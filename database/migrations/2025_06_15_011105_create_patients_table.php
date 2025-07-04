@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('patients', function (Blueprint $table) {
+            $table->id(); //'id_patient'
+            $table->string('user_uuid')->unique();
+            $table->foreignId('state_id')->constrained('list_states');
+            $table->foreignId('user_detail_id')->constrained('user_details');
+            $table->date('dateOfBirth');
+            $table->string('type_identification');
+            $table->string('identification');
+            $table->string('streetAddress')->nullable();
+            $table->string('city')->nullable();
+            $table->string('postalCode', 12)->nullable();
+            $table->string('relativeName')->nullable();
+            $table->enum('kinship', ['Padre', 'Madre', 'Hermano', 'Amigo', 'Otro'])->nullable();
+            $table->string('relativeMobile')->nullable();
+            $table->binary('consent')->default(0);
+            $table->boolean('state')->default(1);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('patients');
+    }
+};
