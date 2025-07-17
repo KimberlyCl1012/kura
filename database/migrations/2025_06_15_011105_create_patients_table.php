@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('relativeName')->nullable();
             $table->enum('kinship', ['Padre', 'Madre', 'Hermano', 'Amigo', 'Otro'])->nullable();
             $table->string('relativeMobile')->nullable();
-            $table->binary('consent')->default(0);
+            $table->boolean('consent')->default(0);
             $table->boolean('state')->default(1);
             $table->timestamps();
         });

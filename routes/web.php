@@ -8,9 +8,13 @@ use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Permission\PermissionController;
+use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
+use App\Http\Controllers\Record\WoundController;
+use App\Http\Controllers\Record\WoundHistoryController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Middleware\HandleInertiaRequests;
+use Carbon\Exceptions\NotAPeriodException;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -62,6 +66,18 @@ Route::middleware([
         ->name('health_records.store');
     Route::put('/health_records/{healthRecord}', [HealthRecordController::class, 'update'])
         ->name('health_records.update');
+
+    //Appointments
+    Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+    Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+    Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
+
+    //Wounds
+    Route::get('/wounds', [WoundController::class, 'index'])->name('wounds.index');
+
+
+    //Wounds History
+    Route::get('/wounds_history', [WoundHistoryController::class, 'index'])->name('wounds_history.index');
 
 
 

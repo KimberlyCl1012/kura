@@ -15,7 +15,7 @@ const model = ref([
         items: [{ label: 'Pacientes', icon: 'pi pi-circle', to: '/patients' }]
     },
      {
-        items: [{ label: 'Consultas', icon: 'pi pi-circle', to: '/dashboard' }]
+        items: [{ label: 'Consultas', icon: 'pi pi-circle', to: '/appointments' }]
     },
     // {
     //     label: 'Pages',

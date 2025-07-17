@@ -46,11 +46,11 @@ console.log("✅ userPermissions:", userPermissions.value);
         :href="route('dashboard')"
         class="layout-topbar-logo flex items-center gap-2 font-bold text-xl text-primary-600"
       >
-        <img
+        <!-- <img
           style="background-color: #fff; padding: 7px; width: 45%; border-radius: 2%"
           src="../../../../public/build/img/logos/red/kura_1.svg"
           alt="Procomsa Logo"
-        />
+        /> -->
       </a>
     </div>
 

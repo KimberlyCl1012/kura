@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class WoundHistoryController extends Controller
 {
@@ -12,7 +13,7 @@ class WoundHistoryController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('WoundHis/Index');
     }
 
     /**

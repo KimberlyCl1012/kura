@@ -89,8 +89,8 @@ const submit = async () => {
                             </g>
                         </svg> -->
                             <div class="flex items-center justify-center bg-surface-0 dark:bg-surface-950 p-5">
-                                <img src="../../../../public//build/img/logos/red/kura_1.svg" alt="Procomsa Logo"
-                                    class="bg-white w-4/6 max-w-sm rounded-md mx-auto" />
+                                <!-- <img src="../../../../public//build/img/logos/red/kura_1.svg" alt="Procomsa Logo"
+                                    class="bg-white w-4/6 max-w-sm rounded-md mx-auto" /> -->
                             </div>
                             <!-- <span class="text-muted-color font-medium">Sign in to continue</span> -->
                         </div>
