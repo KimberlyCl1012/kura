@@ -42,15 +42,9 @@ console.log("✅ userPermissions:", userPermissions.value);
       <button class="layout-menu-button layout-topbar-action" @click="toggleMenu">
         <i class="pi pi-bars"></i>
       </button>
-      <a
-        :href="route('dashboard')"
-        class="layout-topbar-logo flex items-center gap-2 font-bold text-xl text-primary-600"
-      >
-        <!-- <img
-          style="background-color: #fff; padding: 7px; width: 45%; border-radius: 2%"
-          src="../../../../public/build/img/logos/red/kura_1.svg"
-          alt="Procomsa Logo"
-        /> -->
+      <a :href="route('dashboard')"
+        class="layout-topbar-logo flex items-center gap-2 font-bold text-xl text-primary-600">
+        <img style="width: 40%;" src="../../../img/logos/red/kura_1.svg" alt="Procomsa Logo" />
       </a>
     </div>
 
@@ -71,13 +65,13 @@ console.log("✅ userPermissions:", userPermissions.value);
               <div style="width: 150px" v-if="userRole == 'owner'">
                 <div class="block px-4 py-2 text-xs text-gray-400">Catálogos</div>
                 <DropdownLink :href="route('users.index')">
-                 • Usuarios
-                 </DropdownLink>
+                  • Usuarios
+                </DropdownLink>
                 <DropdownLink :href="route('sites.index')">
-                 • Sitios
-                 </DropdownLink>
+                  • Sitios
+                </DropdownLink>
                 <DropdownLink :href="route('address.index')">
-                • Direcciones
+                  • Direcciones
                 </DropdownLink>
                 <DropdownLink :href="route('body_locations.index')">
                   • Ubicaciones corporales
@@ -102,38 +96,24 @@ console.log("✅ userPermissions:", userPermissions.value);
             <template #content>
               <div style="width: 150px">
                 <div class="block px-4 py-2 text-xs text-gray-400">Configuración</div>
-                <DropdownLink
-                  :href="route('teams.show', $page.props.auth.user.current_team)"
-                >
+                <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
                   • Roles
                 </DropdownLink>
                 <DropdownLink :href="route('teams.create')"> • Crear Rol </DropdownLink>
-                 <DropdownLink :href="route('permissions.index')"> • Permisos </DropdownLink>
+                <DropdownLink :href="route('permissions.index')"> • Permisos </DropdownLink>
 
-                <div
-                  class="border-t border-gray-200"
-                  v-if="$page.props.auth.user.all_teams.length > 1"
-                />
+                <div class="border-t border-gray-200" v-if="$page.props.auth.user.all_teams.length > 1" />
 
                 <div class="block px-4 py-2 text-xs text-gray-400">Cambiar rol</div>
                 <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
                   <form @submit.prevent="switchToTeam(team)">
                     <DropdownLink as="button">
                       <div class="flex items-center">
-                        <svg
-                          v-if="team.id == $page.props.auth.user.current_team_id"
-                          class="me-2 size-5 text-green-400"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
+                        <svg v-if="team.id == $page.props.auth.user.current_team_id" class="me-2 size-5 text-green-400"
+                          xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                          stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
 
                         <div>{{ team.name }}</div>
@@ -148,15 +128,10 @@ console.log("✅ userPermissions:", userPermissions.value);
         <li class="border-t border-surface lg:border-t-0 list-none">
           <Dropdown align="right" width="64">
             <template #trigger>
-              <button
-                type="button"
-                class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-white-500 hover:text-white-700"
-              >
-                <img
-                  class="size-10 rounded-full object-cover"
-                  :src="$page.props.auth.user.profile_photo_url"
-                  :alt="$page.props.auth.user.name"
-                />&nbsp;<b>{{ $page.props.auth.user.name }}</b>
+              <button type="button"
+                class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-white-500 hover:text-white-700">
+                <img class="size-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url"
+                  :alt="$page.props.auth.user.name" />&nbsp;<b>{{ $page.props.auth.user.name }}</b>
               </button>
             </template>
 

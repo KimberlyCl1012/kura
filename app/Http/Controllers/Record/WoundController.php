@@ -3,7 +3,18 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\BodyLocation;
+use App\Models\BodySublocation;
+use App\Models\HealthRecord;
+use App\Models\Kurator;
+use App\Models\Patient;
+use App\Models\Site;
+use App\Models\State;
+use App\Models\WoundPhase;
+use App\Models\WoundSubtype;
+use App\Models\WoundType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class WoundController extends Controller
@@ -13,7 +24,35 @@ class WoundController extends Controller
      */
     public function index()
     {
-        return Inertia::render('Wounds/Index');
+        // Obtener pacientes con su nombre completo
+        $patients = Patient::with('userDetail')->get()->map(function ($p) {
+            $d = $p->userDetail;
+            return [
+                'id' => $p->id,
+                'full_name' => "{$p->user_uuid} - {$d->name} {$d->fatherLastName} {$d->motherLastName}",
+            ];
+        });
+
+        // Catálogos sin transformar (objetos completos)
+        $woundsType        = WoundType::where('state', 1)->get();
+        $woundsSubtype     = WoundSubtype::where('state', 1)->get();
+        $woundsPhase       = WoundPhase::where('state', 1)->get();
+        $bodyLocations     = BodyLocation::where('state', 1)->get();
+        $bodySublocation   = BodySublocation::where('state', 1)->get();
+
+        return Inertia::render('Wounds/Index', [
+            'patients'        => $patients,
+            'woundsType'      => $woundsType,
+            'woundsSubtype'   => $woundsSubtype,
+            'woundsPhase'     => $woundsPhase,
+            'bodyLocations'   => $bodyLocations,
+            'bodySublocation' => $bodySublocation,
+            'grades'          => [
+                ['label' => '1', 'value' => 1],
+                ['label' => '2', 'value' => 2],
+                ['label' => '3', 'value' => 3],
+            ],
+        ]);
     }
 
     /**

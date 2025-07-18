@@ -1,14 +1,16 @@
 <script setup>
-import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "@/Layouts/Sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
 import { ref } from "vue";
 import { useToast } from "primevue/usetoast";
+import axios from "axios";
+import { router } from "@inertiajs/vue3";
+
 import {
   InputText, Toolbar, DataTable, Column,
   Dialog, Button, IconField, InputIcon,
   DatePicker, Select, Tooltip
 } from "primevue";
-import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
   sites: Array,
@@ -19,6 +21,7 @@ const props = defineProps({
 
 const dt = ref();
 const toast = useToast();
+
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
@@ -30,47 +33,79 @@ const isSaving = ref(false);
 const selected = ref(null);
 
 const appointment = ref({
-  dateOfBirth: null,
+  dateStartVisit: null,
   site_id: null,
   health_record_id: null,
   kurator_id: null,
-  type: null,
+  typeVisit: null,
 });
 
 const typeOptions = [
   { name: "Valoración" },
-  { name: "Seguimiento" },
   { name: "Urgencia" },
+  { name: "Seguimiento" },
 ];
+
+const fieldLabels = {
+  dateStartVisit: "Fecha de la consulta",
+  site_id: "Sitio",
+  health_record_id: "Expediente",
+  kurator_id: "Kurador",
+  typeVisit: "Tipo",
+};
 
 function openNew() {
   appointment.value = {
-    dateOfBirth: null,
+    dateStartVisit: null,
     site_id: null,
     health_record_id: null,
     kurator_id: null,
-    type: null,
+    typeVisit: null,
   };
   submitted.value = false;
   dialog.value = true;
 }
 
+const today = new Date(); // Fecha mínima permitida (hoy)
+
+function formatDateToMySQL(date) {
+  if (!date) return null;
+  const d = new Date(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 async function save() {
   submitted.value = true;
-  for (const field of ['dateOfBirth','site_id','health_record_id','kurator_id','type']) {
+  for (const field of ['dateStartVisit', 'site_id', 'health_record_id', 'kurator_id', 'typeVisit']) {
     if (!appointment.value[field]) {
-      toast.add({ severity: 'warn', summary: 'Validación', detail: `El campo ${field} es obligatorio.`, life: 3000 });
+      const label = fieldLabels[field] || field;
+      toast.add({
+        severity: "warn",
+        summary: "Validación",
+        detail: `El campo ${label} es obligatorio`,
+        life: 3000,
+      });
       return;
     }
   }
+
   isSaving.value = true;
   try {
-    await router.post(route('appointments.store'), appointment.value);
-    toast.add({ severity: 'success', summary: 'Consulta creada', life: 3000 });
+    const payload = {
+      ...appointment.value,
+      dateStartVisit: formatDateToMySQL(appointment.value.dateStartVisit),
+    };
+
+    // Usamos axios para POST
+    await axios.post(route('appointments.store'), payload);
+    toast.add({ severity: "success", summary: "Guardado", detail: "Consulta creada", life: 3000 });
     dialog.value = false;
     router.reload();
-  } catch {
-    toast.add({ severity: 'error', summary: 'Error al guardar', life: 3000 });
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error al guardar', detail: error.response?.data?.message || '', life: 3000 });
   } finally {
     isSaving.value = false;
   }
@@ -84,12 +119,14 @@ function confirmDelete(item) {
 async function destroy() {
   isSaving.value = true;
   try {
-    await router.delete(route('appointments.destroy', selected.value.id));
-    toast.add({ severity: 'success', summary: 'Consulta eliminada', life: 3000 });
+    // Usamos axios para DELETE
+    await axios.delete(route('appointments.destroy', selected.value.id));
+
+    toast.add({ severity: 'success', summary: 'Eliminado', detail: "Consulta eliminada", life: 3000 });
     deleteDialog.value = false;
     router.reload();
-  } catch {
-    toast.add({ severity: 'error', summary: 'Error al eliminar', life: 3000 });
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error al eliminar', detail: error.response?.data?.message || '', life: 3000 });
   } finally {
     isSaving.value = false;
   }
@@ -105,18 +142,16 @@ function clearFilter() {
     <div class="card">
       <Toolbar class="mb-6">
         <template #start>
-          <Button label="Nueva consulta" icon="pi pi-plus" severity="secondary" @click="openNew" />
+          <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNew" />
         </template>
         <template #end>
           <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="dt.exportCSV()" />
         </template>
       </Toolbar>
 
-      <DataTable ref="dt" :value="props.appointments" dataKey="id"
-                 :paginator="true" :rows="10" :filters="filters"
-                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                 :rowsPerPageOptions="[5,10,25]"
-                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} consultas">
+      <DataTable ref="dt" :value="props.appointments" dataKey="id" :paginator="true" :rows="10" :filters="filters"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        :rowsPerPageOptions="[5, 10, 25]" currentPageReportTemplate="Ver {first} al {last} de {totalRecords} consultas">
         <template #header>
           <div class="flex justify-between items-center">
             <h4 class="m-0">Consultas</h4>
@@ -130,67 +165,74 @@ function clearFilter() {
         <Column header="#" style="min-width: 6rem">
           <template #body="{ index }">{{ index + 1 }}</template>
         </Column>
-        <Column field="dateOfBirth" header="Fecha" />
-        <Column field="site.name" header="Sitio" />
-        <Column field="healthRecord.record_uuid" header="Expediente" />
-        <Column field="kurator.user_uuid" header="Kurador" />
-        <Column field="type" header="Tipo" />
+        <Column field="dateStartVisit" header="Fecha" />
+        <Column field="site_name" header="Sitio" />
+        <Column field="health_record_uuid" header="Expediente" />
+        <Column field="kurator_full_name" header="Kurador" />
+        <Column field="typeVisit" header="Tipo" />
         <Column :exportable="false" header="Acciones" style="min-width: 8rem">
           <template #body="{ data }">
-            <Button icon="pi pi-trash" outlined rounded severity="danger"
-                    v-tooltip.top="'Eliminar consulta'"
-                    @click="confirmDelete(data)" />
+            <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+              @click="confirmDelete(data)" />
           </template>
         </Column>
       </DataTable>
     </div>
 
-    <!-- Dialog Nuevo / Editar -->
+    <!-- Diálogo nuevo -->
     <Dialog v-model:visible="dialog" modal :style="{ width: '600px' }" header="Registrar Consulta">
       <form @submit.prevent="save" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Fecha -->
           <div>
-            <label class="block font-bold mb-1">Fecha de la consulta <span class="text-red-500">*</span></label>
-            <DatePicker v-model="appointment.dateOfBirth" showIcon class="w-full" />
-            <small v-if="submitted && !appointment.dateOfBirth" class="text-red-500">Campo requerido</small>
+            <label for="dateStartVisit" class="block font-bold mb-1">
+              Fecha de la consulta <span class="text-red-500">*</span>
+            </label>
+            <DatePicker id="dateStartVisit" inputId="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full"
+              variant="filled" showIcon iconDisplay="input" :minDate="today" />
+            <small v-if="submitted && !appointment.dateStartVisit" class="text-red-500">Campo requerido</small>
           </div>
 
           <!-- Sitio -->
           <div>
-            <label class="block font-bold mb-1">Sitio <span class="text-red-500">*</span></label>
-            <Select v-model="appointment.site_id" :options="props.sites" optionLabel="name" optionValue="id"
-                    filter class="w-full"
-                    :class="{ 'p-invalid': submitted && !appointment.site_id }" />
-            <small v-if="submitted && !appointment.site_id" class="text-red-500">Campo requerido</small>
+            <label for="site_id" class="block font-bold mb-1">Sitio <span class="text-red-500">*</span></label>
+            <Select id="site_id" v-model="appointment.site_id" :options="props.sites" optionLabel="siteName"
+              optionValue="id" filter class="w-full" placeholder="Seleccione un sitio"
+              :class="{ 'p-invalid': submitted && !appointment.site_id }" />
+            <small v-if="submitted && !appointment.site_id" class="text-red-500">El sitio es obligatorio.</small>
           </div>
 
           <!-- Expediente -->
           <div>
-            <label class="block font-bold mb-1">Expediente <span class="text-red-500">*</span></label>
-            <Select v-model="appointment.health_record_id" :options="props.patientRecords" optionLabel="full_name"
-                    optionValue="health_record_id" filter class="w-full"
-                    :class="{ 'p-invalid': submitted && !appointment.health_record_id }" />
-            <small v-if="submitted && !appointment.health_record_id" class="text-red-500">Campo requerido</small>
+            <label for="health_record_id" class="block font-bold mb-1">Expediente <span
+                class="text-red-500">*</span></label>
+            <Select id="health_record_id" v-model="appointment.health_record_id" :options="props.patientRecords"
+              optionLabel="full_name" optionValue="health_record_id" filter class="w-full"
+              placeholder="Seleccione un expediente"
+              :class="{ 'p-invalid': submitted && !appointment.health_record_id }" />
+            <small v-if="submitted && !appointment.health_record_id" class="text-red-500">El expediente es
+              obligatorio.</small>
           </div>
 
           <!-- Kurador -->
           <div>
-            <label class="block font-bold mb-1">Kurador <span class="text-red-500">*</span></label>
-            <Select v-model="appointment.kurator_id" :options="props.kurators" optionLabel="full_name"
-                    optionValue="kurator_id" filter class="w-full"
-                    :class="{ 'p-invalid': submitted && !appointment.kurator_id }" />
-            <small v-if="submitted && !appointment.kurator_id" class="text-red-500">Campo requerido</small>
+            <label for="kurator_id" class="block font-bold mb-1">Kurador <span class="text-red-500">*</span></label>
+            <Select id="kurator_id" v-model="appointment.kurator_id" :options="props.kurators" optionLabel="full_name"
+              optionValue="kurator_id" filter class="w-full" placeholder="Seleccione un kurador"
+              :class="{ 'p-invalid': submitted && !appointment.kurator_id }" />
+            <small v-if="submitted && !appointment.kurator_id" class="text-red-500">El kurador es obligatorio.</small>
           </div>
 
-          <!-- Tipo -->
+          <!-- Tipo de Visita -->
           <div>
-            <label class="block font-bold mb-1">Tipo <span class="text-red-500">*</span></label>
-            <Select v-model="appointment.type" :options="typeOptions" optionLabel="name" optionValue="name"
-                    filter class="w-full"
-                    :class="{ 'p-invalid': submitted && !appointment.type }" />
-            <small v-if="submitted && !appointment.type" class="text-red-500">Campo requerido</small>
+            <label for="typeVisit" class="block font-bold mb-1">Tipo de visita <span
+                class="text-red-500">*</span></label>
+            <Select id="typeVisit" v-model="appointment.typeVisit" :options="typeOptions" optionLabel="name"
+              optionValue="name" class="w-full" placeholder="Seleccione el tipo"
+              :class="{ 'p-invalid': submitted && !appointment.typeVisit }" />
+            <small v-if="submitted && !appointment.typeVisit" class="text-red-500">El tipo de visita es
+              obligatorio.</small>
           </div>
+
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
@@ -200,7 +242,7 @@ function clearFilter() {
       </form>
     </Dialog>
 
-    <!-- Confirmación -->
+    <!-- Confirmación eliminación -->
     <Dialog v-model:visible="deleteDialog" header="Confirmar" modal style="width:450px">
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl" />

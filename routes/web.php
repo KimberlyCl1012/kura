@@ -48,17 +48,25 @@ Route::middleware([
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
 
+    //Patients
+    Route::get('/patients', [PatientController::class, 'index'])->name('patients.index');
+    Route::post('/patients', [PatientController::class, 'store'])->name('patients.store');
+    Route::get('/patients/{patient}', [PatientController::class, 'show'])->name('patients.show');
+    Route::put('/patients/{id}', [PatientController::class, 'update'])->name('patients.update');
+    Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->name('patients.destroy');
+
     //Kurators
     Route::get('/kurators', [KuratorController::class, 'index'])->name('kurators.index');
     Route::post('/kurators', [KuratorController::class, 'store'])->name('kurators.store');
     Route::put('/kurators/{id}', [KuratorController::class, 'update'])->name('kurators.update');
     Route::delete('/kurators/{id}', [KuratorController::class, 'destroy'])->name('kurators.destroy');
 
-    //Patients
-    Route::get('/patients', [PatientController::class, 'index'])->name('patients.index');
-    Route::post('/patients', [PatientController::class, 'store'])->name('patients.store');
-    Route::put('/patients/{id}', [PatientController::class, 'update'])->name('patients.update');
-    Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->name('patients.destroy');
+    //Kurators Appointments
+    Route::get('/appointments/by-kurator/{kuratorId}', [KuratorController::class, 'byKurator'])->name('appointments.byKurator');
+
+    //Wounds
+    Route::get('/wounds', [WoundController::class, 'index'])->name('wounds.index');
+    Route::post('/wounds', [WoundController::class, 'store'])->name('wounds.store');
 
     //Health Record
     Route::get('/health_records/create/{patientId}', [HealthRecordController::class, 'create'])->name('health_records.create');
@@ -72,13 +80,9 @@ Route::middleware([
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
 
-    //Wounds
-    Route::get('/wounds', [WoundController::class, 'index'])->name('wounds.index');
-
-
     //Wounds History
     Route::get('/wounds_history', [WoundHistoryController::class, 'index'])->name('wounds_history.index');
-
+    Route::post('/wounds/antecedent', [WoundHistoryController::class, 'store'])->name('wounds_antecedent.store');
 
 
     //Catalogues

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Kurator;
 
 use App\Http\Controllers\Controller;
+use App\Models\HealthRecord;
 use App\Models\Kurator;
+use App\Models\Patient;
 use App\Models\Site;
+use App\Models\State;
 use App\Models\User;
 use App\Models\UserDetail;
 use Carbon\Carbon;
@@ -212,5 +215,58 @@ class KuratorController extends Controller
             Log::error($e);
             return back()->withErrors(['error' => 'Error al eliminar el kurador.']);
         }
+    }
+
+    public function byKurator($kuratorId)
+    {
+        $sites = Site::all();
+        $states = State::all();
+
+        $patientRecords = HealthRecord::with('patient.userDetail')
+            ->get()
+            ->map(function ($record) {
+                $detail = $record->patient->userDetail;
+                return [
+                    'full_name' => "{$record->record_uuid} - {$detail->name} {$detail->fatherLastName}",
+                    'health_record_id' => $record->id,
+                ];
+            });
+
+        $kurators = Kurator::with('userDetail')
+            ->get()
+            ->map(function ($k) {
+                $d = $k->userDetail;
+                return [
+                    'full_name' => "{$k->user_uuid} - {$d->name} {$d->fatherLastName}",
+                    'kurator_id' => $k->id,
+                ];
+            });
+
+        $appointments = DB::table('appointments')
+            ->join('list_sites', 'appointments.site_id', '=', 'list_sites.id')
+            ->join('kurators', 'appointments.kurator_id', '=', 'kurators.id')
+            ->join('user_details as kurator_user_details', 'kurators.user_detail_id', '=', 'kurator_user_details.id')
+            ->join('health_records', 'appointments.health_record_id', '=', 'health_records.id')
+            ->join('patients', 'health_records.patient_id', '=', 'patients.id')
+            ->join('user_details as patient_user_details', 'patients.user_detail_id', '=', 'patient_user_details.id')
+            ->select(
+                'appointments.*',
+                'list_sites.siteName as site_name',
+                DB::raw("CONCAT(kurators.user_uuid, '-', kurator_user_details.name) as kurator_full_name"),
+                DB::raw("CONCAT(patients.user_uuid, '-', patient_user_details.name) as patient_full_name"),
+                'health_records.record_uuid as health_record_uuid',
+                'health_records.patient_id'
+            )
+            ->where('appointments.kurator_id', $kuratorId)
+            ->orderBy('appointments.created_at', 'desc')
+            ->get();
+
+        return Inertia::render('Kurators/Appointments', [
+            'states' => $states,
+            'sites' => $sites,
+            'patientRecords' => $patientRecords,
+            'kurators' => $kurators,
+            'appointments' => $appointments,
+        ]);
     }
 }

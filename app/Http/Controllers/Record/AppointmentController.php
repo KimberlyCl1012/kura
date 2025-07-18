@@ -8,13 +8,11 @@ use App\Models\HealthRecord;
 use App\Models\Kurator;
 use App\Models\Site;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AppointmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $sites = Site::all();
@@ -39,8 +37,18 @@ class AppointmentController extends Controller
                 ];
             });
 
-        $appointments = Appointment::with(['site', 'kurator', 'healthRecord'])
-            ->latest()
+        $appointments = DB::table('appointments')
+            ->join('list_sites', 'appointments.site_id', '=', 'list_sites.id')
+            ->join('kurators', 'appointments.kurator_id', '=', 'kurators.id')
+            ->join('user_details', 'kurators.user_detail_id', '=', 'user_details.id')
+            ->join('health_records', 'appointments.health_record_id', '=', 'health_records.id')
+            ->select(
+                'appointments.*',
+                'list_sites.siteName as site_name',
+                DB::raw("CONCAT(kurators.user_uuid, '-', user_details.name) as kurator_full_name"),
+                'health_records.record_uuid as health_record_uuid'
+            )
+            ->orderBy('appointments.created_at', 'desc')
             ->get();
 
         return Inertia::render('Appointments/Index', [
@@ -50,33 +58,24 @@ class AppointmentController extends Controller
             'appointments' => $appointments,
         ]);
     }
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'dateOfBirth' => 'required|date',
-            'site_id' => 'required|exists:sites,id',
+            'dateStartVisit' => 'required|date',
+            'site_id' => 'required|exists:list_sites,id',
             'health_record_id' => 'required|exists:health_records,id',
             'kurator_id' => 'required|exists:kurators,id',
-            'type' => 'required|string'
+            'typeVisit' => 'required|in:Valoración,Urgencia,Seguimiento',
         ]);
 
         Appointment::create([
-            'dateOfBirth' => $request->dateOfBirth,
+            'dateStartVisit' => $request->dateStartVisit,
             'site_id' => $request->site_id,
             'health_record_id' => $request->health_record_id,
             'kurator_id' => $request->kurator_id,
-            'type' => $request->type
+            'typeVisit' => $request->typeVisit,
+            'state' => true, // se puede omitir, ya que por defecto es true
         ]);
 
         return redirect()->route('appointments.index');

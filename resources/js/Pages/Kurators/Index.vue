@@ -120,7 +120,7 @@ async function saveKurator() {
     if (
         !payload.name || !payload.fatherLastName || !payload.sex ||
         !payload.mobile || !payload.site_id || !payload.email ||
-        (!isEditMode.value && !payload.password) || !payload.type_kurator ||  !payload.specialty || !payload.type_identification ||
+        (!isEditMode.value && !payload.password) || !payload.type_kurator || !payload.specialty || !payload.type_identification ||
         !payload.identification
     ) {
         isSaving.value = false;
@@ -156,6 +156,10 @@ async function saveKurator() {
     }
 }
 
+function goToAppointments(kurator) {
+    router.visit(route('appointments.byKurator', kurator.id));
+}
+
 </script>
 
 <template>
@@ -189,8 +193,11 @@ async function saveKurator() {
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editKurator(data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger"
+                        <Button icon="pi pi-calendar-clock" severity="info" outlined rounded class="mr-2"
+                            @click="goToAppointments(data)" v-tooltip.top="'Ver consultas'" />
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editKurator(data)"
+                            v-tooltip.top="'Editar'" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
                             @click="confirmDeleteKurator(data)" />
                     </template>
                 </Column>

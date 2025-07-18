@@ -237,4 +237,28 @@ class PatientController extends Controller
             return back()->withErrors(['error' => 'Error al eliminar el paciente.']);
         }
     }
+
+    public function show($id)
+    {
+        $patient = Patient::with('userDetail')->findOrFail($id);
+
+        return response()->json([
+            'name' => $patient->userDetail->name,
+            'fatherLastName' => $patient->userDetail->fatherLastName,
+            'motherLastName' => $patient->userDetail->motherLastName,
+            'sex' => $patient->userDetail->sex,
+            'site_id' => $patient->userDetail->site_id,
+            'mobile' => $patient->userDetail->mobile,
+            'email' => $patient->userDetail->contactEmail,
+            'dateOfBirth' => $patient->dateOfBirth,
+            'state_id' => $patient->state_id,
+            'streetAddress' => $patient->streetAddress,
+            'postalCode' => $patient->postalCode,
+            'relativeName' => $patient->relativeName,
+            'kinship' => $patient->kinship,
+            'relativeMobile' => $patient->relativeMobile,
+            'type_identification' => $patient->type_identification,
+            'identification' => $patient->identification,
+        ]);
+    }
 }

@@ -94,8 +94,8 @@ function getSeverity(status) {
         <div class="card">
             <div class="font-semibold text-xl mb-4">Bienvenidos</div>
             <div class="flex items-center justify-center bg-surface-0 dark:bg-surface-950 p-5">
-                <!-- <img src="../../../public//build/img/logos/red/kura_1.svg" alt="Procomsa Logo"
-                    class="bg-white w-2/6 max-w-sm rounded-md mx-auto" /> -->
+                <img src="../../img/logos/red/kura_1.svg" alt="Procomsa Logo"
+                    class="w-2/6 max-w-sm rounded-md mx-auto" />
             </div>
             <div class="container">
                 <p class="text-center mb-3">

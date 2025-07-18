@@ -9,6 +9,13 @@ class Appointment extends Model
 {
     use HasFactory;
     protected $guarded = [];
+    protected $fillable = [
+        'dateStartVisit',
+        'site_id',
+        'health_record_id',
+        'kurator_id',
+        'typeVisit',
+    ];
     // protected $primaryKey = 'id_appointment';
 
     public function site()
@@ -30,5 +37,4 @@ class Appointment extends Model
     {
         return $this->belongsTo(HealthRecord::class);  //, 'id_healthRecord'
     }
-
 }

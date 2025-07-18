@@ -193,9 +193,11 @@ function healthRecord(data) {
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
-                        <Button icon="pi pi-folder-plus" outlined rounded class="mr-2" @click="healthRecord(data)" v-tooltip.top="'Crear expediente'"  />
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)" v-tooltip.top="'Editar'"  />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'" 
+                        <Button icon="pi pi-folder-plus" outlined rounded class="mr-2" @click="healthRecord(data)"
+                            v-tooltip.top="'Crear expediente'" />
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)"
+                            v-tooltip.top="'Editar'" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
                             @click="confirmDeleteUser(data)" />
                     </template>
                 </Column>
