@@ -39,42 +39,53 @@ class WoundPhaseController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        $phase = WoundPhase::create($request->only('name', 'description'));
+        try {
+            $phase = WoundPhase::create($request->only('name', 'description'));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Registro creado exitosamente',
-            'data' => [
-                'id' => Crypt::encryptString($phase->id),
-                'name' => $phase->name,
-                'description' => $phase->description,
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Fase creada exitosamente',
+                'data' => [
+                    'id' => Crypt::encryptString($phase->id),
+                    'name' => $phase->name,
+                    'description' => $phase->description,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al registrar la fase.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
         try {
             $id = Crypt::decryptString($id);
-
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-            }
 
             $phase = WoundPhase::findOrFail($id);
             $phase->update($request->only('name', 'description'));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro actualizado correctamente',
+                'message' => 'Fase actualizada correctamente',
                 'data' => [
                     'id' => Crypt::encryptString($phase->id),
                     'name' => $phase->name,
@@ -95,7 +106,7 @@ class WoundPhaseController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro eliminado correctamente',
+                'message' => 'Fase eliminada correctamente',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()], 500);

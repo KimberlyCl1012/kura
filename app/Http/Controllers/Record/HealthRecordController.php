@@ -7,6 +7,7 @@ use App\Models\HealthInstitution;
 use App\Models\HealthRecord;
 use App\Models\Patient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
 use Str;
 
@@ -25,10 +26,16 @@ class HealthRecordController extends Controller
      */
     public function create($patientId)
     {
+        try {
+            $decryptpatientId = Crypt::decryptString($patientId);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404, 'ID inválido');
+        }
+
         $healthInstitutions = HealthInstitution::select('id', 'name')->get();
-        $healthRecord = HealthRecord::where('patient_id', $patientId)->first();
+        $healthRecord = HealthRecord::where('patient_id', $decryptpatientId)->first();
         $patient = Patient::with('userDetail')
-            ->where('id', $patientId)
+            ->where('id', $decryptpatientId)
             ->firstOrFail();
 
         return Inertia::render('HealthRecords/Create', [
@@ -119,7 +126,6 @@ class HealthRecordController extends Controller
         $fullEdit = in_array('*', $permissions) || in_array('editor:edit-all', $permissions);
 
 
-        /** 🧠 Campos sensibles que deben ser protegidos contra eliminación */
         $protectedFields = ['medicines', 'allergies', 'pathologicalBackground', 'laboratoryBackground', 'nourishmentBackground'];
 
         foreach ($protectedFields as $field) {

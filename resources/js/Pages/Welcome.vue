@@ -97,7 +97,7 @@ const submit = async () => {
                 class="flex items-center justify-center bg-surface-0 dark:bg-surface-950 p-5"
               >
                 <img
-                  src="../../../public/build/img/logos/red/kura_1.svg"
+                  src="../../img/logos/red/kura_1.svg"
                   alt="Procomsa Logo"
                   class="bg-white w-4/6 max-w-sm rounded-md mx-auto"
                 />

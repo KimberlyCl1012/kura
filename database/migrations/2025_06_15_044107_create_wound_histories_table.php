@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wounds', function (Blueprint $table) {
-            $table->id(); //'id_wound'
-            $table->foreignId('appointment_id')->constrained('appointments');
-            $table->foreignId('health_record_id')->constrained('health_records');
+        Schema::create('wound_histories', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('wound_id')->nullable()->constrained('wounds');
             $table->foreignId('wound_phase_id')->constrained('list_wound_phases');
             $table->foreignId('wound_type_id')->constrained('list_wound_types');
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
@@ -22,9 +21,7 @@ return new class extends Migration
             $table->foreignId('body_sublocation_id')->constrained('list_body_sublocations');
             $table->string('wound_type_other')->nullable();
             $table->string('woundBackground')->default(0);
-            $table->date('woundCreationDate')->nullable();
             $table->date('woundBeginDate')->nullable();
-            $table->date('woundHealDate')->nullable();
             $table->string('grade_foot')->nullable();
             $table->string('MESI')->nullable();
             $table->string('borde')->nullable();
@@ -37,17 +34,24 @@ return new class extends Migration
             $table->string('infeccion')->nullable();
             $table->string('tipo_dolor')->nullable();
             $table->string('visual_scale')->nullable();
-            $table->string('ITB_izquierdo')->nullable();
-            $table->string('pulse_dorsal_izquierdo')->nullable();
-            $table->string('pulse_tibial_izquierdo')->nullable();
-            $table->string('pulse_popliteo_izquierdo')->nullable();
             $table->string('ITB_derecho')->nullable();
             $table->string('pulse_dorsal_derecho')->nullable();
             $table->string('pulse_tibial_derecho')->nullable();
             $table->string('pulse_popliteo_derecho')->nullable();
-            $table->string('blood_glucose')->nullable();
+            $table->string('ITB_izquierdo')->nullable();
+            $table->string('pulse_dorsal_izquierdo')->nullable();
+            $table->string('pulse_tibial_izquierdo')->nullable();
+            $table->string('pulse_popliteo_izquierdo')->nullable();
             $table->string('tunneling')->nullable();
-            $table->longText('note', 999)->nullable();
+            $table->string('lenght')->nullable();
+            $table->string('width')->nullable();
+            $table->string('area')->nullable();
+            $table->decimal('depth', 8, 2)->nullable();
+            $table->decimal('volume', 8, 2)->nullable();
+            $table->string('redPercentaje')->nullable();
+            $table->string('yellowPercentaje')->nullable();
+            $table->string('blackPercentaje')->nullable();
+            $table->longText('description')->nullable();
             $table->boolean('state')->default(1);
             $table->timestamps();
         });
@@ -58,6 +62,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wounds');
+        Schema::dropIfExists('wound_histories');
     }
 };

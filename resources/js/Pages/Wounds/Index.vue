@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
-import { ref } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useToast } from "primevue/usetoast";
 import {
     InputText,
@@ -11,21 +11,22 @@ import {
     Column,
     Dialog,
     Button,
-    IconField,
-    InputIcon,
     DatePicker,
 } from "primevue";
 import axios from "axios";
 import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
-    patients: Array,
     woundsType: Array,
     woundsSubtype: Array,
-    grades: Array,
+    woundsPhase: Array,
     bodyLocations: Array,
     bodySublocation: Array,
-    woundsPhase: Array,
+    grades: Array,
+    wounds: Array,
+    appointmentId: String,
+    healthRecordId: String,
+    patient: Object,
 });
 
 const dt = ref();
@@ -36,14 +37,17 @@ const filters = ref({
 });
 
 const woundDialog = ref(false);
-const deletePatientDialog = ref(false);
 const isEditMode = ref(false);
 const isAntecedent = ref(false);
 const submitted = ref(false);
 const isSaving = ref(false);
 
+const expandedRows = ref({}); // controla filas expandidas
+
 const formWound = ref({
     id: null,
+    appointment_id: props.appointmentId,
+    health_record_id: props.healthRecordId,
     wound_type_id: null,
     grade_foot: null,
     wound_subtype_id: null,
@@ -52,6 +56,48 @@ const formWound = ref({
     body_sublocation_id: null,
     wound_phase_id: null,
     woundBeginDate: null,
+    wound_id: null,
+});
+
+const woundSubtypes = ref([]);
+const bodySublocations = ref([]);
+
+// Cuando cambia el tipo de herida, cargar subtipos
+watch(() => formWound.value.wound_type_id, async (newVal) => {
+    formWound.value.wound_subtype_id = null;
+    woundSubtypes.value = [];
+    if (!newVal) return;
+
+    try {
+        const { data } = await axios.get(`/wound_types/${newVal}/subtypes`);
+        woundSubtypes.value = data;
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'No se pudieron cargar los subtipos.',
+            life: 3000,
+        });
+    }
+});
+
+// Cuando cambia la ubicación corporal, cargar sublocalizaciones
+watch(() => formWound.value.body_location_id, async (newVal) => {
+    formWound.value.body_sublocation_id = null;
+    bodySublocations.value = [];
+    if (!newVal) return;
+
+    try {
+        const { data } = await axios.get(`/body_locations/${newVal}/sublocations`);
+        bodySublocations.value = data;
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'No se pudieron cargar las sublocalizaciones.',
+            life: 3000,
+        });
+    }
 });
 
 function openNewWound() {
@@ -60,15 +106,26 @@ function openNewWound() {
     woundDialog.value = true;
 }
 
-function openNewAntecedent() {
+function openNewAntecedent(data) {
     resetForm();
     isAntecedent.value = true;
+    formWound.value.id = null;
+    formWound.value.wound_type_id = null;
+    formWound.value.wound_subtype_id = null;
+    formWound.value.body_location_id = null;
+    formWound.value.body_sublocation_id = null;
+    formWound.value.wound_phase_id = null;
+    formWound.value.wound_id = data.id;
+
     woundDialog.value = true;
 }
 
+// Resetear formulario
 function resetForm() {
     formWound.value = {
         id: null,
+        appointment_id: props.appointmentId,
+        health_record_id: props.healthRecordId,
         wound_type_id: null,
         grade_foot: null,
         wound_subtype_id: null,
@@ -77,35 +134,19 @@ function resetForm() {
         body_sublocation_id: null,
         wound_phase_id: null,
         woundBeginDate: null,
+        wound_id: null,
     };
     submitted.value = false;
     isEditMode.value = false;
 }
 
-function editUser(data) {
-    // Asegúrate que aquí los valores son solo los ids (no objetos completos)
-    formWound.value = {
-        id: data.id ?? null,
-        wound_type_id: data.wound_type_id ?? (data.wound_type?.id ?? null),
-        grade_foot: data.grade_foot ?? null,
-        wound_subtype_id: data.wound_subtype_id ?? (data.wound_subtype?.id ?? null),
-        wound_type_other: data.wound_type_other ?? "",
-        body_location_id: data.body_location_id ?? (data.body_location?.id ?? null),
-        body_sublocation_id: data.body_sublocation_id ?? (data.body_sublocation?.id ?? null),
-        wound_phase_id: data.wound_phase_id ?? (data.wound_phase?.id ?? null),
-        woundBeginDate: data.woundBeginDate ?? null,
-    };
-    submitted.value = false;
-    isEditMode.value = true;
-    isAntecedent.value = false;
-    woundDialog.value = true;
-}
-
+// Ocultar diálogo
 function hideDialog() {
     woundDialog.value = false;
     submitted.value = false;
 }
 
+// Guardar herida o antecedente
 async function saveUser() {
     submitted.value = true;
 
@@ -144,7 +185,7 @@ async function saveUser() {
         const routeName = isEditMode.value
             ? "wounds.update"
             : isAntecedent.value
-                ? "wounds_antecedent.store"
+                ? "wounds_histories.store"
                 : "wounds.store";
 
         const request = isEditMode.value
@@ -161,13 +202,32 @@ async function saveUser() {
         });
 
         hideDialog();
-        router.reload({ only: ["patients"] });
+        router.reload({ only: ["wounds"] });
     } catch (e) {
         toast.add({ severity: "error", summary: "Error", detail: "No se pudo guardar", life: 3000 });
     } finally {
         isSaving.value = false;
     }
 }
+
+// Expandir todas filas
+const expandAll = () => {
+    expandedRows.value = {};
+    props.wounds.forEach(w => (expandedRows.value[w.id] = true));
+};
+// Colapsar todas filas
+const collapseAll = () => {
+    expandedRows.value = {};
+};
+// Expandir/colapsar filas
+const onRowExpand = (event) => { };
+const onRowCollapse = (event) => { };
+
+
+function goToWound(wound) {
+    router.visit(route('wounds.edit', { woundId: wound.wound_id }));
+}
+
 </script>
 
 <template>
@@ -176,8 +236,9 @@ async function saveUser() {
             <Toolbar class="mb-6">
                 <template #start>
                     <div class="flex flex-wrap gap-2">
-                        <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNewWound" />
-                        <Button label="Antecedente" icon="pi pi-plus" severity="secondary" @click="openNewAntecedent" />
+                        <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNewWound" />
+                        <Button label="Expandir todo" icon="pi pi-plus" text @click="expandAll" />
+                        <Button label="Colapsar todo" icon="pi pi-minus" text @click="collapseAll" />
                     </div>
                 </template>
                 <template #end>
@@ -185,40 +246,69 @@ async function saveUser() {
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="patients" dataKey="id" :paginator="true" :rows="10" :filters="filters"
-                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+            <DataTable ref="dt" :value="wounds" dataKey="id" :paginator="true" :rows="10" :filters="filters"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
+                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
+                v-model:expandedRows="expandedRows" @rowExpand="onRowExpand" @rowCollapse="onRowCollapse"
+                responsiveLayout="scroll">
                 <template #header>
                     <div class="flex justify-between items-center">
                         <h4 class="m-0">Heridas</h4>
-                        <IconField>
-                            <InputIcon><i class="pi pi-search" /></InputIcon>
-                            <InputText v-model="filters.global.value" placeholder="Buscar..." />
-                        </IconField>
+                        <InputText v-model="filters.global.value" placeholder="Buscar..." />
                     </div>
                 </template>
 
+                <Column expander style="width: 3rem" />
                 <Column header="#" style="min-width: 6rem">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
-                <Column field="patient_name" header="Paciente" />
-                <Column field="wound_type_name" header="Tipo" />
-                <Column field="wound_subtype_name" header="Subtipo" />
-                <Column field="body_location_name" header="Ubicación" />
-                <Column :exportable="false" header="Acciones" style="min-width: 8rem">
-                    <template #body="{ data }">
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)" />
-                        <Button icon="pi pi-trash" severity="danger" outlined rounded
-                            @click="deletePatientDialog = true" />
+                <Column header="Paciente">
+                    <template #body>
+                        {{ patient.full_name }}
                     </template>
                 </Column>
+                <Column field="wound_type" header="Tipo" />
+                <Column field="wound_subtype" header="Subtipo" />
+                <Column field="body_location" header="Ubicación" />
+                <Column :exportable="false" header="Acciones" style="min-width: 8rem">
+                    <template #body="{ data }">
+                        <Button icon="pi pi-file-edit" outlined rounded class="mr-2" @click="goToWound(data)"
+                            v-tooltip.top="'Configurar herida'" />
+                        <Button icon="pi pi-history" outlined rounded class="mr-2" severity="info"
+                            @click="() => openNewAntecedent(data)" v-tooltip.top="'Crear antecedente'" />
+                    </template>
+                </Column>
+
+                <!-- Fila expandida para mostrar antecedentes -->
+                <template #expansion="{ data }">
+                    <div class="p-4 border-2 border-primary rounded-lg">
+                        <h5>Antecedentes: Herida - {{ data.id }}</h5>
+                        <DataTable v-if="data.histories && data.histories.length > 0" :value="data.histories"
+                            responsiveLayout="scroll" size="small">
+                            <Column header="#" style="min-width: 6rem">
+                                <template #body="{ index }">{{ index + 1 }}</template>
+                            </Column>
+                            <Column field="wound_phase_history" header="Fase" />
+                            <Column field="wound_type_history" header="Tipo" />
+                            <Column field="body_location_history" header="Ubicación" />
+                            <Column :exportable="false" header="Acciones" style="min-width: 8rem">
+                                <template #body="{ data }">
+                                    <Button icon="pi pi-file-edit" outlined rounded class="mr-2"
+                                        @click="goToWoundHis(data)" v-tooltip.top="'Configurar antecedente'" />
+                                </template>
+                            </Column>
+                        </DataTable>
+                        <div v-else class="text-center text-gray-500 italic mt-3">
+                            No existen antecedentes de la herida
+                        </div>
+                    </div>
+                </template>
             </DataTable>
         </div>
 
         <!-- Diálogo Crear/Editar -->
         <Dialog v-model:visible="woundDialog" modal style="width: 600px"
-            :header="isEditMode ? 'Editar herida' : (isAntecedent ? 'Antecedente' : 'Registrar herida')">
+            :header="isEditMode ? 'Editar herida' : (isAntecedent ? 'Antecedente de la herida' : 'Registrar nueva herida')">
             <form @submit.prevent="saveUser" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Tipo de herida -->
@@ -227,10 +317,22 @@ async function saveUser() {
                             Tipo de herida <span class="text-red-600">*</span>
                         </label>
                         <Select v-model="formWound.wound_type_id" :options="woundsType" optionLabel="name"
-                            optionValue="id" filter class="w-full" placeholder="Seleccione un tipo"
+                            optionValue="id" filter placeholder="Seleccione un tipo" class="w-full"
                             :class="{ 'p-invalid': submitted && !formWound.wound_type_id }" />
                         <small v-if="submitted && !formWound.wound_type_id" class="text-red-500">
                             Debe seleccionar el tipo de herida.
+                        </small>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold mb-1">
+                            Subtipo de herida <span class="text-red-600">*</span>
+                        </label>
+                        <Select v-model="formWound.wound_subtype_id" :options="woundSubtypes" optionLabel="name"
+                            optionValue="id" filter placeholder="Seleccione un subtipo" class="w-full"
+                            :class="{ 'p-invalid': submitted && !formWound.wound_subtype_id }" />
+                        <small v-if="submitted && !formWound.wound_subtype_id" class="text-red-500">
+                            Debe seleccionar el subtipo.
                         </small>
                     </div>
 
@@ -248,7 +350,8 @@ async function saveUser() {
                     </div>
 
                     <!-- Otro tipo -->
-                    <div v-if="formWound.wound_type_id === 9">
+                    <div
+                        v-if="formWound.wound_type_id === 9 || [7, 11, 25, 33, 46].includes(formWound.wound_subtype_id)">
                         <label class="block font-bold mb-1">
                             Indicar tipo de herida <span class="text-red-600">*</span>
                         </label>
@@ -259,52 +362,26 @@ async function saveUser() {
                         </small>
                     </div>
 
-
-                    <!-- Subtipo -->
+                    <!-- Ubicación corporal -->
                     <div>
                         <label class="block font-bold mb-1">
-                            Tipo de herida (etiología) <span class="text-red-600">*</span>
-                        </label>
-                        <Select v-model="formWound.wound_subtype_id" :options="woundsSubtype" optionLabel="name"
-                            placeholder="Seleccione un tipo" optionValue="id" filter class="w-full"
-                            :class="{ 'p-invalid': submitted && !formWound.wound_subtype_id }" />
-                        <small v-if="submitted && !formWound.wound_subtype_id" class="text-red-500">
-                            Debe seleccionar el subtipo.
-                        </small>
-                    </div>
-
-                    <!-- Otro tipo -->
-                    <div v-if="[7, 11, 25, 33, 46].includes(formWound.wound_subtype_id)">
-                        <label class="block font-bold mb-1">
-                            Indicar tipo de herida (etiología) <span class="text-red-600">*</span>
-                        </label>
-                        <InputText v-model="formWound.wound_type_other" class="w-full"
-                            :class="{ 'p-invalid': submitted && !formWound.wound_type_other }" />
-                        <small v-if="submitted && !formWound.wound_type_other" class="text-red-500">
-                            Debe especificar otro tipo de herida (etiología).
-                        </small>
-                    </div>
-
-                    <!-- Ubicación corporal primaria -->
-                    <div>
-                        <label class="block font-bold mb-1">
-                            Ubicación corporal primaria <span class="text-red-600">*</span>
+                            Ubicación corporal <span class="text-red-600">*</span>
                         </label>
                         <Select v-model="formWound.body_location_id" :options="bodyLocations" optionLabel="name"
-                            placeholder="Seleccione una ubicación primaria" optionValue="id" filter class="w-full"
+                            optionValue="id" filter placeholder="Seleccione una ubicación" class="w-full"
                             :class="{ 'p-invalid': submitted && !formWound.body_location_id }" />
                         <small v-if="submitted && !formWound.body_location_id" class="text-red-500">
-                            Debe seleccionar la ubicación corporal.
+                            Debe seleccionar una ubicación.
                         </small>
                     </div>
 
-                    <!-- Sublocalización -->
+                    <!-- Sublocalización corporal -->
                     <div>
                         <label class="block font-bold mb-1">
                             Ubicación corporal secundaria <span class="text-red-600">*</span>
                         </label>
-                        <Select v-model="formWound.body_sublocation_id" :options="bodySublocation" optionLabel="name"
-                            placeholder="Seleccione una ubicación secundaria" optionValue="id" filter class="w-full"
+                        <Select v-model="formWound.body_sublocation_id" :options="bodySublocations" optionLabel="name"
+                            optionValue="id" filter placeholder="Seleccione una ubicación" class="w-full"
                             :class="{ 'p-invalid': submitted && !formWound.body_sublocation_id }" />
                         <small v-if="submitted && !formWound.body_sublocation_id" class="text-red-500">
                             Debe seleccionar la sublocalización.
@@ -343,20 +420,6 @@ async function saveUser() {
                     <Button label="Guardar" icon="pi pi-check" type="submit" :loading="isSaving" :disabled="isSaving" />
                 </div>
             </form>
-        </Dialog>
-
-        <!-- Confirmación eliminar -->
-        <Dialog v-model:visible="deletePatientDialog" header="Eliminar herida" modal style="width: 450px">
-            <div class="flex items-center gap-4">
-                <i class="pi pi-exclamation-triangle text-2xl" />
-                <span>¿Confirma eliminar esta herida?</span>
-            </div>
-            <template #footer>
-                <Button label="No" text @click="deletePatientDialog = false" />
-                <Button label="Sí" severity="danger" @click="() => {
-                    // Aquí agregar la lógica para eliminar la herida
-                }" />
-            </template>
         </Dialog>
     </AppLayout>
 </template>

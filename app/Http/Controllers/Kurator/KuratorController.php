@@ -33,7 +33,8 @@ class KuratorController extends Controller
             ->join('users', 'user_details.user_id', '=', 'users.id')
             ->join('list_sites', 'user_details.site_id', '=', 'list_sites.id')
             ->select(
-                'kurators.id as id',
+                DB::raw("CONCAT(kurators.user_uuid, '-', user_details.name) as kurator_full_name"),
+                'kurators.id as kurator_id',
                 'kurators.user_uuid',
                 'kurators.specialty',
                 'kurators.type_kurator',
@@ -50,7 +51,11 @@ class KuratorController extends Controller
                 'list_sites.siteName',
                 'users.email'
             )
-            ->get();
+            ->get()
+            ->map(function ($kurator) {
+                $kurator->crypt_kurator = Crypt::encryptString($kurator->kurator_id);
+                return $kurator;
+            });
 
         $sites = DB::table('list_sites')->select('id', 'siteName')->get();
 
@@ -114,8 +119,6 @@ class KuratorController extends Controller
 
             return redirect()->route('kurators.index')->with('success', 'Kurador creado correctamente.');
         } catch (\Throwable $e) {
-            dd($e);
-
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al crear el kurador.'])->withInput();
@@ -209,16 +212,28 @@ class KuratorController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'Kurador eliminado correctamente.');
+            // Respuesta JSON exitosa para peticiones ajax
+            return response()->json([
+                'message' => 'Kurador eliminado correctamente.'
+            ], 200);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error($e);
-            return back()->withErrors(['error' => 'Error al eliminar el kurador.']);
+
+            return response()->json([
+                'error' => 'Error al eliminar el kurador.'
+            ], 500);
         }
     }
 
     public function byKurator($kuratorId)
     {
+        try {
+            $decryptkuratorId = Crypt::decryptString($kuratorId);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404, 'ID inválido');
+        }
+
         $sites = Site::all();
         $states = State::all();
 
@@ -242,24 +257,58 @@ class KuratorController extends Controller
                 ];
             });
 
-        $appointments = DB::table('appointments')
-            ->join('list_sites', 'appointments.site_id', '=', 'list_sites.id')
-            ->join('kurators', 'appointments.kurator_id', '=', 'kurators.id')
-            ->join('user_details as kurator_user_details', 'kurators.user_detail_id', '=', 'kurator_user_details.id')
-            ->join('health_records', 'appointments.health_record_id', '=', 'health_records.id')
-            ->join('patients', 'health_records.patient_id', '=', 'patients.id')
+        $appointmentsRaw = DB::table('patients')
             ->join('user_details as patient_user_details', 'patients.user_detail_id', '=', 'patient_user_details.id')
+            ->leftJoin('health_records', 'health_records.patient_id', '=', 'patients.id')
+            ->leftJoin('appointments', 'appointments.health_record_id', '=', 'health_records.id')
+            ->leftJoin('list_sites', 'appointments.site_id', '=', 'list_sites.id')
+            ->leftJoin('kurators', 'appointments.kurator_id', '=', 'kurators.id')
+            ->leftJoin('user_details as kurator_user_details', 'kurators.user_detail_id', '=', 'kurator_user_details.id')
+            ->where('appointments.kurator_id', $decryptkuratorId)
             ->select(
-                'appointments.*',
+                'patients.id as patient_id',
+                DB::raw("CONCAT(
+            COALESCE(patients.user_uuid, ''), ' - ',
+            COALESCE(patient_user_details.name, ''), ' ',
+            COALESCE(patient_user_details.fatherLastName, ''), ' ',
+            COALESCE(patient_user_details.motherLastName, '')
+        ) as patient_full_name"),
+                DB::raw("COALESCE(health_records.record_uuid, 'Sin expediente') as health_record_uuid"),
+                'health_records.id as health_record_id',
+                'appointments.id as appointment_id',
+                'appointments.dateStartVisit',
+                'appointments.typeVisit',
                 'list_sites.siteName as site_name',
-                DB::raw("CONCAT(kurators.user_uuid, '-', kurator_user_details.name) as kurator_full_name"),
-                DB::raw("CONCAT(patients.user_uuid, '-', patient_user_details.name) as patient_full_name"),
-                'health_records.record_uuid as health_record_uuid',
-                'health_records.patient_id'
+                DB::raw("CONCAT(kurators.user_uuid, '-', COALESCE(kurator_user_details.name, '')) as kurator_full_name")
             )
-            ->where('appointments.kurator_id', $kuratorId)
-            ->orderBy('appointments.created_at', 'desc')
+            ->orderBy('patients.id')
+            ->orderBy('appointments.dateStartVisit', 'desc')
             ->get();
+
+        $appointments = $appointmentsRaw
+            ->groupBy('patient_id')
+            ->map(function ($items) {
+                $first = $items->first();
+
+                $firstFolio = $items->pluck('health_record_uuid')
+                    ->filter(fn($folio) => $folio !== 'Sin expediente' && !is_null($folio))
+                    ->first() ?? 'Sin expediente';
+
+                return [
+                    'patient_id' => $first->patient_id,
+                    'patient_full_name' => $first->patient_full_name,
+                    'health_record_uuid' => $firstFolio,
+                    'appointments' => $items->filter(fn($r) => $r->appointment_id !== null)->map(fn($app) => [
+                        'crypt_appointment_id' => Crypt::encryptString($app->appointment_id),
+                        'dateStartVisit' => $app->dateStartVisit,
+                        'typeVisit' => $app->typeVisit,
+                        'site_name' => $app->site_name,
+                        'kurator_full_name' => $app->kurator_full_name,
+                        'health_record_uuid' => $app->health_record_uuid,
+                        'crypt_health_record_id' => Crypt::encryptString($app->health_record_id),
+                    ])->values(),
+                ];
+            })->values();
 
         return Inertia::render('Kurators/Appointments', [
             'states' => $states,

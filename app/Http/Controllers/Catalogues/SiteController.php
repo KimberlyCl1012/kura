@@ -53,25 +53,39 @@ class SiteController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $site = DB::table('list_sites')->insertGetId([
-            'address_id' => $request->address_id,
-            'siteName' => $request->siteName,
-            'email_admin' => $request->email_admin,
-            'phone' => $request->phone,
-            'description' => $request->description,
-            'state' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $siteData = DB::table('list_sites')->where('id', $site)->first();
-        $siteData->id = Crypt::encryptString($siteData->id);
+            $siteId = DB::table('list_sites')->insertGetId([
+                'address_id' => $request->address_id,
+                'siteName' => $request->siteName,
+                'email_admin' => $request->email_admin,
+                'phone' => $request->phone,
+                'description' => $request->description,
+                'state' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Registro creado exitosamente',
-            'data' => $siteData,
-        ]);
+            $siteData = DB::table('list_sites')->where('id', $siteId)->first();
+            $siteData->id = Crypt::encryptString($siteData->id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sitio creado exitosamente',
+                'data' => $siteData,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al registrar el sitio.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
@@ -105,7 +119,7 @@ class SiteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro actualizado correctamente',
+                'message' => 'Sitio actualizado correctamente',
                 'data' => $siteData,
             ]);
         } catch (\Exception $e) {
@@ -128,7 +142,7 @@ class SiteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro eliminado correctamente',
+                'message' => 'Sitio eliminado correctamente',
                 'id' => $id,
             ]);
         } catch (\Exception $e) {

@@ -6,8 +6,7 @@ import axios from "axios";
 import { router } from "@inertiajs/vue3";
 import {
     InputText, Toolbar, DataTable, Column,
-    Dialog, Button, InputIcon, IconField,
-    DatePicker, Select
+    Dialog, Button, InputIcon, Select, DatePicker
 } from "primevue";
 
 const props = defineProps({
@@ -22,19 +21,43 @@ const props = defineProps({
 });
 
 const toast = useToast();
-const dt = ref();
+const dt = ref(null);
+
 const filters = ref({
     global: { value: null, matchMode: "contains" },
 });
 
-const sex = [
+const sexOptions = [
     { label: "Hombre", value: "Hombre" },
     { label: "Mujer", value: "Mujer" },
 ];
 
-const identificationTypes = ["INE", "CURP", "Pasaporte", "Visa", "Otro"];
-const kinshipOptions = ["Padre", "Madre", "Hermano", "Amigo", "Otro"];
+const identificationTypesOptions = props.identificationTypes || ["INE", "CURP", "Pasaporte", "Visa", "Otro"];
+const kinshipOptionsLocal = props.kinshipOptions || ["Padre", "Madre", "Hermano", "Amigo", "Otro"];
 
+const expandedRows = ref({});
+
+const expandAll = () => {
+    const all = {};
+    props.appointments.forEach((p) => {
+        all[p.patient_id] = true;
+    });
+    expandedRows.value = all;
+};
+
+const collapseAll = () => {
+    expandedRows.value = {};
+};
+
+const onRowExpand = (event) => {
+    toast.add({ severity: "info", summary: "Paciente expandido", detail: event.data.patient_full_name, life: 2000 });
+};
+
+const onRowCollapse = (event) => {
+    toast.add({ severity: "warn", summary: "Paciente colapsado", detail: event.data.patient_full_name, life: 2000 });
+};
+
+// Para editar paciente
 const patientDialog = ref(false);
 const isEditMode = ref(false);
 const patientIdEditing = ref(null);
@@ -42,12 +65,22 @@ const submittedPatient = ref(false);
 const isSavingPatient = ref(false);
 
 const patient = reactive({
-    name: '', fatherLastName: '', motherLastName: '',
-    sex: null, site_id: null, mobile: '', email: '',
-    dateOfBirth: null, state_id: null, streetAddress: '',
-    postalCode: '', relativeName: '', kinship: null,
-    relativeMobile: '', type_identification: null,
-    identification: '',
+    name: "",
+    fatherLastName: "",
+    motherLastName: "",
+    sex: null,
+    site_id: null,
+    mobile: "",
+    email: "",
+    dateOfBirth: null,
+    state_id: null,
+    streetAddress: "",
+    postalCode: "",
+    relativeName: "",
+    kinship: null,
+    relativeMobile: "",
+    type_identification: null,
+    identification: "",
 });
 
 async function editPatient(patientId) {
@@ -67,6 +100,7 @@ async function editPatient(patientId) {
 
 async function saveUser() {
     submittedPatient.value = true;
+
     const required = [
         'name', 'fatherLastName', 'sex', 'site_id', 'email',
         'dateOfBirth', 'state_id', 'type_identification', 'identification'
@@ -98,48 +132,83 @@ function hidePatientDialog() {
     patientDialog.value = false;
 }
 
-function goToWounds(appointmentId) {
-    router.visit(route('wounds.index', appointmentId));
+function goToWounds(appointments) {
+    router.visit(route('wounds.index', {
+        appointmentId: appointments.crypt_appointment_id,
+        healthrecordId: appointments.crypt_health_record_id,
+    }));
 }
+
 </script>
 
 <template>
     <AppLayout title="Mis Consultas">
         <div class="card">
             <Toolbar class="mb-6">
+                <template #start>
+                    <Button text icon="pi pi-plus" label="Expandir Todo" @click="expandAll" class="mr-2" />
+                    <Button text icon="pi pi-minus" label="Colapsar Todo" @click="collapseAll" />
+                </template>
                 <template #end>
-                    <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="dt.exportCSV()" />
+                    <IconField>
+                        <InputIcon><i class="pi pi-search" /></InputIcon>
+                        <InputText v-model="filters.global.value" placeholder="Buscar..." />
+                    </IconField>
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="props.appointments" dataKey="id" :paginator="true" :rows="10" :filters="filters"
+            <DataTable ref="dt" :value="props.appointments" v-model:expandedRows="expandedRows" dataKey="patient_id"
+                :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-                :rowsPerPageOptions="[5, 10, 25]" currentPageReportTemplate="Ver {first} al {last} de {totalRecords}">
+                :rowsPerPageOptions="[5, 10, 25]" currentPageReportTemplate="Ver {first} al {last} de {totalRecords}"
+                @row-expand="onRowExpand" @row-collapse="onRowCollapse"
+                tableStyle="min-width: 60rem; table-layout: fixed">
                 <template #header>
                     <div class="flex justify-between items-center">
-                        <h4 class="m-0">Mis Consultas</h4>
-                        <IconField>
-                            <InputIcon><i class="pi pi-search" /></InputIcon>
-                            <InputText v-model="filters.global.value" placeholder="Buscar..." />
-                        </IconField>
+                        <h4 class="m-0">Mis consultas</h4>
                     </div>
                 </template>
 
-                <Column header="#" style="min-width: 6rem">
+                <!-- Columnas principales -->
+                <Column expander style="width: 5%" />
+                <Column header="#" style="width: 5%">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
-                <Column field="dateStartVisit" header="Fecha consulta" />
-                <Column field="health_record_uuid" header="Expediente" />
-                <Column field="patient_full_name" header="Paciente" />
-                <Column field="typeVisit" header="Tipo" />
-                <Column :exportable="false" header="Acciones" style="min-width: 8rem">
+                <Column field="health_record_uuid" header="Expediente" style="width: 30%" />
+                <Column field="patient_full_name" header="Paciente" style="width: 30%" />
+                <Column :exportable="false" header="Acciones" style="width: 30%">
                     <template #body="{ data }">
                         <Button icon="pi pi-user-edit" outlined rounded severity="warning"
-                            v-tooltip.top="'Editar Paciente'" @click="editPatient(data.patient_id)" />
-                        <Button icon="pi pi-plus" outlined rounded severity="danger" class="ml-2"
-                            v-tooltip.top="'Heridas'" @click="goToWounds(data.id)" />
+                            v-tooltip.top="'Editar Paciente'" @click.stop="editPatient(data.patient_id)" />
                     </template>
                 </Column>
+
+                <!-- Fila expandida con estilo -->
+                <template #expansion="{ data }">
+                    <div class="p-4 border-2 border-primary rounded-lg">
+                        <div class="text-primary mb-3">
+                            Consultas del paciente: <b>{{ data.patient_full_name }}</b>
+                        </div>
+
+                        <DataTable :value="data.appointments" dataKey="id" :paginator="true" :rows="5"
+                            tableStyle="min-width: 100%; table-layout: fixed"
+                            emptyMessage="No hay consultas registradas para este paciente">
+                            <Column header="#" style="width: 10%">
+                                <template #body="{ index }">{{ index + 1 }}</template>
+                            </Column>
+                            <Column field="site_name" header="Sitio" style="width: 30%" />
+                            <Column field="dateStartVisit" header="Fecha consulta" style="width: 30%" />
+                            <Column field="typeVisit" header="Tipo de visita" style="width: 30%" />
+                            <Column :exportable="false" header="Acciones" style="width: 30%">
+                                <template #body="{ data }">
+                                    <Button icon="pi pi-file-plus" outlined rounded severity="danger" class="ml-2"
+                                        v-tooltip.top="'Heridas'" @click.stop="goToWounds(data)" />
+                                </template>
+                            </Column>
+
+                        </DataTable>
+                    </div>
+                </template>
             </DataTable>
         </div>
 
@@ -177,8 +246,8 @@ function goToWounds(appointmentId) {
                         <label for="sex" class="block font-bold mb-1">
                             Sexo <span class="text-red-500">*</span>
                         </label>
-                        <Select id="sex" v-model="patient.sex" :options="sex" optionLabel="value" optionValue="value"
-                            filter class="w-full" placeholder="Seleccione un sexo"
+                        <Select id="sex" v-model="patient.sex" :options="sexOptions" optionLabel="value"
+                            optionValue="value" filter class="w-full" placeholder="Seleccione un sexo"
                             :class="{ 'p-invalid': submittedPatient && !patient.sex }" />
                         <small v-if="submittedPatient && !patient.sex" class="text-red-500">El sexo es
                             obligatorio.</small>
@@ -253,7 +322,7 @@ function goToWounds(appointmentId) {
 
                     <div>
                         <label for="kinship" class="block font-bold mb-1">Parentesco</label>
-                        <Select id="kinship" :options="kinshipOptions" v-model="patient.kinship"
+                        <Select id="kinship" :options="kinshipOptionsLocal" v-model="patient.kinship"
                             placeholder="Seleccione parentesco" class="w-full" />
                     </div>
 
@@ -266,7 +335,7 @@ function goToWounds(appointmentId) {
                         <label for="type_identification" class="block font-bold mb-1">
                             Tipo de identificación <span class="text-red-500">*</span>
                         </label>
-                        <Select id="type_identification" :options="identificationTypes"
+                        <Select id="type_identification" :options="identificationTypesOptions"
                             v-model="patient.type_identification" placeholder="Seleccione un tipo"
                             :class="{ 'p-invalid': submittedPatient && !patient.type_identification }" class="w-full" />
                         <small v-if="submittedPatient && !patient.type_identification" class="text-red-500">El tipo de
@@ -286,7 +355,8 @@ function goToWounds(appointmentId) {
 
                 <div class="flex justify-end mt-4">
                     <Button label="Cancelar" outlined severity="danger" @click="hidePatientDialog" />
-                    <Button label="Actualizar" icon="pi pi-check" :loading="isSavingPatient" class="ml-2" type="submit" />
+                    <Button label="Actualizar" icon="pi pi-check" :loading="isSavingPatient" class="ml-2"
+                        type="submit" />
                 </div>
             </form>
         </Dialog>

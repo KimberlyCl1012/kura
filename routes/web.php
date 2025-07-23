@@ -64,10 +64,6 @@ Route::middleware([
     //Kurators Appointments
     Route::get('/appointments/by-kurator/{kuratorId}', [KuratorController::class, 'byKurator'])->name('appointments.byKurator');
 
-    //Wounds
-    Route::get('/wounds', [WoundController::class, 'index'])->name('wounds.index');
-    Route::post('/wounds', [WoundController::class, 'store'])->name('wounds.store');
-
     //Health Record
     Route::get('/health_records/create/{patientId}', [HealthRecordController::class, 'create'])->name('health_records.create');
     Route::post('/health_records', [HealthRecordController::class, 'store'])
@@ -80,9 +76,20 @@ Route::middleware([
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
 
+    //Wounds
+    Route::get('/wounds/{appointmentId}/{healthrecordId}', [WoundController::class, 'index'])->name('wounds.index');
+    Route::post('/wounds', [WoundController::class, 'store'])->name('wounds.store');
+    Route::get('/wounds/{woundId}', [WoundController::class, 'edit'])->name('wounds.edit');
+
     //Wounds History
-    Route::get('/wounds_history', [WoundHistoryController::class, 'index'])->name('wounds_history.index');
-    Route::post('/wounds/antecedent', [WoundHistoryController::class, 'store'])->name('wounds_antecedent.store');
+    Route::get('/wounds_histories', [WoundHistoryController::class, 'index'])->name('wounds_histories.index');
+    Route::post('/wounds_histories', [WoundHistoryController::class, 'store'])->name('wounds_histories.store');
+
+    // Relations
+    Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');
+    Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
+
+
 
 
     //Catalogues

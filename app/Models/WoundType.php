@@ -12,8 +12,8 @@ class WoundType extends Model
     protected $guarded = [];
     // protected $primaryKey = 'id_woundType';
 
-    public function wound()
+    public function woundSubtypes()
     {
-        return $this->hasMany(Wound::class);  //, 'id_wound'
+       return $this->hasMany(WoundSubtype::class, 'wound_type_id');
     }
 }

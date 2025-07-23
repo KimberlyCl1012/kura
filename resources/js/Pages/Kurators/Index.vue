@@ -70,7 +70,7 @@ function openNew() {
 
 function editKurator(data) {
     kurator.value = {
-        id: data.id,
+        kurator_id: data.kurator_id,
         name: data.name || "",
         fatherLastName: data.fatherLastName || "",
         motherLastName: data.motherLastName || "",
@@ -102,15 +102,16 @@ function confirmDeleteKurator(data) {
 
 async function deleteKurator() {
     try {
-        await axios.delete(route("kurators.destroy", kurator.value.id));
+        const response = await axios.delete(route("kurators.destroy", kurator.value.kurator_id));
+        console.log("Respuesta exitosa eliminar kurador:", response);
         toast.add({ severity: "success", summary: "Eliminado", detail: "Kurador eliminado", life: 3000 });
         router.reload({ only: ["kurators"] });
         deleteKuratorDialog.value = false;
-    } catch (e) {
+    } catch (error) {
+        console.error("Error al eliminar kurador:", error.response || error);
         toast.add({ severity: "error", summary: "Error", detail: "No se pudo eliminar", life: 3000 });
     }
 }
-
 async function saveKurator() {
     submitted.value = true;
     isSaving.value = true;
@@ -129,15 +130,15 @@ async function saveKurator() {
 
     try {
         if (isEditMode.value) {
-            if (!kurator.value.id) {
+            if (!kurator.value.kurator_id) {
                 toast.add({ severity: "error", summary: "Error", detail: "ID del kurador no definido." });
                 isSaving.value = false;
                 return;
             }
 
-            console.log("RUTA PUT (simulada con POST):", route("kurators.update", kurator.value.id));
+            console.log("RUTA PUT (simulada con POST):", route("kurators.update", kurator.value.kurator_id));
 
-            await axios.post(route("kurators.update", kurator.value.id), {
+            await axios.post(route("kurators.update", kurator.value.kurator_id), {
                 ...payload,
                 _method: 'PUT'
             });
@@ -157,7 +158,7 @@ async function saveKurator() {
 }
 
 function goToAppointments(kurator) {
-    router.visit(route('appointments.byKurator', kurator.id));
+    router.visit(route('appointments.byKurator', kurator.crypt_kurator));
 }
 
 </script>
@@ -174,7 +175,7 @@ function goToAppointments(kurator) {
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="kurators" dataKey="id" :paginator="true" :rows="10" :filters="filters"
+            <DataTable ref="dt" :value="kurators" dataKey="kurator_id" :paginator="true" :rows="10" :filters="filters"
                 :rowsPerPageOptions="[5, 10, 25]"
                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
                 <template #header>
@@ -187,7 +188,7 @@ function goToAppointments(kurator) {
                 <Column header="#" style="min-width: 6rem">
                     <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
-                <Column field="name" header="Nombre" />
+                <Column field="kurator_full_name" header="Nombre" />
                 <Column field="contactEmail" header="Correo contacto" />
                 <Column field="specialty" header="Especialidad" />
                 <Column field="siteName" header="Sitio" />

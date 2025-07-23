@@ -19,8 +19,7 @@ return new class extends Migration
             $table->decimal('lenght', 8, 2)->nullable();
             $table->decimal('width', 8, 2)->nullable();
             $table->decimal('area', 8, 2)->nullable();
-            $table->decimal('maxDepth', 8, 2)->nullable();
-            $table->decimal('avgDepth', 8, 2)->nullable();
+            $table->decimal('depth', 8, 2)->nullable();
             $table->decimal('volume', 8, 2)->nullable();
             $table->decimal('redPercentaje', 5, 2)->nullable();
             $table->decimal('yellowPercentaje', 5, 2)->nullable();

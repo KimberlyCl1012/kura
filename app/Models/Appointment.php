@@ -37,4 +37,9 @@ class Appointment extends Model
     {
         return $this->belongsTo(HealthRecord::class);  //, 'id_healthRecord'
     }
+
+    public function wounds()
+    {
+        return $this->hasMany(Wound::class);
+    }
 }

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Wound extends Model
+class WoundHistory extends Model
 {
     use HasFactory;
     protected $guarded = [];
@@ -41,8 +41,8 @@ class Wound extends Model
         return $this->belongsTo(BodySublocation::class);
     }
 
-    public function histories()
+    public function wound()
     {
-        return $this->hasMany(WoundHistory::class);
+        return $this->belongsTo(Wound::class);
     }
 }

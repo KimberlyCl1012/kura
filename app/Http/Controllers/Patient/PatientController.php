@@ -19,9 +19,6 @@ use Str;
 
 class PatientController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $patients = DB::table('patients')
@@ -54,7 +51,11 @@ class PatientController extends Controller
                 'user_details.site_id',
                 'patients.consent'
             )
-            ->get();
+            ->get()
+            ->map(function ($patient) {
+                $patient->crypt_patient = Crypt::encryptString($patient->patient_id); 
+                return $patient;
+            });
 
         $states = DB::table('list_states')->select('id', 'name')->get();
         $sites = DB::table('list_sites')->select('id', 'siteName')->get();
@@ -65,6 +66,7 @@ class PatientController extends Controller
             'sites' => $sites,
         ]);
     }
+
 
     public function store(Request $request)
     {

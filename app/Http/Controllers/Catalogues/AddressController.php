@@ -131,13 +131,13 @@ class AddressController extends Controller
      */
     public function update(Request $request, $id)
     {
-        try {
-            $validated = $request->validate([
-                'streetAddress' => 'required|string|max:255',
-                'postalCode'    => 'required|string|max:10',
-                'state_id'      => 'required|exists:list_states,id',
-            ]);
+        $validated = $request->validate([
+            'streetAddress' => 'required|string|max:255',
+            'postalCode'    => 'required|string|max:10',
+            'state_id'      => 'required|exists:list_states,id',
+        ]);
 
+        try {
             $addressId = Crypt::decryptString($id); // Desencripta el ID recibido
 
             DB::table('list_addresses')
@@ -204,7 +204,7 @@ class AddressController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro eliminado correctamente',
+                'message' => 'Dirección eliminada correctamente',
                 'id' => $id,
             ]);
         } catch (\Exception $e) {

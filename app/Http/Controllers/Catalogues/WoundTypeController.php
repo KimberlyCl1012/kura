@@ -42,23 +42,32 @@ class WoundTypeController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $id = DB::table('list_wound_types')->insertGetId([
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'state' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        try {
+            $id = DB::table('list_wound_types')->insertGetId([
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'state' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        $woundType = DB::table('list_wound_types')->where('id', $id)->first();
-        $woundType->id = Crypt::encryptString($woundType->id);
+            $woundType = DB::table('list_wound_types')->where('id', $id)->first();
+            $woundType->id = Crypt::encryptString($woundType->id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Tipo de herida creado correctamente.',
-            'data' => $woundType,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Tipo de herida creado correctamente.',
+                'data' => $woundType,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al crear el tipo de herida.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
     public function update(Request $request, $id)
     {
         try {
@@ -111,5 +120,15 @@ class WoundTypeController extends Controller
                 'message' => 'Error al eliminar: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function subtypes($woundtypeId)
+    {
+        $woundType = WoundType::with(['woundSubtypes' => function ($query) {
+            $query->where('state', 1)
+                ->select('id', 'wound_type_id', 'name');
+        }])->findOrFail($woundtypeId);
+
+        return response()->json($woundType->woundSubtypes);
     }
 }

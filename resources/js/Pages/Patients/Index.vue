@@ -151,7 +151,7 @@ function exportCSV() {
 
 //Expediente
 function healthRecord(data) {
-    router.get(route('health_records.create', data.patient_id));
+    router.get(route('health_records.create', data.crypt_patient));
 }
 
 

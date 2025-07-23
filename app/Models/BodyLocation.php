@@ -10,10 +10,9 @@ class BodyLocation extends Model
     use HasFactory;
     protected $table = 'list_body_locations';
     protected $guarded = [];
-    // protected $primaryKey = 'id_bodyLocation';
 
-    public function wounds()
+    public function bodySublocations()
     {
-        return $this->hasMany(Wound::class); // , 'id_bodyLocation'
+        return $this->hasMany(BodySublocation::class, 'body_location_id');
     }
 }

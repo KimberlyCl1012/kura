@@ -99,13 +99,17 @@ async function save() {
       dateStartVisit: formatDateToMySQL(appointment.value.dateStartVisit),
     };
 
-    // Usamos axios para POST
     await axios.post(route('appointments.store'), payload);
     toast.add({ severity: "success", summary: "Guardado", detail: "Consulta creada", life: 3000 });
     dialog.value = false;
     router.reload();
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error al guardar', detail: error.response?.data?.message || '', life: 3000 });
+    toast.add({
+      severity: 'error',
+      summary: 'Error al guardar',
+      detail: error.response?.data?.message || 'Ocurrió un error inesperado',
+      life: 3000
+    });
   } finally {
     isSaving.value = false;
   }
@@ -119,14 +123,18 @@ function confirmDelete(item) {
 async function destroy() {
   isSaving.value = true;
   try {
-    // Usamos axios para DELETE
     await axios.delete(route('appointments.destroy', selected.value.id));
 
     toast.add({ severity: 'success', summary: 'Eliminado', detail: "Consulta eliminada", life: 3000 });
     deleteDialog.value = false;
     router.reload();
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error al eliminar', detail: error.response?.data?.message || '', life: 3000 });
+    toast.add({
+      severity: 'warn',
+      summary: 'Advertencia',
+      detail: error.response?.data?.message || 'No se pudo eliminar la consulta',
+      life: 4000,
+    });
   } finally {
     isSaving.value = false;
   }
@@ -185,7 +193,8 @@ function clearFilter() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label for="dateStartVisit" class="block font-bold mb-1">
-              Fecha de la consulta <span class="text-red-500">*</span>
+              Fecha de la consulta
+              <span class="text-red-500">*</span>
             </label>
             <DatePicker id="dateStartVisit" inputId="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full"
               variant="filled" showIcon iconDisplay="input" :minDate="today" />
@@ -196,19 +205,22 @@ function clearFilter() {
           <div>
             <label for="site_id" class="block font-bold mb-1">Sitio <span class="text-red-500">*</span></label>
             <Select id="site_id" v-model="appointment.site_id" :options="props.sites" optionLabel="siteName"
-              optionValue="id" filter class="w-full" placeholder="Seleccione un sitio"
-              :class="{ 'p-invalid': submitted && !appointment.site_id }" />
+              optionValue="id" filter class="w-full" placeholder="Seleccione un sitio" :class="{
+                'p-invalid': submitted && !appointment.site_id,
+              }" />
             <small v-if="submitted && !appointment.site_id" class="text-red-500">El sitio es obligatorio.</small>
           </div>
 
           <!-- Expediente -->
           <div>
-            <label for="health_record_id" class="block font-bold mb-1">Expediente <span
-                class="text-red-500">*</span></label>
+            <label for="health_record_id" class="block font-bold mb-1">Expediente
+              <span class="text-red-500">*</span></label>
             <Select id="health_record_id" v-model="appointment.health_record_id" :options="props.patientRecords"
               optionLabel="full_name" optionValue="health_record_id" filter class="w-full"
-              placeholder="Seleccione un expediente"
-              :class="{ 'p-invalid': submitted && !appointment.health_record_id }" />
+              placeholder="Seleccione un expediente" :class="{
+                'p-invalid':
+                  submitted && !appointment.health_record_id,
+              }" />
             <small v-if="submitted && !appointment.health_record_id" class="text-red-500">El expediente es
               obligatorio.</small>
           </div>
@@ -217,22 +229,25 @@ function clearFilter() {
           <div>
             <label for="kurator_id" class="block font-bold mb-1">Kurador <span class="text-red-500">*</span></label>
             <Select id="kurator_id" v-model="appointment.kurator_id" :options="props.kurators" optionLabel="full_name"
-              optionValue="kurator_id" filter class="w-full" placeholder="Seleccione un kurador"
-              :class="{ 'p-invalid': submitted && !appointment.kurator_id }" />
+              optionValue="kurator_id" filter class="w-full" placeholder="Seleccione un kurador" :class="{
+                'p-invalid':
+                  submitted && !appointment.kurator_id,
+              }" />
             <small v-if="submitted && !appointment.kurator_id" class="text-red-500">El kurador es obligatorio.</small>
           </div>
 
           <!-- Tipo de Visita -->
           <div>
-            <label for="typeVisit" class="block font-bold mb-1">Tipo de visita <span
-                class="text-red-500">*</span></label>
+            <label for="typeVisit" class="block font-bold mb-1">Tipo de visita
+              <span class="text-red-500">*</span></label>
             <Select id="typeVisit" v-model="appointment.typeVisit" :options="typeOptions" optionLabel="name"
-              optionValue="name" class="w-full" placeholder="Seleccione el tipo"
-              :class="{ 'p-invalid': submitted && !appointment.typeVisit }" />
+              optionValue="name" class="w-full" placeholder="Seleccione el tipo" :class="{
+                'p-invalid':
+                  submitted && !appointment.typeVisit,
+              }" />
             <small v-if="submitted && !appointment.typeVisit" class="text-red-500">El tipo de visita es
               obligatorio.</small>
           </div>
-
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
@@ -243,7 +258,7 @@ function clearFilter() {
     </Dialog>
 
     <!-- Confirmación eliminación -->
-    <Dialog v-model:visible="deleteDialog" header="Confirmar" modal style="width:450px">
+    <Dialog v-model:visible="deleteDialog" header="Confirmar" modal style="width: 450px">
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl" />
         <span>¿Deseas eliminar esta consulta?</span>

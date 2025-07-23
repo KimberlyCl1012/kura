@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\HealthRecord;
 use App\Models\Kurator;
+use App\Models\KuratorPatient;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,20 +70,54 @@ class AppointmentController extends Controller
             'typeVisit' => 'required|in:Valoración,Urgencia,Seguimiento',
         ]);
 
-        Appointment::create([
-            'dateStartVisit' => $request->dateStartVisit,
-            'site_id' => $request->site_id,
-            'health_record_id' => $request->health_record_id,
-            'kurator_id' => $request->kurator_id,
-            'typeVisit' => $request->typeVisit,
-            'state' => true, // se puede omitir, ya que por defecto es true
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('appointments.index');
+            $healthRecord = HealthRecord::findOrFail($request->health_record_id);
+            $patientId = $healthRecord->patient_id;
+
+            KuratorPatient::updateOrCreate(
+                [
+                    'kurator_id' => $request->kurator_id,
+                    'patient_id' => $patientId,
+                ],
+                [
+                    'state' => 1,
+                ]
+            );
+
+            Appointment::create([
+                'dateStartVisit' => $request->dateStartVisit,
+                'site_id' => $request->site_id,
+                'health_record_id' => $request->health_record_id,
+                'kurator_id' => $request->kurator_id,
+                'typeVisit' => $request->typeVisit,
+                'state' => true,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('appointments.index')
+                ->with('success', 'Consulta creada correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()
+                ->withErrors(['error' => 'Ocurrió un error al guardar la consulta: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     public function destroy(Appointment $appointment)
     {
+        $hasWounds = $appointment->wounds()->exists();
+
+        if ($hasWounds) {
+            return response()->json([
+                'message' => 'No se puede eliminar, ya existen heridas asociadas a la consulta.'
+            ], 400); // Error 400 - Bad Request
+        }
+
         $appointment->delete();
 
         return response()->json(['message' => 'Consulta eliminada correctamente.'], 200);

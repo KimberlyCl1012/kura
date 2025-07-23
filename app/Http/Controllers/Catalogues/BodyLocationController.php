@@ -46,16 +46,24 @@ class BodyLocationController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $location = BodyLocation::create($request->only('name', 'description'));
+        try {
+            $location = BodyLocation::create($request->only('name', 'description'));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Registro creado exitosamente',
-            'data' => [
-                ...$location->toArray(),
-                'id' => Crypt::encryptString($location->id),
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Ubicación creada exitosamente',
+                'data' => [
+                    ...$location->toArray(),
+                    'id' => Crypt::encryptString($location->id),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al registrar la localización.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // Actualizar registro
@@ -78,7 +86,7 @@ class BodyLocationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro actualizado correctamente',
+                'message' => 'Ubicación actualizada correctamente',
                 'data' => [
                     ...$location->toArray(),
                     'id' => Crypt::encryptString($location->id),
@@ -92,7 +100,6 @@ class BodyLocationController extends Controller
         }
     }
 
-    // Eliminar (soft delete cambiando estado)
     public function destroy($encryptedId)
     {
         try {
@@ -103,7 +110,7 @@ class BodyLocationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registro eliminado correctamente',
+                'message' => 'Ubicación eliminada correctamente',
                 'id' => $encryptedId,
             ]);
         } catch (\Exception $e) {
@@ -112,5 +119,15 @@ class BodyLocationController extends Controller
                 'message' => 'Error al eliminar el registro: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function sublocations($bodyLocationId)
+    {
+        $location = BodyLocation::with(['bodySublocations' => function ($query) {
+            $query->where('state', 1)
+                ->select('id', 'body_location_id', 'name');
+        }])->findOrFail($bodyLocationId);
+
+        return response()->json($location->bodySublocations);
     }
 }

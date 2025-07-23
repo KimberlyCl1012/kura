@@ -54,49 +54,65 @@ class UserController extends Controller
             ], 422);
         }
 
-        $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $user = User::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario creado exitosamente.',
-            'data'    => $user,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario creado exitosamente.',
+                'data'    => $user,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al crear el usuario.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        try {
+            $user = User::findOrFail($id);
 
-        $validator = Validator::make($request->all(), [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|string|min:6',
-        ]);
+            $validator = Validator::make($request->all(), [
+                'name'     => 'required|string|max:255',
+                'email'    => 'required|email|unique:users,email,' . $user->id,
+                'password' => 'nullable|string|min:6',
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors'  => $validator->errors()
+                ], 422);
+            }
+
+            $user->name  = $request->name;
+            $user->email = $request->email;
+
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
+
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario actualizado correctamente.',
+                'data'    => $user,
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'errors'  => $validator->errors()
-            ], 422);
+                'message' => 'Ocurrió un error al actualizar el usuario.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
-
-        $user->name  = $request->name;
-        $user->email = $request->email;
-
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
-        }
-
-        $user->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario actualizado correctamente.',
-            'data'    => $user,
-        ]);
     }
 }
