@@ -215,7 +215,7 @@ createInertiaApp({
                 .component("StepItem", StepItem)
                 .component("StepList", StepList)
                 .component("StepPanel", StepPanel)
-                .component('Stepper', Stepper)
+                .component("Stepper", Stepper)
                 // .component('Tab', Tab)
                 // .component('TabList', TabList)
                 // .component('TabPanel', TabPanel)

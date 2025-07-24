@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { Head, useForm } from "@inertiajs/vue3";
-import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "../../Layouts/sakai/AppLayout.vue";
 import FloatingConfigurator from "../../Components/Sakai/FloatingConfigurator.vue";
 import InputError from "@/Components/InputError.vue";
 import InputText from "primevue/inputtext";

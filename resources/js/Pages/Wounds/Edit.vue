@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "../../Layouts/sakai/AppLayout.vue";
 import { ref, watch, onMounted, computed } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
@@ -179,6 +179,22 @@ function goToStep(step) {
 const showVascularFields = computed(() => {
     return formWound.value.body_location_id === 3 || formWound.value.body_location_id === 5;
 });
+
+function onVisualScaleInput(event) {
+    const input = event.target.value.replace('/10', '');
+    let number = parseInt(input);
+
+    if (!isNaN(number)) {
+        // Limita entre 1 y 10
+        if (number < 1) number = 1;
+        if (number > 10) number = 10;
+
+        formWound.value.visual_scale = `${number}/10`;
+    } else {
+        formWound.value.visual_scale = '';
+    }
+}
+
 </script>
 
 <template>
@@ -339,14 +355,15 @@ const showVascularFields = computed(() => {
                         <form @submit.prevent="saveUser" class="flex flex-col flex-grow overflow-auto">
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4">
 
-                                <!-- Campos vasculares -->
-                                <div class="col-span-full">
-                                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Valoración vascular (solo
-                                        aplica en heridas en pierna)</h3>
-                                </div>
 
                                 <template
                                     v-if="[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33].includes(formWound.body_location_id)">
+
+                                    <!-- Campos vasculares -->
+                                    <div class="col-span-full">
+                                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Valoración vascular (solo
+                                            aplica en heridas en pierna)</h3>
+                                    </div>
 
                                     <div>
                                         <label class="flex items-center gap-1 mb-1 font-medium">
@@ -515,15 +532,15 @@ const showVascularFields = computed(() => {
                                     </Select>
                                     <small v-if="errors.tipo_dolor" class="text-red-500">{{ errors.tipo_dolor }}</small>
                                 </div>
-
                                 <div>
                                     <label class="flex items-center gap-1 mb-1 font-medium">
                                         Escala Visual Analógica (EVA) <span class="text-red-600">*</span>
                                     </label>
-                                    <InputText id="visual_scale" v-model="formWound.visual_scale"
-                                        class="w-full min-w-0" />
+                                    <InputText id="visual_scale" v-model="formWound.visual_scale" class="w-full min-w-0"
+                                        :class="{ 'p-invalid': submitted && !formWound.visual_scale }"
+                                        placeholder="Ej: 3/10" @input="onVisualScaleInput" />
                                     <small v-if="errors.visual_scale" class="text-red-500">{{ errors.visual_scale
-                                        }}</small>
+                                    }}</small>
                                 </div>
 
                                 <div>
@@ -601,7 +618,93 @@ const showVascularFields = computed(() => {
                             </div>
                         </form>
 
+                        <!-- Nueva sección: Zona de la herida (dimensiones) -->
+                        <div class="col-span-full mt-10">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-2">Zona de la herida (dimensiones)</h3>
+                        </div>
 
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4">
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Fecha<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.wound_zone_date" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Longitud (cm)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.length" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Anchura (cm)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.width" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Área (cm²)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.area" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Profundidad (cm)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.depth" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Volumen (cm³)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.volume" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Tunelización<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.tunnel" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Dirección túnel<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.tunnel_direction" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Centímetros túnel<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.tunnel_cm" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Socavamiento<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.undermining" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Dirección socavamiento<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.undermining_direction" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Centímetros socavamiento<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.undermining_cm" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Tejido de granulación (%)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.granulation_percent" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Tejido de esfácelo (%)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.slough_percent" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Necrosis (%)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.necrosis_percent" class="w-full min-w-0" />
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Epitelización (%)<span
+                                        class="text-red-600">*</span></label>
+                                <InputText v-model="formWound.epithelialization_percent" class="w-full min-w-0" />
+                            </div>
+                        </div>
 
 
                     </div>

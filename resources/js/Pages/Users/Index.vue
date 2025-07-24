@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "../../Layouts/sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
 import { InputText, Password } from "primevue";
 import { useToast } from "primevue/usetoast";

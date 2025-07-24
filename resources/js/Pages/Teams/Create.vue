@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from '../../Layouts/Sakai/AppLayout.vue';
+import AppLayout from '../../Layouts/sakai/AppLayout.vue';
 import CreateTeamForm from '@/Pages/Teams/Partials/CreateTeamForm.vue';
 </script>
 

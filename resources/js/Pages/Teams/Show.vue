@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from '../../Layouts/Sakai/AppLayout.vue';
+import AppLayout from '../../Layouts/sakai/AppLayout.vue';
 import DeleteTeamForm from '@/Pages/Teams/Partials/DeleteTeamForm.vue';
 import SectionBorder from '@/Components/SectionBorder.vue';
 import TeamMemberManager from '@/Pages/Teams/Partials/TeamMemberManager.vue';

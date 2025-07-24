@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from "../../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "../../Layouts/sakai/AppLayout.vue";
 import { ref, watch, computed } from "vue";
 import { useForm, router, usePage } from "@inertiajs/vue3";
 import InputText from "primevue/inputtext";
