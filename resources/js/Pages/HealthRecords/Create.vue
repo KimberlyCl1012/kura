@@ -247,7 +247,7 @@ function handleEditorInput(fieldName, newValue) {
                         </div>
 
                         <div class="mt-6 flex justify-end">
-                            <Button :label="props.healthRecord ? 'Actualizar' : 'Guardar'" icon="pi pi-save"
+                            <Button :label="props.healthRecord ? 'Actualizar' : 'Guardar'" icon="pi pi-check"
                                 :loading="isSaving" :disabled="isSaving" @click="submit" />
                         </div>
                     </div>

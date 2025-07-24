@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('woundBackground')->default(0);
             $table->date('woundCreationDate')->nullable();
             $table->date('woundBeginDate')->nullable();
-            $table->date('woundHealDate')->nullable();
+            $table->date('woundHealthDate')->nullable();
             $table->string('grade_foot')->nullable();
             $table->string('MESI')->nullable();
             $table->string('borde')->nullable();

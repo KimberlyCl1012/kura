@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -78,7 +79,7 @@ class WoundController extends Controller
             $wound->histories = $histories;
         }
 
-        // Obtener el paciente desde el expediente
+        // Obtener paciente
         $healthRecord = HealthRecord::with('patient.userDetail')->findOrFail($decryptHealthRecordId);
         $patient = $healthRecord->patient;
         $fullName = $patient && $patient->userDetail
@@ -124,7 +125,6 @@ class WoundController extends Controller
 
             $validator = Validator::make($request->all(), $rules);
 
-            // Validación condicional: si el tipo de herida es 8, grade_foot es obligatorio
             $validator->sometimes('grade_foot', 'required', function ($input) {
                 return $input->wound_type_id == 8;
             });
@@ -135,7 +135,6 @@ class WoundController extends Controller
                 ], 422);
             }
 
-            // Crear la herida
             $wound = Wound::create([
                 'appointment_id'      => $request->appointment_id,
                 'health_record_id'    => $request->health_record_id,
@@ -160,36 +159,116 @@ class WoundController extends Controller
             ], 500);
         }
     }
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($woundId)
     {
-         try {
+        try {
             $decryptWoundId = Crypt::decryptString($woundId);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             abort(404, 'ID inválido');
         }
 
-        return Inertia::render('Wounds/Edit');
+        $wound = Wound::select([
+            'wounds.*',
+            'list_wound_types.name as wound_type_name',
+            'list_wound_types.id as wound_type_id',
+            'list_wound_subtypes.name as wound_subtype_name',
+            'list_wound_subtypes.id as wound_subtype_id',
+            'list_body_locations.name as body_location_name',
+            'list_body_locations.id as body_location_id',
+            'list_body_sublocations.name as body_sublocation_name',
+            'list_body_sublocations.id as body_sublocation_id',
+            'list_wound_phases.name as wound_phase_name',
+            'list_wound_phases.id as wound_phase_id',
+        ])
+            ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
+            ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
+            ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
+            ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
+            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
+            ->where('wounds.id', $decryptWoundId)
+            ->where('wounds.state', 1)
+            ->firstOrFail();
+
+        $wound->wound_id = Crypt::encryptString($wound->id);
+
+        return Inertia::render('Wounds/Edit', [
+            'wound' => $wound,
+            'woundsType' => WoundType::where('state', 1)->get(),
+            'woundsSubtype' => WoundSubtype::where('state', 1)->get(),
+            'woundsPhase' => WoundPhase::where('state', 1)->get(),
+            'bodyLocations' => BodyLocation::where('state', 1)->get(),
+            'bodySublocation' => BodySublocation::where('state', 1)->get(),
+            'grades' => [
+                ['label' => '1', 'value' => 1],
+                ['label' => '2', 'value' => 2],
+                ['label' => '3', 'value' => 3],
+            ],
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id) {}
+    public function update(Request $request, Wound $wound)
+    {
+        $vascularRequired = in_array($request->body_location_id, range(18, 33));
 
-    /**
-     * Remove the specified resource from storage.
-     */
+        $rules = [
+            'wound_type_id' => 'required|exists:list_wound_types,id',
+            'wound_subtype_id' => 'required|exists:list_wound_subtypes,id',
+            'body_location_id' => 'required|exists:list_body_locations,id',
+            'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
+            'wound_phase_id' => 'required|exists:list_wound_phases,id',
+            'woundBeginDate' => 'nullable|date',
+            'woundHealthDate' => 'nullable|date',
+            'grade_foot' => 'nullable|string|max:255',
+            'wound_type_other' => 'nullable|string|max:255',
+            'MESI' => 'nullable|string|max:255',
+            'woundBackground' => 'nullable|string|max:255',
+            'borde' => 'nullable|string|max:255',
+            'edema' => 'nullable|string|max:255',
+            'dolor' => 'nullable|string|max:255',
+            'exudado_cantidad' => 'nullable|string|max:255',
+            'exudado_tipo' => 'nullable|string|max:255',
+            'olor' => 'nullable|string|max:255',
+            'piel_perisional' => 'nullable|string|max:255',
+            'infeccion' => 'nullable|string|max:255',
+            'tipo_dolor' => 'nullable|string|max:255',
+            'visual_scale' => 'nullable|string|max:255',
+            'blood_glucose' => 'nullable|string|max:255',
+            'tunneling' => 'nullable|string|max:255',
+            'note' => 'nullable|string',
+        ];
+
+        if (
+            $request->wound_type_id == 9 ||
+            in_array($request->wound_subtype_id, [7, 11, 25, 33, 46])
+        ) {
+            $rules['wound_type_other'] = 'required|string|max:255';
+        }
+
+        if ($request->wound_type_id == 8) {
+            $rules['grade_foot'] = 'required|string|max:255';
+        }
+
+        if ($vascularRequired) {
+            $rules = array_merge($rules, [
+                'ITB_derecho' => 'required|string|max:255',
+                'pulse_dorsal_derecho' => 'required|string|max:255',
+                'pulse_tibial_derecho' => 'required|string|max:255',
+                'pulse_popliteo_derecho' => 'required|string|max:255',
+                'ITB_izquierdo' => 'required|string|max:255',
+                'pulse_dorsal_izquierdo' => 'required|string|max:255',
+                'pulse_tibial_izquierdo' => 'required|string|max:255',
+                'pulse_popliteo_izquierdo' => 'required|string|max:255',
+            ]);
+        }
+
+        $validated = $request->validate($rules);
+
+        $wound->update($validated);
+
+        return response()->json(['message' => 'Herida actualizada correctamente.']);
+    }
+
     public function destroy(string $id)
     {
         //

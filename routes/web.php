@@ -80,6 +80,7 @@ Route::middleware([
     Route::get('/wounds/{appointmentId}/{healthrecordId}', [WoundController::class, 'index'])->name('wounds.index');
     Route::post('/wounds', [WoundController::class, 'store'])->name('wounds.store');
     Route::get('/wounds/{woundId}', [WoundController::class, 'edit'])->name('wounds.edit');
+    Route::put('/wounds/{wound}', [WoundController::class, 'update'])->name('wounds.update');
 
     //Wounds History
     Route::get('/wounds_histories', [WoundHistoryController::class, 'index'])->name('wounds_histories.index');
