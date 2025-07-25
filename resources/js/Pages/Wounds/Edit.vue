@@ -195,6 +195,49 @@ function onVisualScaleInput(event) {
     }
 }
 
+//Form measurement
+async function saveMeasurement() {
+    submitted.value = true;
+    isSaving.value = true;
+    errors.value = {};
+
+    try {
+        const payload = {
+            wound_id: formWound.value.id, // Asegúrate de encriptarlo si el backend lo requiere
+            appointment_id: props.appointmentId,
+            measurementDate: formWound.value.wound_zone_date,
+            lenght: formWound.value.length,
+            width: formWound.value.width,
+            area: formWound.value.area,
+            depth: formWound.value.depth,
+            volume: formWound.value.volume,
+            redPercentaje: formWound.value.granulation_percent,
+            yellowPercentaje: formWound.value.slough_percent,
+            blackPercentaje: formWound.value.necrosis_percent,
+            maxDepth: formWound.value.maxDepth, // Asegúrate de tenerlos en tu formulario
+            avgDepth: formWound.value.avgDepth,
+        };
+
+        await axios.post('/measurements', payload);
+
+        toast.add({ severity: 'success', summary: 'Dimensiones guardadas', detail: 'Medición registrada', life: 3000 });
+    } catch (error) {
+        if (error.response?.status === 422) {
+            errors.value = error.response.data.errors || {};
+        }
+
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'No se pudo guardar la medición',
+            life: 5000
+        });
+    } finally {
+        isSaving.value = false;
+    }
+}
+
+
 </script>
 
 <template>
@@ -705,6 +748,9 @@ function onVisualScaleInput(event) {
                                 <InputText v-model="formWound.epithelialization_percent" class="w-full min-w-0" />
                             </div>
                         </div>
+
+                        <Button label="Guardar dimensiones" icon="pi pi-save" @click="saveMeasurement"
+                            :loading="isSaving" />
 
 
                     </div>

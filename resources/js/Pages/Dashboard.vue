@@ -1,5 +1,5 @@
 <script setup>
-import AppLayout from "../Layouts/Sakai/AppLayout.vue";
+import AppLayout from "../Layouts/sakai/AppLayout.vue";
 import { PhotoService } from "../Services/PhotoService.js";
 import { ProductService } from "../Services/ProductService.js";
 import { onMounted, ref } from "vue";

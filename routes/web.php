@@ -10,6 +10,7 @@ use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
+use App\Http\Controllers\Record\MeasurementController;
 use App\Http\Controllers\Record\WoundController;
 use App\Http\Controllers\Record\WoundHistoryController;
 use App\Http\Controllers\User\UserController;
@@ -81,6 +82,10 @@ Route::middleware([
     Route::post('/wounds', [WoundController::class, 'store'])->name('wounds.store');
     Route::get('/wounds/{woundId}', [WoundController::class, 'edit'])->name('wounds.edit');
     Route::put('/wounds/{wound}', [WoundController::class, 'update'])->name('wounds.update');
+
+
+    //Measurement
+    Route::post('/measurements', [MeasurementController::class, 'store'])->name('measurement.store');
 
     //Wounds History
     Route::get('/wounds_histories', [WoundHistoryController::class, 'index'])->name('wounds_histories.index');
