@@ -5,58 +5,78 @@ namespace App\Http\Controllers\Record;
 use App\Http\Controllers\Controller;
 use App\Models\Method;
 use App\Models\Treatment;
+use App\Models\TreatmentMethod;
+use App\Models\TreatmentSubmethod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TreatmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            // otros campos de tratamiento
-            'method_ids' => 'array',
+        $request->validate([
+            'wound_id' => 'required|exists:wounds,id',
+            'note' => 'required|string',
+            'method_ids' => 'required|array|min:1',
             'method_ids.*' => 'exists:list_treatment_methods,id',
-            'submethod_ids' => 'array',
+            'submethod_ids' => 'nullable|array',
             'submethod_ids.*' => 'exists:list_treatment_submethods,id',
         ]);
 
-        $treatment = Treatment::create([
-            'patient_id' => $validated['patient_id'],
-            // otros campos
-        ]);
+        try {
+            DB::beginTransaction();
 
-        if (!empty($validated['method_ids'])) {
-            $treatment->treatmentMethods()->sync($validated['method_ids']);
+            // Verifica si ya existe tratamiento
+            $treatment = Treatment::where('wound_id', $request->wound_id)->first();
+
+            if (!$treatment) {
+                // Si no existe, lo crea
+                $treatment = Treatment::create([
+                    'wound_id' => $request->wound_id,
+                    'description' => $request->note,
+                    'beginDate' => now(),
+                    'state' => 1,
+                ]);
+            } else {
+                // Si existe, lo actualiza
+                $treatment->update([
+                    'description' => $request->note,
+                    'state' => 1,
+                ]);
+
+                // Limpia métodos y submétodos previos
+                $treatment->methods()->delete();
+                $treatment->submethods()->delete();
+            }
+
+            // Registra métodos
+            foreach ($request->method_ids as $methodId) {
+                TreatmentMethod::create([
+                    'treatment_id' => $treatment->id,
+                    'treatment_method_id' => $methodId,
+                ]);
+            }
+
+            // Registra submétodos
+            foreach ($request->submethod_ids ?? [] as $submethodId) {
+                TreatmentSubmethod::create([
+                    'treatment_id' => $treatment->id,
+                    'treatment_submethod_id' => $submethodId,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json(['message' => 'Tratamiento guardado/actualizado correctamente.'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al guardar tratamiento',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if (!empty($validated['submethod_ids'])) {
-            $treatment->treatmentSubmethods()->sync($validated['submethod_ids']);
-        }
-
-        return response()->json([
-            'message' => 'Tratamiento guardado correctamente.',
-            'treatment' => $treatment
-        ]);
     }
+
 
     public function getTreatmentMethodsWithSubmethods()
     {

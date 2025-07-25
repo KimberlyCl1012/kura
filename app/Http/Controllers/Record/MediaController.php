@@ -23,7 +23,7 @@ class MediaController extends Controller
         return response()->json($media);
     }
 
-    public function store(Request $request)
+    public function upload(Request $request)
     {
         $request->validate([
             'wound_id' => 'required|exists:wounds,id',

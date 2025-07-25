@@ -13,6 +13,7 @@ use App\Models\Patient;
 use App\Models\Site;
 use App\Models\State;
 use App\Models\Submethod;
+use App\Models\Treatment;
 use App\Models\Wound;
 use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
@@ -197,6 +198,12 @@ class WoundController extends Controller
 
         $measurement = Measurement::where('wound_id', $decryptWoundId)->first();
 
+        $treatment = Treatment::with([
+            'methods:id,treatment_id,treatment_method_id',
+            'submethods:id,treatment_id,treatment_submethod_id'
+        ])->where('wound_id', $decryptWoundId)->first();
+
+
         return Inertia::render('Wounds/Edit', [
             'wound' => $wound,
             'measurement' => $measurement,
@@ -217,6 +224,7 @@ class WoundController extends Controller
                 ->get(),
 
             'treatmentSubmethods' => Submethod::where('state', 1)->get(),
+            'treatment' => $treatment,
         ]);
     }
 
@@ -247,7 +255,6 @@ class WoundController extends Controller
             'tipo_dolor' => 'nullable|string|max:255',
             'visual_scale' => 'nullable|string|max:255',
             'blood_glucose' => 'nullable|string|max:255',
-            'tunneling' => 'nullable|string|max:255',
             'note' => 'nullable|string',
         ];
 

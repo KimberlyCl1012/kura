@@ -193,14 +193,18 @@ function healthRecord(data) {
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
-                        <Button icon="pi pi-folder-plus" outlined rounded class="mr-2" @click="healthRecord(data)"
-                            v-tooltip.top="'Crear expediente'" />
+                        <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined
+                            rounded class="mr-2" @click="healthRecord(data)"
+                            :severity="data.health_record_id ? 'info' : 'secondary'"
+                            :label="data.health_record_id ? '' : ''"
+                            v-tooltip.top="data.health_record_id ? 'Ver expediente' : 'Crear expediente'" />
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)"
                             v-tooltip.top="'Editar'" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
                             @click="confirmDeleteUser(data)" />
                     </template>
                 </Column>
+
             </DataTable>
         </div>
 
@@ -335,8 +339,7 @@ function healthRecord(data) {
                             <Checkbox v-model="patient.consent" :binary="true" :true-value="1" :false-value="0"
                                 inputId="consentCheckbox" />
                             <label for="consentCheckbox" class="text-sm cursor-pointer select-none">
-                                Autorizo el uso de mis datos personales, clínicos y de imagen (fotografías) para fines
-                                médicos y de seguimiento.
+                               Autorizo el uso de mis datos personales, clínicos y de imagen (fotografías) para fines médicos y de seguimiento, conforme a la normativa de salud vigente. Acepto el tratamiento y resguardo seguro de mi información.
                             </label>
                         </div>
                         <small v-if="submitted && !patient.consent" class="text-red-500">

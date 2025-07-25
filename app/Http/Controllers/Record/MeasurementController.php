@@ -17,7 +17,7 @@ class MeasurementController extends Controller
         $validated = $request->validate([
             'wound_id' => 'required|integer|exists:wounds,id',
             'measurementDate' => 'required|date',
-            'lenght' => 'required|numeric|min:0',
+            'length' => 'required|numeric|min:0',
             'width' => 'required|numeric|min:0',
             'area' => 'required|numeric|min:0',
             // Profundidad puede ser null, pero si se envía debe ser numérico
@@ -42,7 +42,7 @@ class MeasurementController extends Controller
                 'wound_id' => $request->wound_id,
                 'appointment_id' => $request->appointmentId,
                 'measurementDate' => $date,
-                'lenght' => $request->lenght,
+                'length' => $request->length,
                 'width' => $request->width,
                 'area' => $request->area,
                 'depth' => $request->depth,

@@ -107,7 +107,7 @@ function getSeverity(status) {
                     <div class="border border-surface-200 dark:border-surface-700 rounded m-2 p-4">
                         <div class="mb-4">
                             <div class="relative mx-auto">
-                                <img :src="'https://kuratrackerpro.procomsa.mx/img/gallery/' +
+                                <img :src="'/build/img/gallery/' +
                                     slotProps.data.image
                                     " :alt="slotProps.data.name" class="w-full rounded" />
                                 <!-- <div class="dark:bg-surface-900 absolute rounded-border" style="left: 5px; top: 5px">

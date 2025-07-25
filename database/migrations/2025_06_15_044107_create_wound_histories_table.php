@@ -43,7 +43,7 @@ return new class extends Migration
             $table->string('pulse_tibial_izquierdo')->nullable();
             $table->string('pulse_popliteo_izquierdo')->nullable();
             $table->string('tunneling')->nullable();
-            $table->string('lenght')->nullable();
+            $table->string('length')->nullable();
             $table->string('width')->nullable();
             $table->string('area')->nullable();
             $table->decimal('depth', 8, 2)->nullable();

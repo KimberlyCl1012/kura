@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('wound_id')->constrained('wounds');
             $table->foreignId('appointment_id')->nullable()->constrained('appointments');
             $table->date('measurementDate');
-            $table->decimal('lenght', 8, 2)->nullable();
+            $table->decimal('length', 8, 2)->nullable();
             $table->decimal('width', 8, 2)->nullable();
             $table->decimal('area', 8, 2)->nullable();
             $table->decimal('depth', 8, 2)->nullable();

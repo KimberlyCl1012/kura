@@ -8,7 +8,6 @@ import Select from "primevue/select";
 import Button from "primevue/button";
 import { Badge, DatePicker, ProgressBar, usePrimeVue } from "primevue";
 import Editor from "primevue/editor";
-import WoundTreatment from "./Wounds/WoundTreatment.vue";
 import FileUpload from 'primevue/fileupload';
 
 // Props
@@ -25,6 +24,7 @@ const props = defineProps({
   measurement: Object,
   treatmentMethods: Array,
   treatmentSubmethods: Array,
+  treatment: Object,
 });
 
 // UI y estado
@@ -94,6 +94,55 @@ const formWound = ref({
   pulse_popliteo_derecho: "",
 });
 
+async function saveUser() {
+  submittedUser.value = true;
+  isSavingUser.value = true;
+  errors.value = {};
+
+  const woundId = formWound.value.id;
+
+  const payload = {
+    ...formWound.value,
+    woundBeginDate: formWound.value.woundBeginDate
+      ? new Date(formWound.value.woundBeginDate).toISOString().slice(0, 10)
+      : null,
+    woundHealthDate: formWound.value.woundHealthDate
+      ? new Date(formWound.value.woundHealthDate).toISOString().slice(0, 10)
+      : null,
+  };
+
+  try {
+    let response;
+
+    if (woundId) {
+      response = await axios.put(`/wounds/${woundId}`, payload);
+    } else {
+      response = await axios.post("/wounds", payload);
+      formWound.value.id = response.data.id; // Importante para posteriores pasos como guardar imágenes
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "Guardado",
+      detail: "Datos de la herida guardados correctamente.",
+      life: 3000,
+    });
+  } catch (error) {
+    if (error.response?.status === 422) {
+      errors.value = error.response.data.errors || {};
+    }
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || "No se pudo guardar la herida.",
+      life: 5000,
+    });
+  } finally {
+    isSavingUser.value = false;
+  }
+}
+
+
 // Carga de datos iniciales
 const woundSubtypes = ref([]);
 const bodySublocations = ref([]);
@@ -115,7 +164,7 @@ onMounted(() => {
   if (props.measurement) {
     Object.assign(formWound.value, {
       measurementDate: new Date(props.measurement.measurementDate),
-      length: props.measurement.lenght,
+      length: props.measurement.length,
       width: props.measurement.width,
       area: props.measurement.area,
       depth: props.measurement.depth,
@@ -278,7 +327,7 @@ async function saveMeasurement() {
       measurementDate: formWound.value.measurementDate
         ? new Date(formWound.value.measurementDate).toISOString().slice(0, 10)
         : null,
-      lenght: formWound.value.length,
+      length: formWound.value.length,
       width: formWound.value.width,
       area: formWound.value.area,
       depth: formWound.value.depth,
@@ -389,16 +438,30 @@ const uploadFiles = ref([]);
 const existingImages = ref([]);
 
 const loadExistingImages = async () => {
+  const woundId = formWound.value.id;
+  if (!woundId) return;
+
   try {
-    const response = await axios.get('/media?wound_id=1');
+    const response = await axios.get('/media', {
+      params: { wound_id: woundId }
+    });
     existingImages.value = response.data;
   } catch (error) {
-    console.error('Error al cargar imágenes guardadas:', error);
+    if (error.response?.status !== 404) {
+      console.error('Error al cargar imágenes guardadas:', error);
+      toast.add({
+        severity: 'warn',
+        summary: 'Aviso',
+        detail: 'No se pudieron cargar imágenes guardadas',
+        life: 3000,
+      });
+    }
   }
+
 };
 
-onMounted(() => {
-  loadExistingImages();
+watch(() => formWound.value.id, (newId) => {
+  if (newId) loadExistingImages();
 });
 
 const onSelectedFiles = (event) => {
@@ -448,76 +511,195 @@ const clearTemplatedUpload = (clear) => {
 };
 
 const uploadEvent = async () => {
+  if (!formWound.value.id) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Advertencia',
+      detail: 'Debe guardar primero los datos de la herida antes de subir imágenes.',
+      life: 4000,
+    });
+    return;
+  }
+
+  if (!uploadFiles.value.length) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Sin archivos',
+      detail: 'Debes seleccionar al menos una imagen para subir.',
+      life: 3000,
+    });
+    return;
+  }
+
   const formData = new FormData();
   uploadFiles.value.forEach((file, index) => {
     formData.append('images[]', file.raw, file.name);
     formData.append(`rotations[${index}]`, file.rotation || 0);
   });
-  formData.append('wound_id', 1); // Reemplaza con el ID real
+  formData.append('wound_id', formWound.value.id);
 
   try {
     await axios.post('/media/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 });
+    toast.add({
+      severity: 'success',
+      summary: 'Éxito',
+      detail: 'Imágenes subidas.',
+      life: 3000
+    });
+
     uploadFiles.value = [];
     totalSize.value = 0;
     totalSizePercent.value = 0;
-    loadExistingImages(); // recargar tras subida
+
+    loadExistingImages();
   } catch (err) {
     console.error(err);
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 });
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Fallo al subir.',
+      life: 4000
+    });
   }
 };
 
+
 //Tratamiento 
-// Estado reactivo
+// Refs
 const formTreat = ref({
-  methods: [],                     // IDs de métodos seleccionados
-  submethodsByMethod: {},          // { metodo_id: [submethod_id, ...] }
+  methods: [],
+  submethodsByMethod: {}, // { [methodId]: [submethodId, ...] }
+  note: "", // aquí se carga la descripción
 });
 
 const isSavingTreatment = ref(false);
+const submittedTreatment = ref(false);
 
-// Computed que filtra los métodos seleccionados y sus submétodos
+// Computed: filtrar métodos seleccionados
 const selectedMethodsWithSubmethods = computed(() => {
   return props.treatmentMethods.filter(method =>
     formTreat.value.methods.includes(method.id)
   );
 });
 
-// Enviar al backend
+// Función para guardar tratamiento
 const storeTreatment = async () => {
+  submittedTreatment.value = true;
   isSavingTreatment.value = true;
+  errors.value = {};
 
-  const selectedSubmethodIds = Object.values(formTreat.value.submethodsByMethod).flat();
+  if (!formWound.value.id) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "Debes guardar primero los datos de la herida.",
+      life: 4000,
+    });
+    isSavingTreatment.value = false;
+    return;
+  }
+
+  if (!formTreat.value.methods || formTreat.value.methods.length === 0) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "Debes seleccionar al menos un método de tratamiento.",
+      life: 4000,
+    });
+    isSavingTreatment.value = false;
+    return;
+  }
+
+  // Validar que cada método tenga al menos un submétodo
+  const selectedSubmethodIds = [];
+
+  for (const methodId of formTreat.value.methods) {
+    const subs = formTreat.value.submethodsByMethod[methodId] || [];
+    if (subs.length === 0) {
+      const methodName = props.treatmentMethods.find(m => m.id === methodId)?.name || "Método";
+      toast.add({
+        severity: "warn",
+        summary: "Advertencia",
+        detail: `Debe seleccionar al menos un submétodo para "${methodName}".`,
+        life: 4000,
+      });
+      isSavingTreatment.value = false;
+      return;
+    }
+    selectedSubmethodIds.push(...subs);
+  }
+
+  // Construir payload
+  const payload = {
+    wound_id: formWound.value.id,
+    note: formTreat.value.note || null,
+    method_ids: formTreat.value.methods,
+    submethod_ids: selectedSubmethodIds,
+  };
 
   try {
-    const payload = {
-      wound_id: 1, // reemplazar por el real
-      method_ids: formTreat.value.methods,
-      submethod_ids: selectedSubmethodIds,
-    };
-
-    await axios.post('/api/treatments', payload);
+    await axios.post("/treatments", payload);
 
     toast.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Tratamiento guardado correctamente',
+      severity: "success",
+      summary: "Éxito",
+      detail: "Tratamiento guardado correctamente.",
       life: 3000,
     });
   } catch (error) {
+    if (error.response?.status === 422) {
+      errors.value = error.response.data.errors || {};
+    }
+
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'No se pudo guardar el tratamiento',
-      life: 4000,
+      severity: "error",
+      summary: "Error",
+      detail:
+        error.response?.data?.message ||
+        "No se pudo guardar el tratamiento. Inténtalo de nuevo.",
+      life: 5000,
     });
   } finally {
     isSavingTreatment.value = false;
   }
 };
+
+onMounted(() => {
+  if (props.treatment) {
+    // Cargar nota
+    formTreat.value.note = props.treatment.description;
+
+    // Cargar métodos seleccionados
+    formTreat.value.methods = props.treatment.methods.map(
+      (m) => m.treatment_method_id
+    );
+
+    // Agrupar submétodos por método
+    const submethodsByMethod = {};
+
+    props.treatment.methods.forEach((method) => {
+      const methodId = method.treatment_method_id;
+      submethodsByMethod[methodId] = [];
+
+      // Agregar todos los submétodos que vengan del backend si los tuvieras agrupados
+      // Aquí asumimos que backend no te lo manda agrupado, así que hacemos asociación general
+      props.treatment.submethods.forEach((sub) => {
+        // Asumimos que todos los submétodos seleccionados se asignan al primer método (ajustable)
+        // Idealmente, tu backend debe agruparlos
+        const subId = sub.treatment_submethod_id;
+        if (!submethodsByMethod[methodId].includes(subId)) {
+          submethodsByMethod[methodId].push(subId);
+        }
+      });
+    });
+
+    formTreat.value.submethodsByMethod = submethodsByMethod;
+  }
+});
+
+
 </script>
 
 <template>
@@ -1211,35 +1393,50 @@ const storeTreatment = async () => {
         </div>
 
         <div v-show="currentStep === 3">
-          <div
-            class="flex flex-col flex-grow p-4 border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
-            <h2 class="text-xl font-semibold mb-4 px-4 pt-4">Establecer tratamiento</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6 px-4">
-              <!-- Selección de métodos -->
+          <form @submit.prevent="storeTreatment">
+            <div
+              class="flex flex-col flex-grow p-4 border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
+              <h2 class="text-xl font-semibold mb-4 px-4 pt-4">Establecer tratamiento</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6 px-4">
+
+                <!-- Selección de métodos -->
+                <div>
+                  <label class="flex items-center gap-1 mb-1 font-medium">Seleccionar métodos</label>
+                  <MultiSelect v-model="formTreat.methods" :options="treatmentMethods" optionLabel="name"
+                    optionValue="id" display="chip" class="w-full min-w-0"
+                    placeholder="Seleccione uno o varios métodos" />
+                </div>
+
+                <!-- Submétodos por método -->
+                <div v-for="method in selectedMethodsWithSubmethods" :key="method.id">
+                  <label class="flex items-center gap-1 mb-1 font-medium">
+                    {{ method.name }}
+                  </label>
+                  <MultiSelect v-model="formTreat.submethodsByMethod[method.id]" :options="method.submethods"
+                    class="w-full min-w-0" optionLabel="name" optionValue="id" placeholder="Seleccione submétodos"
+                    display="chip" />
+                </div>
+              </div>
+              <!-- Descripción final -->
+              <div class="grid grid-cols-3 gap-6 px-4 mt-6">
+                <div class="col-span-3">
+                  <label for="note" class="flex items-center gap-1 mb-1 font-medium">
+                    Descripción final del tratamiento de la herida
+                  </label>
+                  <Editor v-model="formTreat.note" editorStyle="height: 150px" class="w-full min-w-0" />
+                  <small v-if="errors.note" class="text-red-500">{{ errors.note }}</small>
+                </div>
+              </div>
               <div>
-                <label class="flex items-center gap-1 mb-1 font-medium">Seleccionar métodos</label>
-                <MultiSelect v-model="formTreat.methods" :options="treatmentMethods" optionLabel="name" optionValue="id"
-                  display="chip" class="w-full min-w-0" placeholder="Seleccione uno o varios métodos" />
+
               </div>
-
-              <!-- Secciones dinámicas por cada método seleccionado -->
-              <div v-for="method in selectedMethodsWithSubmethods" :key="method.id">
-                <label class="flex items-center gap-1 mb-1 font-medium">
-                  {{ method.name }}
-                </label>
-
-                <MultiSelect v-model="formTreat.submethodsByMethod[method.id]" :options="method.submethods"
-                  class="w-full min-w-0" optionLabel="name" optionValue="id" placeholder="Seleccione submétodos"
-                  display="chip" />
-              </div>
-
               <div class="mt-6 flex justify-end gap-2 p-10">
                 <Button label="Actualizar" icon="pi pi-check" type="submit" :loading="isSavingTreatment"
                   :disabled="isSavingTreatment" />
               </div>
 
             </div>
-          </div>
+          </form>
         </div>
 
       </section>

@@ -21,13 +21,13 @@ class Treatment extends Model
         return $this->hasMany(TreatmentLog::class);  // , 'id_wound'
     }
 
-    public function treatmentMethods()
+    public function methods()
     {
-        return $this->belongsToMany(Method::class, 'treatment_methods');
+        return $this->hasMany(TreatmentMethod::class);
     }
 
-    public function treatmentSubmethods()
+    public function submethods()
     {
-        return $this->belongsToMany(Submethod::class, 'treatment_submethods');
+        return $this->hasMany(TreatmentSubmethod::class);
     }
 }

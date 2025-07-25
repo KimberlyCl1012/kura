@@ -91,7 +91,7 @@ Route::middleware([
 
     //Media
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
-    Route::post('/media/upload', [MediaController::class, 'store'])->name('media.store');
+    Route::post('/media/upload', [MediaController::class, 'upload'])->name('media.upload');
 
     //Treatment
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
