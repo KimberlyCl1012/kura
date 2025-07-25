@@ -23,11 +23,11 @@ class Treatment extends Model
 
     public function treatmentMethods()
     {
-        return $this->belongsToMany(Method::class, 'methods_treatments');
+        return $this->belongsToMany(Method::class, 'treatment_methods');
     }
 
     public function treatmentSubmethods()
     {
-        return $this->belongsToMany(Submethod::class, 'submethods_treatments');
+        return $this->belongsToMany(Submethod::class, 'treatment_submethods');
     }
 }

@@ -21,9 +21,12 @@ return new class extends Migration
             $table->decimal('area', 8, 2)->nullable();
             $table->decimal('depth', 8, 2)->nullable();
             $table->decimal('volume', 8, 2)->nullable();
-            $table->decimal('redPercentaje', 5, 2)->nullable();
-            $table->decimal('yellowPercentaje', 5, 2)->nullable();
-            $table->decimal('blackPercentaje', 5, 2)->nullable();
+            $table->string('tunneling')->nullable();
+            $table->string('undermining')->nullable();
+            $table->decimal('granulation_percent', 5, 2)->nullable();
+            $table->decimal('slough_percent', 5, 2)->nullable();
+            $table->decimal('necrosis_percent', 5, 2)->nullable();
+            $table->decimal('epithelialization_percent', 5, 2)->nullable();
             $table->timestamps();
         });
     }

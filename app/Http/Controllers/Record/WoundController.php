@@ -7,9 +7,12 @@ use App\Models\BodyLocation;
 use App\Models\BodySublocation;
 use App\Models\HealthRecord;
 use App\Models\Kurator;
+use App\Models\Measurement;
+use App\Models\Method;
 use App\Models\Patient;
 use App\Models\Site;
 use App\Models\State;
+use App\Models\Submethod;
 use App\Models\Wound;
 use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
@@ -192,8 +195,11 @@ class WoundController extends Controller
 
         $wound->wound_id = Crypt::encryptString($wound->id);
 
+        $measurement = Measurement::where('wound_id', $decryptWoundId)->first();
+
         return Inertia::render('Wounds/Edit', [
             'wound' => $wound,
+            'measurement' => $measurement,
             'woundsType' => WoundType::where('state', 1)->get(),
             'woundsSubtype' => WoundSubtype::where('state', 1)->get(),
             'woundsPhase' => WoundPhase::where('state', 1)->get(),
@@ -204,6 +210,13 @@ class WoundController extends Controller
                 ['label' => '2', 'value' => 2],
                 ['label' => '3', 'value' => 3],
             ],
+            'treatmentMethods' => Method::where('state', 1)
+                ->with(['submethods' => function ($q) {
+                    $q->where('state', 1);
+                }])
+                ->get(),
+
+            'treatmentSubmethods' => Submethod::where('state', 1)->get(),
         ]);
     }
 

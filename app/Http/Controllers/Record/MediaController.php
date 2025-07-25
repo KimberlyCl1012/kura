@@ -3,63 +3,48 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\Media;
 use Illuminate\Http\Request;
 
 class MediaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $woundId = $request->query('wound_id');
+
+        if (!$woundId) {
+            return response()->json(['error' => 'Falta wound_id'], 400);
+        }
+
+        $media = \App\Models\Media::where('wound_id', $woundId)
+            ->where('type', 1)
+            ->get(['id', 'content', 'position']); // Solo columnas necesarias
+
+        return response()->json($media);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
-    }
+        $request->validate([
+            'wound_id' => 'required|exists:wounds,id',
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        $woundId = $request->input('wound_id');
+        $rotations = $request->input('rotations', []);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        foreach ($request->file('images') as $i => $image) {
+            $path = $image->store('wound_media', 'public');
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+            $rotation = $rotations[$i] ?? 0;
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+            Media::create([
+                'wound_id' => $woundId,
+                'content' => $path,
+                'position' => $rotation,
+                'type' => 1,
+            ]);
+        }
+
+        return response()->json(['message' => 'Imágenes guardadas correctamente.']);
     }
 }

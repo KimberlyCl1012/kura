@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\Method;
+use App\Models\Treatment;
 use Illuminate\Http\Request;
 
 class TreatmentController extends Controller
@@ -28,38 +30,42 @@ class TreatmentController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'patient_id' => 'required|exists:patients,id',
+            // otros campos de tratamiento
+            'method_ids' => 'array',
+            'method_ids.*' => 'exists:list_treatment_methods,id',
+            'submethod_ids' => 'array',
+            'submethod_ids.*' => 'exists:list_treatment_submethods,id',
+        ]);
+
+        $treatment = Treatment::create([
+            'patient_id' => $validated['patient_id'],
+            // otros campos
+        ]);
+
+        if (!empty($validated['method_ids'])) {
+            $treatment->treatmentMethods()->sync($validated['method_ids']);
+        }
+
+        if (!empty($validated['submethod_ids'])) {
+            $treatment->treatmentSubmethods()->sync($validated['submethod_ids']);
+        }
+
+        return response()->json([
+            'message' => 'Tratamiento guardado correctamente.',
+            'treatment' => $treatment
+        ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function getTreatmentMethodsWithSubmethods()
     {
-        //
-    }
+        $methods = Method::with(['submethods' => function ($q) {
+            $q->where('state', true);
+        }])
+            ->where('state', true)
+            ->get();
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return response()->json($methods);
     }
 }

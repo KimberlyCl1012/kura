@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Submethod extends Model
 {
-    use HasFactory;
-    protected $table = 'list_treatment_submethods';
-    protected $guarded = [];
+     use HasFactory;
 
-    public function treatmentMethod()
+    protected $table = 'list_treatment_submethods';
+
+    public function method()
     {
-        return $this->belongsTo(Method::class);
+        return $this->belongsTo(ListTreatmentMethod::class, 'treatment_method_id');
     }
 }

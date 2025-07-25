@@ -70,6 +70,8 @@ namespace App\Models{
  * @property-read \App\Models\Site|null $site
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\TreatmentLog> $treatmentLogs
  * @property-read int|null $treatment_logs_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Wound> $wounds
+ * @property-read int|null $wounds_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Appointment newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Appointment newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Appointment query()
@@ -97,8 +99,8 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Wound> $wounds
- * @property-read int|null $wounds_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodySublocation> $bodySublocations
+ * @property-read int|null $body_sublocations_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodyLocation newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodyLocation newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodyLocation query()
@@ -123,6 +125,7 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\BodyLocation $location
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodySublocation newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodySublocation newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BodySublocation query()
@@ -289,18 +292,71 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property string $name
+ * @property string|null $description
+ * @property int $state
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Submethod> $submethods
+ * @property-read int|null $submethods_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereState($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentMethod whereUpdatedAt($value)
+ */
+	class ListTreatmentMethod extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $treatment_method_id
+ * @property string $name
+ * @property string|null $description
+ * @property int $state
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\ListTreatmentMethod $method
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereState($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereTreatmentMethodId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ListTreatmentSubmethod whereUpdatedAt($value)
+ */
+	class ListTreatmentSubmethod extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property int $wound_id
  * @property int|null $appointment_id
  * @property string $measurementDate
  * @property string|null $lenght
  * @property string|null $width
  * @property string|null $area
- * @property string|null $maxDepth
- * @property string|null $avgDepth
+ * @property string|null $depth
  * @property string|null $volume
- * @property string|null $redPercentaje
- * @property string|null $yellowPercentaje
- * @property string|null $blackPercentaje
+ * @property string|null $tunneling
+ * @property string|null $undermining
+ * @property string|null $granulation_percent
+ * @property string|null $slough_percent
+ * @property string|null $necrosis_percent
+ * @property string|null $epithelialization_percent
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Media> $media
@@ -312,19 +368,21 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereAppointmentId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereArea($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereAvgDepth($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereBlackPercentaje($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereDepth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereEpithelializationPercent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereGranulationPercent($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereLenght($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereMaxDepth($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereMeasurementDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereRedPercentaje($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereNecrosisPercent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereSloughPercent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereTunneling($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereUndermining($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereVolume($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereWidth($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereWoundId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Measurement whereYellowPercentaje($value)
  */
 	class Measurement extends \Eloquent {}
 }
@@ -390,6 +448,8 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Submethod> $submethods
+ * @property-read int|null $submethods_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Method newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Method newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Method query()
@@ -420,7 +480,7 @@ namespace App\Models{
  * @property string|null $relativeName
  * @property string|null $kinship
  * @property string|null $relativeMobile
- * @property string|null $consent
+ * @property int $consent
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -521,7 +581,7 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\Method $treatmentMethod
+ * @property-read \App\Models\ListTreatmentMethod $method
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Submethod newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Submethod newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Submethod query()
@@ -796,24 +856,23 @@ namespace App\Models{
  * @property int $wound_subtype_id
  * @property int $body_location_id
  * @property int $body_sublocation_id
- * @property string $antecedentWound
  * @property string|null $wound_type_other
  * @property string $woundBackground
- * @property string $woundCreationDate
- * @property string $woundBeginDate
- * @property string $woundHealDate
+ * @property string|null $woundCreationDate
+ * @property string|null $woundBeginDate
+ * @property string|null $woundHealthDate
  * @property string|null $grade_foot
- * @property string $MESI
- * @property string $borde
- * @property string $edema
- * @property string $dolor
- * @property string $exudado_cantidad
- * @property string $exudado_tipo
- * @property string $olor
- * @property string $piel_perisional
- * @property string $infeccion
- * @property string $tipo_dolor
- * @property string $visual_scale
+ * @property string|null $MESI
+ * @property string|null $borde
+ * @property string|null $edema
+ * @property string|null $dolor
+ * @property string|null $exudado_cantidad
+ * @property string|null $exudado_tipo
+ * @property string|null $olor
+ * @property string|null $piel_perisional
+ * @property string|null $infeccion
+ * @property string|null $tipo_dolor
+ * @property string|null $visual_scale
  * @property string|null $ITB_izquierdo
  * @property string|null $pulse_dorsal_izquierdo
  * @property string|null $pulse_tibial_izquierdo
@@ -823,19 +882,22 @@ namespace App\Models{
  * @property string|null $pulse_tibial_derecho
  * @property string|null $pulse_popliteo_derecho
  * @property string|null $blood_glucose
- * @property string $tunneling
+ * @property string|null $tunneling
  * @property string|null $note
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\BodyLocation $bodyLocation
+ * @property-read \App\Models\BodySublocation $bodySublocation
  * @property-read \App\Models\HealthRecord $healthRecord
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WoundHistory> $histories
+ * @property-read int|null $histories_count
  * @property-read \App\Models\WoundPhase $woundPhase
+ * @property-read \App\Models\WoundSubtype $woundSubtype
  * @property-read \App\Models\WoundType $woundType
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereAntecedentWound($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereAppointmentId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereBloodGlucose($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereBodyLocationId($value)
@@ -870,7 +932,7 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundBackground($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundBeginDate($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundCreationDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundHealDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundHealthDate($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundPhaseId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundSubtypeId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Wound whereWoundTypeId($value)
@@ -883,20 +945,39 @@ namespace App\Models{
 /**
  * 
  *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow query()
+ */
+	class WoundFollow extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
  * @property int $id
  * @property int|null $wound_id
- * @property int|null $wound_phase_id
+ * @property int $wound_phase_id
+ * @property int $wound_type_id
+ * @property int $wound_subtype_id
+ * @property int $body_location_id
+ * @property int $body_sublocation_id
+ * @property string|null $wound_type_other
  * @property string $woundBackground
- * @property string $borde
- * @property string $edema
- * @property string $dolor
- * @property string $exudado_cantidad
- * @property string $exudado_tipo
- * @property string $olor
- * @property string $piel_perisional
- * @property string $infeccion
- * @property string $tipo_dolor
- * @property string $visual_scale
+ * @property string|null $woundBeginDate
+ * @property string|null $grade_foot
+ * @property string|null $MESI
+ * @property string|null $borde
+ * @property string|null $edema
+ * @property string|null $dolor
+ * @property string|null $exudado_cantidad
+ * @property string|null $exudado_tipo
+ * @property string|null $olor
+ * @property string|null $piel_perisional
+ * @property string|null $infeccion
+ * @property string|null $tipo_dolor
+ * @property string|null $visual_scale
  * @property string|null $ITB_derecho
  * @property string|null $pulse_dorsal_derecho
  * @property string|null $pulse_tibial_derecho
@@ -905,61 +986,74 @@ namespace App\Models{
  * @property string|null $pulse_dorsal_izquierdo
  * @property string|null $pulse_tibial_izquierdo
  * @property string|null $pulse_popliteo_izquierdo
- * @property string $tunneling
- * @property string $measurementDate
- * @property string $lenght
- * @property string $width
- * @property string $area
- * @property string $maxDepth
- * @property string $redPercentaje
- * @property string $yellowPercentaje
- * @property string $blackPercentaje
- * @property string $media
- * @property string $description
+ * @property string|null $tunneling
+ * @property string|null $lenght
+ * @property string|null $width
+ * @property string|null $area
+ * @property string|null $depth
+ * @property string|null $volume
+ * @property string|null $redPercentaje
+ * @property string|null $yellowPercentaje
+ * @property string|null $blackPercentaje
+ * @property string|null $description
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereArea($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereBlackPercentaje($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereBorde($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereDescription($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereDolor($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereEdema($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereExudadoCantidad($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereExudadoTipo($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereITBDerecho($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereITBIzquierdo($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereInfeccion($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereLenght($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereMaxDepth($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereMeasurementDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereMedia($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereOlor($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePielPerisional($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulseDorsalDerecho($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulseDorsalIzquierdo($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulsePopliteoDerecho($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulsePopliteoIzquierdo($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulseTibialDerecho($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow wherePulseTibialIzquierdo($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereRedPercentaje($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereState($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereTipoDolor($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereTunneling($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereVisualScale($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereWidth($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereWoundBackground($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereWoundId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereWoundPhaseId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundFollow whereYellowPercentaje($value)
+ * @property-read \App\Models\BodyLocation $bodyLocation
+ * @property-read \App\Models\BodySublocation $bodySublocation
+ * @property-read \App\Models\HealthRecord|null $healthRecord
+ * @property-read \App\Models\Wound|null $wound
+ * @property-read \App\Models\WoundPhase $woundPhase
+ * @property-read \App\Models\WoundSubtype $woundSubtype
+ * @property-read \App\Models\WoundType $woundType
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereArea($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereBlackPercentaje($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereBodyLocationId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereBodySublocationId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereBorde($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereDepth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereDolor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereEdema($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereExudadoCantidad($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereExudadoTipo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereGradeFoot($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereITBDerecho($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereITBIzquierdo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereInfeccion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereLenght($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereMESI($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereOlor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePielPerisional($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulseDorsalDerecho($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulseDorsalIzquierdo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulsePopliteoDerecho($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulsePopliteoIzquierdo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulseTibialDerecho($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory wherePulseTibialIzquierdo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereRedPercentaje($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereState($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereTipoDolor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereTunneling($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereVisualScale($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereVolume($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWidth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundBackground($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundBeginDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundPhaseId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundSubtypeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundTypeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereWoundTypeOther($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundHistory whereYellowPercentaje($value)
  */
-	class WoundFollow extends \Eloquent {}
+	class WoundHistory extends \Eloquent {}
 }
 
 namespace App\Models{
@@ -1035,6 +1129,7 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\WoundType $type
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundSubtype newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundSubtype newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundSubtype query()
@@ -1059,8 +1154,8 @@ namespace App\Models{
  * @property int $state
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Wound> $wound
- * @property-read int|null $wound_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WoundSubtype> $woundSubtypes
+ * @property-read int|null $wound_subtypes_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundType newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundType newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WoundType query()

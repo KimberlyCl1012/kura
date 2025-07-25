@@ -66,7 +66,7 @@ import Menu from "primevue/menu";
 // import Menubar from 'primevue/menubar';
 // import MeterGroup from 'primevue/metergroup';
 // import Message from 'primevue/message';
-// import MultiSelect from 'primevue/multiselect';
+import MultiSelect from 'primevue/multiselect';
 // import OrderList from 'primevue/orderlist';
 // import OrganizationChart from 'primevue/organizationchart';
 // import OverlayBadge from 'primevue/overlaybadge';
@@ -188,7 +188,7 @@ createInertiaApp({
                 // .component('Menubar', Menubar)
                 // .component('MeterGroup', MeterGroup)
                 // .component('Message', Message)
-                // .component('MultiSelect', MultiSelect)
+                .component('MultiSelect', MultiSelect)
                 // .component('OrderList', OrderList)
                 // .component('OrganizationChart', OrganizationChart)
                 // .component('OverlayBadge', OverlayBadge)

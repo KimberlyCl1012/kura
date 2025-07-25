@@ -46,7 +46,6 @@ return new class extends Migration
             $table->string('pulse_tibial_derecho')->nullable();
             $table->string('pulse_popliteo_derecho')->nullable();
             $table->string('blood_glucose')->nullable();
-            $table->string('tunneling')->nullable();
             $table->longText('note', 999)->nullable();
             $table->boolean('state')->default(1);
             $table->timestamps();

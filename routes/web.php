@@ -11,6 +11,8 @@ use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
+use App\Http\Controllers\Record\MediaController;
+use App\Http\Controllers\Record\TreatmentController;
 use App\Http\Controllers\Record\WoundController;
 use App\Http\Controllers\Record\WoundHistoryController;
 use App\Http\Controllers\User\UserController;
@@ -86,6 +88,14 @@ Route::middleware([
 
     //Measurement
     Route::post('/measurements', [MeasurementController::class, 'store'])->name('measurement.store');
+
+    //Media
+    Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+    Route::post('/media/upload', [MediaController::class, 'store'])->name('media.store');
+
+    //Treatment
+    Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
+
 
     //Wounds History
     Route::get('/wounds_histories', [WoundHistoryController::class, 'index'])->name('wounds_histories.index');
