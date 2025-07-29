@@ -7,6 +7,7 @@ use App\Models\WoundPhase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -58,6 +59,9 @@ class WoundPhaseController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar fase de la herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al registrar la fase.',
@@ -93,6 +97,9 @@ class WoundPhaseController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar fase de la herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()], 500);
         }
     }
@@ -109,6 +116,9 @@ class WoundPhaseController extends Controller
                 'message' => 'Fase eliminada correctamente',
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar fase de la herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json(['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()], 500);
         }
     }

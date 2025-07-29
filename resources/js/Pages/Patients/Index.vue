@@ -216,14 +216,15 @@ function healthRecord(data) {
                     <!-- Campos del formulario -->
 
                     <div>
-                        <label for="name" class="block font-bold mb-1">Nombre</label>
+                        <label for="name" class="block font-bold mb-1">Nombre<span class="text-red-600">*</span></label>
                         <InputText id="name" v-model="patient.name" class="w-full"
                             :class="{ 'p-invalid': submitted && !patient.name }" />
                         <small v-if="submitted && !patient.name" class="text-red-500">El nombre es obligatorio.</small>
                     </div>
 
                     <div>
-                        <label for="fatherLastName" class="block font-bold mb-1">Apellido paterno</label>
+                        <label for="fatherLastName" class="block font-bold mb-1">Apellido paterno<span
+                                class="text-red-600">*</span></label>
                         <InputText id="fatherLastName" v-model="patient.fatherLastName" class="w-full"
                             :class="{ 'p-invalid': submitted && !patient.fatherLastName }" />
                         <small v-if="submitted && !patient.fatherLastName" class="text-red-500">El apellido paterno es
@@ -236,7 +237,7 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="sex" class="block font-bold mb-1">Sexo</label>
+                        <label for="sex" class="block font-bold mb-1">Sexo<span class="text-red-600">*</span></label>
                         <Select id="sex" v-model="patient.sex" :options="sex" optionLabel="value" optionValue="value"
                             filter class="w-full" placeholder="Seleccione un sexo"
                             :class="{ 'p-invalid': submitted && !patient.sex }" />
@@ -244,7 +245,8 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="site_id" class="block font-bold mb-1">Sitio</label>
+                        <label for="site_id" class="block font-bold mb-1">Sitio<span
+                                class="text-red-600">*</span></label>
                         <Select id="site_id" v-model="patient.site_id" :options="sites" optionLabel="siteName"
                             optionValue="id" filter class="w-full" placeholder="Seleccione un sitio"
                             :class="{ 'p-invalid': submitted && !patient.site_id }" />
@@ -258,14 +260,16 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="email" class="block font-bold mb-1">Correo</label>
-                        <InputText id="email" v-model="patient.email" class="w-full"
+                        <label for="email" class="block font-bold mb-1">Correo<span
+                                class="text-red-600">*</span></label>
+                        <InputText type="email" id="email" v-model="patient.email" class="w-full"
                             :class="{ 'p-invalid': submitted && !patient.email }" />
                         <small v-if="submitted && !patient.email" class="text-red-500">El correo es obligatorio.</small>
                     </div>
 
                     <div>
-                        <label for="dateOfBirth" class="block font-bold mb-1">Fecha de nacimiento</label>
+                        <label for="dateOfBirth" class="block font-bold mb-1">Fecha de nacimiento<span
+                                class="text-red-600">*</span></label>
                         <DatePicker class="w-full" inputId="in_label" showIcon iconDisplay="input" id="dateOfBirth"
                             v-model="patient.dateOfBirth" variant="filled" />
                         <small v-if="submitted && !patient.dateOfBirth" class="text-red-500">La fecha es
@@ -273,7 +277,8 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="state_id" class="block font-bold mb-1">Estado</label>
+                        <label for="state_id" class="block font-bold mb-1">Estado<span
+                                class="text-red-600">*</span></label>
                         <Select id="state_id" v-model="patient.state_id" :options="states" optionLabel="name"
                             optionValue="id" filter class="w-full" placeholder="Seleccione un estado"
                             :class="{ 'p-invalid': submitted && !patient.state_id }" />
@@ -313,7 +318,8 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="type_identification" class="block font-bold mb-1">Tipo de identificación</label>
+                        <label for="type_identification" class="block font-bold mb-1">Tipo de identificación<span
+                                class="text-red-600">*</span></label>
                         <Select id="type_identification" :options="identificationTypes"
                             v-model="patient.type_identification" placeholder="Seleccione un tipo"
                             :class="{ 'p-invalid': submitted && !patient.type_identification }" class="w-full" />
@@ -323,7 +329,8 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="identification" class="block font-bold mb-1">Número de identificación</label>
+                        <label for="identification" class="block font-bold mb-1">Número de identificación<span
+                                class="text-red-600">*</span></label>
                         <InputText id="identification" v-model="patient.identification" class="w-full"
                             :class="{ 'p-invalid': submitted && !patient.identification }" />
                         <small v-if="submitted && !patient.identification" class="text-red-500">El número de
@@ -339,8 +346,10 @@ function healthRecord(data) {
                             <Checkbox v-model="patient.consent" :binary="true" :true-value="1" :false-value="0"
                                 inputId="consentCheckbox" />
                             <label for="consentCheckbox" class="text-sm cursor-pointer select-none">
-                               Autorizo el uso de mis datos personales, clínicos y de imagen (fotografías) para fines médicos y de seguimiento, conforme a la normativa de salud vigente. Acepto el tratamiento y resguardo seguro de mi información.
-                            </label>
+                                Autorizo el uso de mis datos personales, clínicos y de imagen (fotografías) para fines
+                                médicos y de seguimiento, conforme a la normativa de salud vigente. Acepto el
+                                tratamiento y resguardo seguro de mi información.
+                                <span class="text-red-600">*</span></label>
                         </div>
                         <small v-if="submitted && !patient.consent" class="text-red-500">
                             Debes aceptar el consentimiento.

@@ -207,7 +207,7 @@ function exportCSV() {
             :header="isEditMode ? 'Editar tipo de herida' : 'Crear tipo de herida'" :modal="true">
             <div class="flex flex-col gap-6">
                 <div>
-                    <label class="block font-bold mb-2">Nombre</label>
+                    <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
                     <InputText v-model="woundsType.name" required :invalid="submitted && !woundsType.name" class="w-full" />
                     <small v-if="submitted && !woundsType.name" class="text-red-500">El nombre es requerido.</small>
                 </div>

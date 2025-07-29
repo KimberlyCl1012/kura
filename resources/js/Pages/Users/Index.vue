@@ -153,18 +153,22 @@ function exportCSV() {
             :modal="true">
             <div class="flex flex-col gap-6">
                 <div>
-                    <label class="block font-bold mb-2">Nombre</label>
+                    <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
                     <InputText v-model="user.name" required :invalid="submitted && !user.name" class="w-full" />
                     <small v-if="submitted && !user.name" class="text-red-500">El nombre es requerido.</small>
                 </div>
                 <div>
-                    <label class="block font-bold mb-2">Correo</label>
+                    <label class="block font-bold mb-2">Correo<span class="text-red-600">*</span></label>
                     <InputText v-model="user.email" required :invalid="submitted && !user.email" class="w-full" />
                     <small v-if="submitted && !user.email" class="text-red-500">El correo es requerido.</small>
                 </div>
                 <div>
-                    <label class="block font-bold mb-2">Contraseña <span v-if="isEditMode">(opcional)</span></label>
+                    <label class="block font-bold mb-2">Contraseña <span class="text-red-600">*</span><span
+                            v-if="isEditMode">(opcional)</span></label>
                     <Password v-model="user.password" toggleMask :feedback="false" class="w-full" inputClass="w-full" />
+                    <small v-if="submitted && !isEditMode && !user.password" class="text-red-500">
+                        La contraseña es requerida.
+                    </small>
                 </div>
             </div>
 

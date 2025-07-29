@@ -42,20 +42,33 @@ class PermissionController extends Controller
             'permissions.*' => ['string'],
         ]);
 
-        DB::transaction(function () use ($request) {
-            UserDeniedPermission::where('user_id', $request->user_id)->delete();
+        try {
+            DB::transaction(function () use ($request) {
+                UserDeniedPermission::where('user_id', $request->user_id)->delete();
 
-            if (!empty($request->permissions)) {
-                foreach ($request->permissions as $permission) {
-                    UserDeniedPermission::create([
-                        'user_id' => $request->user_id,
-                        'permission' => $permission,
-                    ]);
+                if (!empty($request->permissions)) {
+                    foreach ($request->permissions as $permission) {
+                        UserDeniedPermission::create([
+                            'user_id' => $request->user_id,
+                            'permission' => $permission,
+                        ]);
+                    }
                 }
-            }
-        });
+            });
 
-        return response()->json(['success' => true, 'message' => 'Restricciones actualizadas correctamente.']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Restricciones actualizadas correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al guardar permisos denegados', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al actualizar las restricciones.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(User $user) {}

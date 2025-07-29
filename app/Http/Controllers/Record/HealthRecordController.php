@@ -8,6 +8,8 @@ use App\Models\HealthRecord;
 use App\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Str;
 
@@ -54,93 +56,120 @@ class HealthRecordController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'health_institution_id' => 'required|exists:list_health_institutions,id',
-            'patient_id' => 'required|exists:patients,id',
-            'medicines' => 'required|string',
-            'allergies' => 'required|string',
-            'pathologicalBackground' => 'required|string',
-            'laboratoryBackground' => 'required|string',
-            'nourishmentBackground' => 'required|string',
-            'medicalInsurance' => 'nullable|string',
-            'medical_info' => 'nullable|string',
-            'health_institution' => 'nullable|string',
-            'religion' => 'nullable|string',
-        ]);
+        try {
+            $data = $request->validate([
+                'health_institution_id' => 'required|exists:list_health_institutions,id',
+                'patient_id' => 'required|exists:patients,id',
+                'medicines' => 'required|string',
+                'allergies' => 'required|string',
+                'pathologicalBackground' => 'required|string',
+                'laboratoryBackground' => 'required|string',
+                'nourishmentBackground' => 'required|string',
+                'medicalInsurance' => 'nullable|string',
+                'medical_info' => 'nullable|string',
+                'health_institution' => 'nullable|string',
+                'religion' => 'nullable|string',
+            ]);
 
-        if ($data['medicalInsurance'] === 'Sí') {
-            $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
-        } else {
-            $data['medicalInsurance'] = 'No';
+            if ($data['medicalInsurance'] === 'Sí') {
+                $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
+            } else {
+                $data['medicalInsurance'] = 'No';
+            }
+
+            if ($data['health_institution_id'] == 5) {
+                $data['health_institution'] = $data['health_institution'] ?? null;
+            } else {
+                $data['health_institution'] = null;
+            }
+
+            unset($data['medical_info']);
+
+            $year = now()->year;
+            $random = strtoupper(Str::random(3));
+            $data['record_uuid'] = "EXP{$year}-{$data['patient_id']}{$random}";
+
+            HealthRecord::create($data);
+
+            return redirect()->back()->with('success', 'Expediente guardado correctamente.');
+        } catch (\Throwable $e) {
+            Log::info('Crear expediente');
+            Log::debug($e);
+            DB::rollBack();
+            \Log::error('Error al crear expediente clínico', [
+                'request' => $request->all(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Ocurrió un error al guardar el expediente.'])
+                ->withInput();
         }
-
-        if ($data['health_institution_id'] == 5) {
-            $data['health_institution'] = $data['health_institution'] ?? null;
-        } else {
-            $data['health_institution'] = null;
-        }
-
-        unset($data['medical_info']);
-
-        $year = now()->year;
-        $random = strtoupper(Str::random(3));
-        $data['record_uuid'] = "EXP{$year}-{$data['patient_id']}{$random}";
-
-        HealthRecord::create($data);
-
-        return redirect()->back();
     }
+
 
     public function update(Request $request, HealthRecord $healthRecord)
     {
-        $data = $request->validate([
-            'health_institution_id' => 'required|exists:list_health_institutions,id',
-            'medicines' => 'required|string',
-            'allergies' => 'required|string',
-            'pathologicalBackground' => 'required|string',
-            'laboratoryBackground' => 'required|string',
-            'nourishmentBackground' => 'required|string',
-            'medicalInsurance' => 'nullable|string',
-            'medical_info' => 'nullable|string',
-            'health_institution' => 'nullable|string',
-            'religion' => 'nullable|string',
-        ]);
+        try {
+            $data = $request->validate([
+                'health_institution_id' => 'required|exists:list_health_institutions,id',
+                'medicines' => 'required|string',
+                'allergies' => 'required|string',
+                'pathologicalBackground' => 'required|string',
+                'laboratoryBackground' => 'required|string',
+                'nourishmentBackground' => 'required|string',
+                'medicalInsurance' => 'nullable|string',
+                'medical_info' => 'nullable|string',
+                'health_institution' => 'nullable|string',
+                'religion' => 'nullable|string',
+            ]);
 
-        if ($data['medicalInsurance'] === 'Sí') {
-            $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
-        } else {
-            $data['medicalInsurance'] = 'No';
-        }
+            if ($data['medicalInsurance'] === 'Sí') {
+                $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
+            } else {
+                $data['medicalInsurance'] = 'No';
+            }
 
-        if ($data['health_institution_id'] == 5) {
-            $data['health_institution'] = $data['health_institution'] ?? null;
-        } else {
-            $data['health_institution'] = null;
-        }
+            if ($data['health_institution_id'] == 5) {
+                $data['health_institution'] = $data['health_institution'] ?? null;
+            } else {
+                $data['health_institution'] = null;
+            }
 
-        unset($data['medical_info']);
+            unset($data['medical_info']);
 
-        /** 🔐 Verificación de permisos para editar libremente */
-        $user = auth()->user();
-        $permissions = is_array($user->current_team_role_permissions) ? $user->current_team_role_permissions : [];
-        $fullEdit = in_array('*', $permissions) || in_array('editor:edit-all', $permissions);
+            /** 🔐 Verificación de permisos para edición restringida */
+            $user = auth()->user();
+            $permissions = is_array($user->current_team_role_permissions) ? $user->current_team_role_permissions : [];
+
+            $hasPermission = in_array('*', $permissions) || in_array('editor:edit-all', $permissions);
+            $isDenied = method_exists($user, 'hasExplicitlyDenied') && $user->hasExplicitlyDenied('editor:edit-all');
+            $fullEdit = $hasPermission && !$isDenied;
 
 
-        $protectedFields = ['medicines', 'allergies', 'pathologicalBackground', 'laboratoryBackground', 'nourishmentBackground'];
+            $protectedFields = ['medicines', 'allergies', 'pathologicalBackground', 'laboratoryBackground', 'nourishmentBackground'];
 
-        foreach ($protectedFields as $field) {
-            if (!$fullEdit) {
-                // si el nuevo texto es más corto que el anterior, se sospecha eliminación
-                if (strlen($data[$field]) < strlen($healthRecord->$field)) {
-                    // evitamos el borrado
+            foreach ($protectedFields as $field) {
+                if (!$fullEdit && strlen($data[$field]) < strlen($healthRecord->$field)) {
                     $data[$field] = $healthRecord->$field;
                 }
             }
+
+            $healthRecord->update($data);
+
+            return redirect()->back()->with('success', 'Expediente actualizado correctamente.');
+        } catch (\Throwable $e) {
+            Log::info('Actualizar expediente clínico');
+            Log::debug($e);
+            \Log::error('Error al actualizar expediente clínico', [
+                'record_id' => $healthRecord->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Ocurrió un error al actualizar el expediente.'])
+                ->withInput();
         }
-
-        $healthRecord->update($data);
-
-        return redirect()->back();
     }
 
     /**

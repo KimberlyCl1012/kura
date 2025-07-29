@@ -165,17 +165,9 @@ function exportCSV() {
         </template>
       </Toolbar>
 
-      <DataTable
-        ref="dt"
-        :value="bodyLocationList"
-        dataKey="id"
-        :paginator="true"
-        :rows="10"
-        :filters="filters"
+      <DataTable ref="dt" :value="bodyLocationList" dataKey="id" :paginator="true" :rows="10" :filters="filters"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :rowsPerPageOptions="[5, 10, 25]"
-        currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
-      >
+        :rowsPerPageOptions="[5, 10, 25]" currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
         <template #header>
           <div class="flex flex-wrap gap-2 items-center justify-between">
             <h4 class="m-0">Ubicaciones corporales</h4>
@@ -205,10 +197,11 @@ function exportCSV() {
     </div>
 
     <!-- Dialog Crear/Editar -->
-    <Dialog v-model:visible="bodyLocationDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar registro' : 'Crear registro'" :modal="true">
+    <Dialog v-model:visible="bodyLocationDialog" :style="{ width: '450px' }"
+      :header="isEditMode ? 'Editar registro' : 'Crear registro'" :modal="true">
       <div class="flex flex-col gap-6">
         <div>
-          <label class="block font-bold mb-2">Nombre</label>
+          <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
           <InputText v-model="bodyLocation.name" required :invalid="submitted && !bodyLocation.name" class="w-full" />
           <small v-if="submitted && !bodyLocation.name" class="text-red-500">El nombre es requerido.</small>
         </div>
@@ -219,7 +212,8 @@ function exportCSV() {
       </div>
       <template #footer>
         <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-        <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :disabled="isSaving" :loading="isSaving" @click="saveBodyLocation" />
+        <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :disabled="isSaving"
+          :loading="isSaving" @click="saveBodyLocation" />
       </template>
     </Dialog>
 
@@ -227,7 +221,8 @@ function exportCSV() {
     <Dialog v-model:visible="deleteBodyLocationDialog" :style="{ width: '450px' }" header="Confirmar" :modal="true">
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle !text-3xl" />
-        <span v-if="bodyLocation?.name">¿Estás seguro que deseas eliminar este registro <b>{{ bodyLocation.name }}</b>?</span>
+        <span v-if="bodyLocation?.name">¿Estás seguro que deseas eliminar este registro <b>{{ bodyLocation.name
+            }}</b>?</span>
         <span v-else>Registro no válido.</span>
       </div>
       <template #footer>

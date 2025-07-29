@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Catalogues;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -16,6 +18,11 @@ class SiteController extends Controller
      */
     public function index()
     {
+        $addresses = Address::all()->map(function ($address) {
+            $address->name = "{$address->streetAddress} {$address->addressLine2}, {$address->city}, {$address->postalCode}";
+            return $address;
+        });
+
         $sites = DB::table('list_sites')
             ->join('list_addresses', 'list_sites.address_id', 'list_addresses.id')
             ->select(
@@ -36,6 +43,7 @@ class SiteController extends Controller
 
         return Inertia::render('Catalogues/Sites/Index', [
             'sites' => $sites,
+            'addresses' => $addresses,
         ]);
     }
 
@@ -78,8 +86,10 @@ class SiteController extends Controller
                 'data' => $siteData,
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear Sitio');
+            Log::debug($e);
             DB::rollBack();
-
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al registrar el sitio.',
@@ -123,6 +133,10 @@ class SiteController extends Controller
                 'data' => $siteData,
             ]);
         } catch (\Exception $e) {
+            Log::info('Editar Sitio');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar: ' . $e->getMessage(),
@@ -146,6 +160,10 @@ class SiteController extends Controller
                 'id' => $id,
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar Sitio');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar: ' . $e->getMessage(),

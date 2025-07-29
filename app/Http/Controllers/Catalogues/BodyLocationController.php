@@ -7,6 +7,7 @@ use App\Models\BodyLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -58,6 +59,9 @@ class BodyLocationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear ubicación corporal');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al registrar la localización.',
@@ -93,6 +97,9 @@ class BodyLocationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::info('Editar ubicación corporal');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar: ' . $e->getMessage(),
@@ -114,6 +121,9 @@ class BodyLocationController extends Controller
                 'id' => $encryptedId,
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar ubicación corporal');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar el registro: ' . $e->getMessage(),

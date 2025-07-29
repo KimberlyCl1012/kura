@@ -189,7 +189,7 @@ function exportCSV() {
         <Dialog v-model:visible="woundsPhaseDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar' : 'Crear'" :modal="true">
             <div class="flex flex-col gap-6">
                 <div>
-                    <label class="block font-bold mb-2">Nombre</label>
+                    <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
                     <InputText v-model="woundsPhase.name" required :invalid="submitted && !woundsPhase.name" class="w-full" />
                     <small v-if="submitted && !woundsPhase.name" class="text-red-500">El nombre es requerido.</small>
                 </div>

@@ -85,7 +85,6 @@ Route::middleware([
     Route::get('/wounds/{woundId}', [WoundController::class, 'edit'])->name('wounds.edit');
     Route::put('/wounds/{wound}', [WoundController::class, 'update'])->name('wounds.update');
 
-
     //Measurement
     Route::post('/measurements', [MeasurementController::class, 'store'])->name('measurement.store');
 

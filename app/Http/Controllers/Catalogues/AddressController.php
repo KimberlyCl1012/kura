@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Catalogues;
 
 use App\Http\Controllers\Controller;
 use App\Models\Address;
+use App\Models\Site;
 use App\Models\State;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -102,6 +103,10 @@ class AddressController extends Controller
                 'data'    => $address,
             ]);
         } catch (\Throwable $e) {
+            Log::info('Crear dirección');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear la dirección',
@@ -182,6 +187,10 @@ class AddressController extends Controller
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
+            Log::info('Ediar dirección');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar la dirección',
@@ -208,6 +217,10 @@ class AddressController extends Controller
                 'id' => $id,
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar dirección');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar el registro: ' . $e->getMessage(),

@@ -53,7 +53,7 @@ class PatientController extends Controller
             )
             ->get()
             ->map(function ($patient) {
-                $patient->crypt_patient = Crypt::encryptString($patient->patient_id); 
+                $patient->crypt_patient = Crypt::encryptString($patient->patient_id);
                 return $patient;
             });
 
@@ -135,6 +135,8 @@ class PatientController extends Controller
 
             return redirect()->route('patients.index')->with('success', 'Paciente creado correctamente.');
         } catch (\Throwable $e) {
+            Log::info('Crear paciente');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al crear el paciente.'])->withInput();
@@ -210,6 +212,8 @@ class PatientController extends Controller
 
             return redirect()->route('patients.index')->with('success', 'Paciente actualizado correctamente.');
         } catch (\Throwable $e) {
+            Log::info('Editar paciente');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al actualizar el paciente.'])->withInput();
@@ -234,6 +238,8 @@ class PatientController extends Controller
 
             return back()->with('success', 'Paciente eliminado correctamente.');
         } catch (\Throwable $e) {
+            Log::info('Eliminar paciente');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al eliminar el paciente.']);

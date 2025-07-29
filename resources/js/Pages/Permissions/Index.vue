@@ -133,7 +133,8 @@ function exportCSV() {
                 <Column header="Permisos restringidos" style="min-width: 20rem">
                     <template #body="{ data }">
                         <ul v-if="data.denied_permissions.length">
-                            <li v-for="p in data.denied_permissions" :key="p.permission" class="text-red-600 text-sm">• {{ p.permission }}</li>
+                            <li v-for="p in data.denied_permissions" :key="p.permission" class="text-red-600 text-sm">•
+                                {{ p.permission }}</li>
                         </ul>
                         <span v-else class="text-gray-500 text-sm">Sin restricciones</span>
                     </template>
@@ -146,10 +147,11 @@ function exportCSV() {
             </DataTable>
         </div>
 
-        <Dialog v-model:visible="userDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar' : 'Crear'" :modal="true">
+        <Dialog v-model:visible="userDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar' : 'Crear'"
+            :modal="true">
             <div class="flex flex-col gap-6">
                 <div>
-                    <label class="block font-bold mb-2">Usuario</label>
+                    <label class="block font-bold mb-2">Usuario<span class="text-red-600">*</span></label>
                     <Dropdown v-model="user.id" :options="props.users" optionLabel="name" optionValue="id"
                         placeholder="Selecciona un usuario" class="w-full" :disabled="isEditMode" />
                 </div>
@@ -163,7 +165,8 @@ function exportCSV() {
 
             <template #footer>
                 <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving" :disabled="isSaving" @click="saveUser" />
+                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving"
+                    :disabled="isSaving" @click="saveUser" />
             </template>
         </Dialog>
     </AppLayout>

@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from "../../../Layouts/sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
-import { InputText, Textarea } from "primevue";
+import { InputText, Textarea, Select } from "primevue";
 import { useToast } from "primevue/usetoast";
 import { ref } from "vue";
 import axios from "axios";
@@ -12,6 +12,7 @@ const props = defineProps({
         required: true,
         default: () => [],
     },
+    addresses: Array,
 });
 
 const toast = useToast();
@@ -53,7 +54,7 @@ function hideDialog() {
 async function saveSite() {
     submitted.value = true;
 
-    if (!site.value.siteName?.trim() || !site.value.email_admin?.trim() || !site.value.phone?.trim()) {
+    if (!site.value.siteName?.trim() || !site.value.email_admin?.trim() || !site.value.phone?.trim() || !site.value.address_id) {
         toast.add({ severity: "error", summary: "Error", detail: "Por favor completa los campos requeridos", life: 3000 });
         return;
     }
@@ -65,7 +66,7 @@ async function saveSite() {
         email_admin: site.value.email_admin,
         phone: site.value.phone,
         description: site.value.description ?? null,
-        address_id: site.value.address_id || 1, // Cambiar esto
+        address_id: site.value.address_id
     };
 
     try {
@@ -100,8 +101,14 @@ async function saveSite() {
             }
         }
     } catch (error) {
-        const msg = error.response?.data?.message || "Error inesperado.";
-        toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
+        if (error.response?.status === 422 && error.response.data?.errors) {
+            const errors = error.response.data.errors;
+            const messages = Object.values(errors).flat().join('\n');
+            toast.add({ severity: "error", summary: "Errores de validación", detail: messages, life: 6000 });
+        } else {
+            const msg = error.response?.data?.message || error.response?.data?.error || "Error inesperado.";
+            toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
+        }
     } finally {
         isSaving.value = false;
     }
@@ -151,17 +158,10 @@ function exportCSV() {
                 </template>
             </Toolbar>
 
-            <DataTable
-                ref="dt"
-                :value="siteList"
-                dataKey="id"
-                :paginator="true"
-                :rows="10"
-                :filters="filters"
+            <DataTable ref="dt" :value="siteList" dataKey="id" :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
-            >
+                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0">Sitios</h4>
@@ -189,28 +189,41 @@ function exportCSV() {
                 <Column :exportable="false" style="min-width: 12rem">
                     <template #body="{ data }">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editSite(data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSite(data)" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger"
+                            @click="confirmDeleteSite(data)" />
                     </template>
                 </Column>
             </DataTable>
         </div>
 
-        <Dialog v-model:visible="siteDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar registro' : 'Crear registro'" :modal="true">
+        <Dialog v-model:visible="siteDialog" :style="{ width: '450px' }"
+            :header="isEditMode ? 'Editar registro' : 'Crear registro'" :modal="true">
             <div class="flex flex-col gap-6">
+
                 <div>
-                    <label class="block font-bold">Nombre</label>
+                    <label class="block font-bold">Nombre<span class="text-red-600">*</span></label>
                     <InputText v-model="site.siteName" required :invalid="submitted && !site.siteName" class="w-full" />
                     <small v-if="submitted && !site.siteName" class="text-red-500">El nombre es requerido.</small>
                 </div>
                 <div>
-                    <label class="block font-bold">Correo</label>
-                    <InputText v-model="site.email_admin" required :invalid="submitted && !site.email_admin" class="w-full" />
+                    <label class="block font-bold">Correo<span class="text-red-600">*</span></label>
+                    <InputText type="email" v-model="site.email_admin" required
+                        :invalid="submitted && !site.email_admin" class="w-full" />
                     <small v-if="submitted && !site.email_admin" class="text-red-500">El correo es requerido.</small>
                 </div>
                 <div>
-                    <label class="block font-bold">Teléfono</label>
+                    <label class="block font-bold">Teléfono<span class="text-red-600">*</span></label>
                     <InputText v-model="site.phone" required :invalid="submitted && !site.phone" class="w-full" />
                     <small v-if="submitted && !site.phone" class="text-red-500">El teléfono es requerido.</small>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">
+                        Dirección <span class="text-red-600">*</span>
+                    </label>
+                    <Select v-model="site.address_id" :options="addresses" optionLabel="name" optionValue="id" filter
+                        placeholder="Seleccione una ubicación" class="w-full"
+                        :class="{ 'p-invalid': submitted && !site.address_id }" />
+                    <small v-if="submitted && !site.address_id" class="text-red-500">La Dirección es requerida.</small>
                 </div>
                 <div>
                     <label class="block font-bold">Descripción</label>
@@ -220,7 +233,8 @@ function exportCSV() {
 
             <template #footer>
                 <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving" :disabled="isSaving" @click="saveSite" />
+                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving"
+                    :disabled="isSaving" @click="saveSite" />
             </template>
         </Dialog>
 

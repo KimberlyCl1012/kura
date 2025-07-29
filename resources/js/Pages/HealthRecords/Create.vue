@@ -114,7 +114,6 @@ function handleEditorInput(fieldName, newValue) {
             life: 3000,
         });
 
-        // 👇 Restauramos el texto anterior
         form[fieldName] = oldValue;
         return;
     }

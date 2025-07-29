@@ -157,6 +157,9 @@ class WoundController extends Controller
                 'wound'   => $wound,
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'message' => 'Error inesperado al guardar la herida',
                 'error' => $e->getMessage(),
@@ -230,63 +233,81 @@ class WoundController extends Controller
 
     public function update(Request $request, Wound $wound)
     {
-        $vascularRequired = in_array($request->body_location_id, range(18, 33));
+        try {
+            $vascularRequired = in_array($request->body_location_id, range(18, 33));
 
-        $rules = [
-            'wound_type_id' => 'required|exists:list_wound_types,id',
-            'wound_subtype_id' => 'required|exists:list_wound_subtypes,id',
-            'body_location_id' => 'required|exists:list_body_locations,id',
-            'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
-            'wound_phase_id' => 'required|exists:list_wound_phases,id',
-            'woundBeginDate' => 'nullable|date',
-            'woundHealthDate' => 'nullable|date',
-            'grade_foot' => 'nullable|string|max:255',
-            'wound_type_other' => 'nullable|string|max:255',
-            'MESI' => 'nullable|string|max:255',
-            'woundBackground' => 'nullable|string|max:255',
-            'borde' => 'nullable|string|max:255',
-            'edema' => 'nullable|string|max:255',
-            'dolor' => 'nullable|string|max:255',
-            'exudado_cantidad' => 'nullable|string|max:255',
-            'exudado_tipo' => 'nullable|string|max:255',
-            'olor' => 'nullable|string|max:255',
-            'piel_perisional' => 'nullable|string|max:255',
-            'infeccion' => 'nullable|string|max:255',
-            'tipo_dolor' => 'nullable|string|max:255',
-            'visual_scale' => 'nullable|string|max:255',
-            'blood_glucose' => 'nullable|string|max:255',
-            'note' => 'nullable|string',
-        ];
+            $rules = [
+                'wound_type_id' => 'required|exists:list_wound_types,id',
+                'wound_subtype_id' => 'required|exists:list_wound_subtypes,id',
+                'body_location_id' => 'required|exists:list_body_locations,id',
+                'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
+                'wound_phase_id' => 'required|exists:list_wound_phases,id',
+                'woundBeginDate' => 'nullable|date',
+                'woundHealthDate' => 'nullable|date',
+                'grade_foot' => 'nullable|string|max:255',
+                'wound_type_other' => 'nullable|string|max:255',
+                'MESI' => 'nullable|string|max:255',
+                'woundBackground' => 'nullable|string|max:255',
+                'borde' => 'nullable|string|max:255',
+                'edema' => 'nullable|string|max:255',
+                'dolor' => 'nullable|string|max:255',
+                'exudado_cantidad' => 'nullable|string|max:255',
+                'exudado_tipo' => 'nullable|string|max:255',
+                'olor' => 'nullable|string|max:255',
+                'piel_perisional' => 'nullable|string|max:255',
+                'infeccion' => 'nullable|string|max:255',
+                'tipo_dolor' => 'nullable|string|max:255',
+                'visual_scale' => 'nullable|string|max:255',
+                'blood_glucose' => 'nullable|string|max:255',
+                'note' => 'nullable|string',
+            ];
 
-        if (
-            $request->wound_type_id == 9 ||
-            in_array($request->wound_subtype_id, [7, 11, 25, 33, 46])
-        ) {
-            $rules['wound_type_other'] = 'required|string|max:255';
-        }
+            if (
+                $request->wound_type_id == 9 ||
+                in_array($request->wound_subtype_id, [7, 11, 25, 33, 46])
+            ) {
+                $rules['wound_type_other'] = 'required|string|max:255';
+            }
 
-        if ($request->wound_type_id == 8) {
-            $rules['grade_foot'] = 'required|string|max:255';
-        }
+            if ($request->wound_type_id == 8) {
+                $rules['grade_foot'] = 'required|string|max:255';
+            }
 
-        if ($vascularRequired) {
-            $rules = array_merge($rules, [
-                'ITB_derecho' => 'required|string|max:255',
-                'pulse_dorsal_derecho' => 'required|string|max:255',
-                'pulse_tibial_derecho' => 'required|string|max:255',
-                'pulse_popliteo_derecho' => 'required|string|max:255',
-                'ITB_izquierdo' => 'required|string|max:255',
-                'pulse_dorsal_izquierdo' => 'required|string|max:255',
-                'pulse_tibial_izquierdo' => 'required|string|max:255',
-                'pulse_popliteo_izquierdo' => 'required|string|max:255',
+            if ($vascularRequired) {
+                $rules = array_merge($rules, [
+                    'ITB_derecho' => 'required|string|max:255',
+                    'pulse_dorsal_derecho' => 'required|string|max:255',
+                    'pulse_tibial_derecho' => 'required|string|max:255',
+                    'pulse_popliteo_derecho' => 'required|string|max:255',
+                    'ITB_izquierdo' => 'required|string|max:255',
+                    'pulse_dorsal_izquierdo' => 'required|string|max:255',
+                    'pulse_tibial_izquierdo' => 'required|string|max:255',
+                    'pulse_popliteo_izquierdo' => 'required|string|max:255',
+                ]);
+            }
+
+            $validated = $request->validate($rules);
+
+            $wound->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Herida actualizada correctamente.'
             ]);
+        } catch (\Throwable $e) {
+            Log::info('Actualizar herida');
+            Log::debug($e);
+            \Log::error('Error al actualizar herida', [
+                'wound_id' => $wound->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al actualizar la herida.',
+                'error' => $e->getMessage(), // Puedes ocultar esto en producción
+            ], 500);
         }
-
-        $validated = $request->validate($rules);
-
-        $wound->update($validated);
-
-        return response()->json(['message' => 'Herida actualizada correctamente.']);
     }
 
     public function destroy(string $id)

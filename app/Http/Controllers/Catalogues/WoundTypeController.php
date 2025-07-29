@@ -7,6 +7,7 @@ use App\Models\WoundType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -60,6 +61,9 @@ class WoundTypeController extends Controller
                 'data' => $woundType,
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar tipo de herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al crear el tipo de herida.',
@@ -93,6 +97,9 @@ class WoundTypeController extends Controller
                 'data' => $woundType,
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar tipo de herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar: ' . $e->getMessage(),
@@ -115,6 +122,9 @@ class WoundTypeController extends Controller
                 'message' => 'Tipo de herida eliminado correctamente.',
             ]);
         } catch (\Exception $e) {
+            Log::info('Eliminar tipo de herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar: ' . $e->getMessage(),

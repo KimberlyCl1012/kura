@@ -119,6 +119,8 @@ class KuratorController extends Controller
 
             return redirect()->route('kurators.index')->with('success', 'Kurador creado correctamente.');
         } catch (\Throwable $e) {
+            Log::info('Crear kurador');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al crear el kurador.'])->withInput();
@@ -191,6 +193,8 @@ class KuratorController extends Controller
 
             return redirect()->route('kurators.index')->with('success', 'Kurador actualizado correctamente.');
         } catch (\Throwable $e) {
+            Log::info('Editar kurador');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al actualizar el kurador.'])->withInput();
@@ -217,9 +221,10 @@ class KuratorController extends Controller
                 'message' => 'Kurador eliminado correctamente.'
             ], 200);
         } catch (\Throwable $e) {
+            Log::info('Eliminar kurador');
+            Log::debug($e);
             DB::rollBack();
             Log::error($e);
-
             return response()->json([
                 'error' => 'Error al eliminar el kurador.'
             ], 500);

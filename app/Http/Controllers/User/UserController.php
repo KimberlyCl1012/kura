@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -19,7 +20,6 @@ class UserController extends Controller
      */
     public function index()
     {
-
         // $users = DB::table('users')
         //     ->selectRaw("DATE_FORMAT(created_at, '%d-%m-%Y %H:%i:%s') as format_create, id, name, email")
         //     ->get();
@@ -67,6 +67,9 @@ class UserController extends Controller
                 'data'    => $user,
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear Usuario');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al crear el usuario.',
@@ -108,6 +111,9 @@ class UserController extends Controller
                 'data'    => $user,
             ]);
         } catch (\Exception $e) {
+            Log::info('Editar Usuario');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al actualizar el usuario.',

@@ -10,6 +10,7 @@ use App\Models\KuratorPatient;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AppointmentController extends Controller
@@ -100,8 +101,10 @@ class AppointmentController extends Controller
             return redirect()->route('appointments.index')
                 ->with('success', 'Consulta creada correctamente.');
         } catch (\Exception $e) {
+            Log::info('Crear consulta');
+            Log::debug($e);
             DB::rollBack();
-
+            Log::error($e);
             return back()
                 ->withErrors(['error' => 'Ocurrió un error al guardar la consulta: ' . $e->getMessage()])
                 ->withInput();
@@ -110,16 +113,35 @@ class AppointmentController extends Controller
 
     public function destroy(Appointment $appointment)
     {
-        $hasWounds = $appointment->wounds()->exists();
+        try {
+            $hasWounds = $appointment->wounds()->exists();
 
-        if ($hasWounds) {
+            if ($hasWounds) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede eliminar, ya existen heridas asociadas a la consulta.'
+                ], 400); // Error 400 - Bad Request
+            }
+
+            $appointment->delete();
+
             return response()->json([
-                'message' => 'No se puede eliminar, ya existen heridas asociadas a la consulta.'
-            ], 400); // Error 400 - Bad Request
+                'success' => true,
+                'message' => 'Consulta eliminada correctamente.'
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::info('Eliminar consulta');
+            Log::debug($e);
+            \Log::error('Error al eliminar la consulta', [
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Ocurrió un error al intentar eliminar la consulta.',
+                'error' => $e->getMessage(), // O quítalo en producción si no deseas exponer detalles
+            ], 500);
         }
-
-        $appointment->delete();
-
-        return response()->json(['message' => 'Consulta eliminada correctamente.'], 200);
     }
 }

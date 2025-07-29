@@ -196,8 +196,8 @@ function clearFilter() {
               Fecha de la consulta
               <span class="text-red-500">*</span>
             </label>
-            <DatePicker id="dateStartVisit" inputId="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full"
-              variant="filled" showIcon iconDisplay="input" :minDate="today" />
+            <DatePicker id="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full" variant="filled"
+              showIcon :minDate="today" />
             <small v-if="submitted && !appointment.dateStartVisit" class="text-red-500">Campo requerido</small>
           </div>
 
