@@ -121,7 +121,19 @@ async function saveUser() {
         hideDialog();
         router.reload({ only: ['patients'] });
     } catch (e) {
-        toast.add({ severity: "error", summary: "Error", detail: "No se pudo guardar", life: 3000 });
+        if (e.response && e.response.status === 422) {
+            const errors = e.response.data.errors;
+            for (let field in errors) {
+                toast.add({
+                    severity: "error",
+                    summary: "Error de validación",
+                    detail: errors[field][0],
+                    life: 4000,
+                });
+            }
+        } else {
+            toast.add({ severity: "error", summary: "Error", detail: "No se pudo guardar", life: 3000 });
+        }
     } finally {
         isSaving.value = false;
     }

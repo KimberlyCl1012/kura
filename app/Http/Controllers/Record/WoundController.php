@@ -62,6 +62,7 @@ class WoundController extends Controller
 
         foreach ($wounds as $wound) {
             $wound->wound_id = Crypt::encryptString($wound->id);
+
             $histories = DB::table('wound_histories')
                 ->select([
                     'wound_histories.*',
@@ -78,7 +79,11 @@ class WoundController extends Controller
                 ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wound_histories.wound_phase_id')
                 ->where('wound_histories.wound_id', $wound->id)
                 ->where('wound_histories.state', 1)
-                ->get();
+                ->get()
+                ->map(function ($h) use ($wound) {
+                    $h->wound_history_id = Crypt::encryptString($h->id);
+                    return $h;
+                });
 
             $wound->histories = $histories;
         }
@@ -97,11 +102,6 @@ class WoundController extends Controller
             'woundsPhase' => WoundPhase::where('state', 1)->get(),
             'bodyLocations' => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
-            'grades' => [
-                ['label' => '1', 'value' => 1],
-                ['label' => '2', 'value' => 2],
-                ['label' => '3', 'value' => 3],
-            ],
             'appointmentId' => $decryptAppointmentId,
             'healthRecordId' => $decryptHealthRecordId,
             'patient' => [
@@ -118,7 +118,6 @@ class WoundController extends Controller
                 'appointment_id'      => 'required|exists:appointments,id',
                 'health_record_id'    => 'required|exists:health_records,id',
                 'wound_type_id'       => 'required|exists:list_wound_types,id',
-                'grade_foot'          => 'nullable|integer',
                 'wound_subtype_id'    => 'required|exists:list_wound_subtypes,id',
                 'wound_type_other'    => 'nullable|string|max:255',
                 'body_location_id'    => 'required|exists:list_body_locations,id',
@@ -244,7 +243,7 @@ class WoundController extends Controller
                 'wound_phase_id' => 'required|exists:list_wound_phases,id',
                 'woundBeginDate' => 'nullable|date',
                 'woundHealthDate' => 'nullable|date',
-                'grade_foot' => 'nullable|string|max:255',
+                'grade_foot' => 'nullable',
                 'wound_type_other' => 'nullable|string|max:255',
                 'MESI' => 'nullable|string|max:255',
                 'woundBackground' => 'nullable|string|max:255',
@@ -270,7 +269,7 @@ class WoundController extends Controller
             }
 
             if ($request->wound_type_id == 8) {
-                $rules['grade_foot'] = 'required|string|max:255';
+                $rules['grade_foot'] = 'required';
             }
 
             if ($vascularRequired) {
@@ -297,7 +296,7 @@ class WoundController extends Controller
         } catch (\Throwable $e) {
             Log::info('Actualizar herida');
             Log::debug($e);
-            \Log::error('Error al actualizar herida', [
+            Log::error('Error al actualizar herida', [
                 'wound_id' => $wound->id,
                 'error' => $e->getMessage(),
             ]);
@@ -305,13 +304,8 @@ class WoundController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al actualizar la herida.',
-                'error' => $e->getMessage(), // Puedes ocultar esto en producción
+                'error' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    public function destroy(string $id)
-    {
-        //
     }
 }

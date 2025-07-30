@@ -68,6 +68,8 @@ class MeasurementController extends Controller
                 'measurement' => $measurement
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear medida');
+            Log::debug($e);
             Log::error('Error al guardar medición', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

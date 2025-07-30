@@ -132,7 +132,7 @@ class AppointmentController extends Controller
         } catch (\Throwable $e) {
             Log::info('Eliminar consulta');
             Log::debug($e);
-            \Log::error('Error al eliminar la consulta', [
+            Log::error('Error al eliminar la consulta', [
                 'appointment_id' => $appointment->id,
                 'error' => $e->getMessage(),
             ]);

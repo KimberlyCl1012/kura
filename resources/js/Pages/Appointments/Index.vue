@@ -5,7 +5,6 @@ import { ref } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
 import { router } from "@inertiajs/vue3";
-
 import {
   InputText, Toolbar, DataTable, Column,
   Dialog, Button, IconField, InputIcon,
@@ -270,9 +269,3 @@ function clearFilter() {
     </Dialog>
   </AppLayout>
 </template>
-
-<style scoped>
-.pi-2x {
-  font-size: 16px;
-}
-</style>

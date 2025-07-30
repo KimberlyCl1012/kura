@@ -6,19 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\WoundHistory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class WoundHistoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        return Inertia::render('WoundHis/Index');
-    }
-
     public function store(Request $request)
     {
         try {
@@ -48,7 +42,7 @@ class WoundHistoryController extends Controller
             }
 
             $history = WoundHistory::create([
-                'wound_id'            => $request->wound_id, // Opcional
+                'wound_id'            => $request->wound_id,
                 'wound_type_id'       => $request->wound_type_id,
                 'grade_foot'          => $request->grade_foot,
                 'wound_subtype_id'    => $request->wound_subtype_id,
@@ -65,6 +59,9 @@ class WoundHistoryController extends Controller
                 'history' => $history,
             ]);
         } catch (\Exception $e) {
+            Log::info('Crear antecedente de la herida');
+            Log::debug($e);
+            Log::error($e);
             return response()->json([
                 'message' => 'Error inesperado al guardar el antecedente',
                 'error'   => $e->getMessage(),
@@ -72,20 +69,17 @@ class WoundHistoryController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function edit($woundHisId)
     {
-        //
-    }
+        try {
+            $decryptHistoryId = Crypt::decryptString($woundHisId);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404, 'ID inválido');
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
+        dd($decryptHistoryId);
+
+        return Inertia::render('WoundsHis/Edit');
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserDeniedPermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PermissionController extends Controller
@@ -61,7 +62,7 @@ class PermissionController extends Controller
                 'message' => 'Restricciones actualizadas correctamente.'
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error al guardar permisos denegados', ['error' => $e->getMessage()]);
+            Log::error('Error al guardar permisos denegados', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,

@@ -9,6 +9,7 @@ use App\Models\TreatmentMethod;
 use App\Models\TreatmentSubmethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TreatmentController extends Controller
 {
@@ -69,7 +70,10 @@ class TreatmentController extends Controller
 
             return response()->json(['message' => 'Tratamiento guardado/actualizado correctamente.'], 200);
         } catch (\Exception $e) {
+            Log::info('Crear Tratamiento');
+            Log::debug($e);
             DB::rollBack();
+            Log::error($e);
             return response()->json([
                 'message' => 'Error al guardar tratamiento',
                 'error' => $e->getMessage()

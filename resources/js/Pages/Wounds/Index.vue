@@ -42,7 +42,7 @@ const isAntecedent = ref(false);
 const submitted = ref(false);
 const isSaving = ref(false);
 
-const expandedRows = ref({}); // controla filas expandidas
+const expandedRows = ref({});
 
 const formWound = ref({
     id: null,
@@ -223,11 +223,13 @@ const collapseAll = () => {
 const onRowExpand = (event) => { };
 const onRowCollapse = (event) => { };
 
-
 function goToWound(wound) {
     router.visit(route('wounds.edit', { woundId: wound.wound_id }));
 }
 
+function goToWoundHis(wound) {
+    router.visit(route('wounds_histories.edit', { woundHisId: wound.wound_history_id }));
+}
 </script>
 
 <template>

@@ -17,6 +17,7 @@ const props = defineProps({
   woundsPhase: Array,
   bodyLocations: Array,
   bodySublocation: Array,
+  grades: Array,
   wound: Object,
   appointmentId: String,
   healthRecordId: String,
@@ -43,7 +44,6 @@ const dolor = ref([{ name: "En reposo" }, { name: "Con movimiento" }, { name: "N
 const exudado_cantidad = ref([{ name: "Abundante" }, { name: "Moderado" }, { name: "Bajo" }]);
 const exudado_tipo = ref([{ name: "Seroso" }, { name: "Purulento" }, { name: "Hemático" }, { name: "Serohemático" }]);
 const olor = ref([{ name: "Mal olor" }, { name: "No aplica" }]);
-const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
 const piel_perisional = ref([
   { name: "Eritema" }, { name: "Escoriación" }, { name: "Maceración" }, { name: "Reseca" },
   { name: "Equimosis" }, { name: "Indurada" }, { name: "Queratosis" }, { name: "Integra" },
@@ -118,7 +118,7 @@ async function saveUser() {
       response = await axios.put(`/wounds/${woundId}`, payload);
     } else {
       response = await axios.post("/wounds", payload);
-      formWound.value.id = response.data.id;
+      formWound.value.id = response.data.id; // Importante para posteriores pasos como guardar imágenes
     }
 
     toast.add({
@@ -142,6 +142,7 @@ async function saveUser() {
   }
 }
 
+
 // Carga de datos iniciales
 const woundSubtypes = ref([]);
 const bodySublocations = ref([]);
@@ -155,7 +156,6 @@ onMounted(() => {
       id: props.wound.id || props.wound.wound_id,
       woundBeginDate: props.wound.woundBeginDate ? new Date(props.wound.woundBeginDate) : null,
       woundHealthDate: props.wound.woundHealthDate ? new Date(props.wound.woundHealthDate) : null,
-      grade_foot: props.wound.grade_foot ? parseInt(props.wound.grade_foot) : null,
     });
     if (formWound.value.wound_type_id) loadSubtypes(formWound.value.wound_type_id);
     if (formWound.value.body_location_id) loadSublocations(formWound.value.body_location_id);
@@ -229,7 +229,6 @@ watch(() => [formWound.value.length, formWound.value.width], ([length, width]) =
     }
   }
 });
-
 watch(() => formWound.value.depth, (depth) => {
   const d = parseFloat(depth);
   const a = parseFloat(formWound.value.area);
@@ -318,7 +317,9 @@ async function saveMeasurement() {
     isSavingMeasurement.value = false;
     return;
   }
-  // Guardar measurements
+
+
+  // Guardar
   try {
     const payload = {
       wound_id: formWound.value.id,
@@ -370,7 +371,7 @@ const showVascularFields = computed(() => {
   return formWound.value.body_location_id === 3 || formWound.value.body_location_id === 5;
 });
 
-// Actualiza la barra de colores
+// Actualiza la barra cuando se cambia un campo
 function adjustProgress() { }
 
 const totalPercentage = computed(() => {
@@ -387,7 +388,7 @@ function percentWidth(field) {
   if (total === 0) return 0;
 
   if (total > 100) {
-    return ((value / total) * 100).toFixed(2);
+    return ((value / total) * 100).toFixed(2); // Ajusta proporcionalmente
   }
 
   return value.toFixed(2);
@@ -427,6 +428,8 @@ const closeZoomModal = () => {
 const closeLimitModal = () => {
   showLimitModal.value = false;
 };
+
+//Evidencia de la herida
 
 const totalSize = ref(0);
 const totalSizePercent = ref(0);
@@ -564,10 +567,11 @@ const uploadEvent = async () => {
 
 
 //Tratamiento 
+// Refs
 const formTreat = ref({
   methods: [],
-  submethodsByMethod: {},
-  note: "",
+  submethodsByMethod: {}, // { [methodId]: [submethodId, ...] }
+  note: "", // aquí se carga la descripción
 });
 
 const isSavingTreatment = ref(false);
@@ -627,6 +631,7 @@ const storeTreatment = async () => {
     selectedSubmethodIds.push(...subs);
   }
 
+  // Construir payload
   const payload = {
     wound_id: formWound.value.id,
     note: formTreat.value.note || null,
@@ -663,17 +668,26 @@ const storeTreatment = async () => {
 
 onMounted(() => {
   if (props.treatment) {
+    // Cargar nota
     formTreat.value.note = props.treatment.description;
+
+    // Cargar métodos seleccionados
     formTreat.value.methods = props.treatment.methods.map(
       (m) => m.treatment_method_id
     );
 
     // Agrupar submétodos por método
     const submethodsByMethod = {};
+
     props.treatment.methods.forEach((method) => {
       const methodId = method.treatment_method_id;
       submethodsByMethod[methodId] = [];
+
+      // Agregar todos los submétodos que vengan del backend si los tuvieras agrupados
+      // Aquí asumimos que backend no te lo manda agrupado, así que hacemos asociación general
       props.treatment.submethods.forEach((sub) => {
+        // Asumimos que todos los submétodos seleccionados se asignan al primer método (ajustable)
+        // Idealmente, tu backend debe agruparlos
         const subId = sub.treatment_submethod_id;
         if (!submethodsByMethod[methodId].includes(subId)) {
           submethodsByMethod[methodId].push(subId);
@@ -731,22 +745,17 @@ onMounted(() => {
                 </div>
 
                 <!-- Grado (condicional) -->
-                <!-- Subtipo o Grado (según tipo de herida) -->
                 <div v-if="formWound.wound_type_id === 8">
                   <label class="flex items-center gap-1 mb-1 font-medium">
                     Grado <span class="text-red-600">*</span>
                   </label>
-                  <Select v-model="formWound.grade_foot" :options="grades" optionLabel="name" optionValue="id"
+                  <Select v-model="formWound.grade_foot" :options="props.grades" optionLabel="label" optionValue="value"
                     placeholder="Seleccione un grado" filter class="w-full min-w-0"
                     :class="{ 'p-invalid': submittedUser && !formWound.grade_foot }" />
-
                   <small v-if="submittedUser && !formWound.grade_foot" class="text-red-500">
                     Debe seleccionar el grado.
                   </small>
                 </div>
-
-
-
 
                 <!-- Otro tipo (condicional) -->
                 <div v-if="
@@ -827,7 +836,7 @@ onMounted(() => {
                       class="text-red-600">*</span></label>
                   <DatePicker v-model="formWound.woundBeginDate" class="w-full min-w-0" inputId="woundBeginDate" :class="{
                     'p-invalid': submittedUser && !formWound.woundBeginDate,
-                  }" placeholder="Seleccione una fecha" showIcon />
+                  }" placeholder="Seleccione una fecha" showIcon dateFormat="yy-mm-dd" />
                   <small v-if="submittedUser && !formWound.woundBeginDate" class="text-red-500">
                     Debe seleccionar la fecha de inicio.
                   </small>
@@ -1023,7 +1032,7 @@ onMounted(() => {
                     <span class="text-red-600">*</span>
                   </label>
                   <DatePicker v-model="formWound.woundHealthDate" inputId="woundHealthDate" class="w-full min-w-0"
-                    placeholder="Seleccione una fecha" showIcon />
+                    placeholder="Seleccione una fecha" showIcon dateFormat="yy-mm-dd" />
                   <small v-if="errors.woundHealthDate" class="text-red-500">{{
                     errors.woundHealthDate
                   }}</small>
@@ -1168,7 +1177,7 @@ onMounted(() => {
                   <span class="text-red-600">*</span>
                 </label>
                 <DatePicker v-model="formWound.measurementDate" inputId="measurementDate" class="w-full min-w-0"
-                  placeholder="Seleccione una fecha" showIcon />
+                  placeholder="Seleccione una fecha" showIcon dateFormat="yy-mm-dd" />
                 <small v-if="errors.measurementDate" class="text-red-500">{{
                   errors.measurementDate
                 }}</small>
@@ -1227,7 +1236,7 @@ onMounted(() => {
 
               <!-- Granulación -->
               <div>
-                <label for="granulation">Granulación (%)<span class="text-red-600">*</span></label>
+                <label for="granulation">Granulación (%)</label>
                 <InputText id="granulation" v-model="formWound.granulation_percent" type="number" min="0" max="100"
                   step="1" @input="adjustProgress" class="w-full" />
                 <small v-if="errors.granulation_percent" class="text-red-500">{{ errors.granulation_percent }}</small>
@@ -1235,7 +1244,7 @@ onMounted(() => {
 
               <!-- Esfacelo -->
               <div>
-                <label for="slough">Esfacelo (%)<span class="text-red-600">*</span></label>
+                <label for="slough">Esfacelo (%)</label>
                 <InputText id="slough" v-model="formWound.slough_percent" type="number" min="0" max="100" step="1"
                   @input="adjustProgress" class="w-full" />
                 <small v-if="errors.slough_percent" class="text-red-500">{{ errors.slough_percent }}</small>
@@ -1243,7 +1252,7 @@ onMounted(() => {
 
               <!-- Necrosis -->
               <div>
-                <label for="necrosis">Necrosis (%)<span class="text-red-600">*</span></label>
+                <label for="necrosis">Necrosis (%)</label>
                 <InputText id="necrosis" v-model="formWound.necrosis_percent" type="number" min="0" max="100" step="1"
                   @input="adjustProgress" class="w-full" />
                 <small v-if="errors.necrosis_percent" class="text-red-500">{{ errors.necrosis_percent }}</small>
@@ -1251,7 +1260,7 @@ onMounted(() => {
 
               <!-- Epitelización -->
               <div>
-                <label for="epithelialization">Epitelización (%)<span class="text-red-600">*</span></label>
+                <label for="epithelialization">Epitelización (%)</label>
                 <InputText id="epithelialization" v-model="formWound.epithelialization_percent" type="number" min="0"
                   max="100" step="1" @input="adjustProgress" class="w-full" />
                 <small v-if="errors.epithelialization_percent" class="text-red-500">{{ errors.epithelialization_percent
@@ -1309,7 +1318,7 @@ onMounted(() => {
 
             <div class="card">
               <Toast />
-              <FileUpload name="images[]" :customUpload="true" :multiple="true" :maxFileSize="9000000" accept="image/*"
+              <FileUpload name="images[]" :customUpload="true" :multiple="true" :maxFileSize="1000000" accept="image/*"
                 @select="onSelectedFiles" @uploader="uploadEvent">
                 <template #header="{ chooseCallback, clearCallback, files }">
                   <div class="flex flex-wrap justify-between items-center flex-1 gap-4">
@@ -1368,33 +1377,10 @@ onMounted(() => {
             </div>
 
             <!-- Modal de Zoom -->
-<Dialog
-  v-model:visible="showZoomModal"
-  modal
-  header="Evidencia de la herida"
-  :style="{ width: '80vw', height: '100vh' }"
-  :contentStyle="{
-    padding: 0,
-    margin: 0,
-    height: '100%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center' 
-  }"
->
-<img
-  :src="zoomImageUrl"
-  class="zoom-img"
-  :style="{
-    transform: `rotate(${zoomRotation}deg)`,
-    width: '70%',
-    height: 'auto',
-    maxHeight: '100%',
-    objectFit: 'contain'
-  }"
-/>
-
-</Dialog>
+            <Dialog v-model:visible="showZoomModal" modal header="Evidencia de la herida" :style="{ width: '90vw' }">
+              <img :src="zoomImageUrl" :style="{ transform: `rotate(${zoomRotation}deg)` }"
+                class="w-full max-h-[80vh] object-contain mx-auto" />
+            </Dialog>
 
             <!-- Modal de Límite -->
             <Dialog v-model:visible="showLimitModal" modal header="Límite de imágenes" :style="{ width: '400px' }">
@@ -1522,16 +1508,5 @@ onMounted(() => {
   font-size: 0.9rem;
   text-align: center;
   user-select: none;
-}
-
-.zoom-img {
-  margin-top: 0; /* Por defecto (móviles y tablets) */
-}
-
-/* Solo en pantallas grandes (≥ 1024px) */
-@media (min-width: 1024px) {
-  .zoom-img {
-    margin-top: 5rem; /* o 6rem, 100px según necesites */
-  }
 }
 </style>

@@ -95,15 +95,13 @@ Route::middleware([
     //Treatment
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
 
-
     //Wounds History
-    Route::get('/wounds_histories', [WoundHistoryController::class, 'index'])->name('wounds_histories.index');
     Route::post('/wounds_histories', [WoundHistoryController::class, 'store'])->name('wounds_histories.store');
+    Route::get('/wounds_histories/{woundHisId}', [WoundHistoryController::class, 'edit'])->name('wounds_histories.edit');
 
     // Relations
     Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');
     Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
-
 
 
 

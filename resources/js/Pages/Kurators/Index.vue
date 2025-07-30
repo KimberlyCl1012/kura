@@ -151,7 +151,19 @@ async function saveKurator() {
         hideDialog();
         router.reload({ only: ["kurators"] });
     } catch (e) {
-        toast.add({ severity: "error", summary: "Error", detail: "Error al guardar", life: 3000 });
+        if (e.response && e.response.status === 422) {
+            const errors = e.response.data.errors;
+            for (const field in errors) {
+                toast.add({
+                    severity: "error",
+                    summary: "Error de validación",
+                    detail: errors[field][0],
+                    life: 4000,
+                });
+            }
+        } else {
+            toast.add({ severity: "error", summary: "Error", detail: "Error al guardar", life: 3000 });
+        }
     } finally {
         isSaving.value = false;
     }
@@ -211,15 +223,13 @@ function goToAppointments(kurator) {
             <form @submit.prevent="saveKurator" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block font-bold mb-1">Nombre<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Nombre<span class="text-red-600">*</span></label>
                         <InputText v-model="kurator.name" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.name }" />
                         <small v-if="submitted && !kurator.name" class="text-red-500">El nombre es obligatorio.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Apellido paterno<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Apellido paterno<span class="text-red-600">*</span></label>
                         <InputText v-model="kurator.fatherLastName" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.fatherLastName }" />
                         <small v-if="submitted && !kurator.fatherLastName" class="text-red-500">El apellido materno es
@@ -230,24 +240,21 @@ function goToAppointments(kurator) {
                         <InputText v-model="kurator.motherLastName" class="w-full" />
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Sexo<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Sexo<span class="text-red-600">*</span></label>
                         <Select v-model="kurator.sex" :options="sex" optionLabel="value" optionValue="value" filter
                             class="w-full" placeholder="Seleccione un sexo"
                             :class="{ 'p-invalid': submitted && !kurator.sex }" />
                         <small v-if="submitted && !kurator.sex" class="text-red-500">El sexo es obligatorio.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Teléfono<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Teléfono<span class="text-red-600">*</span></label>
                         <InputText v-model="kurator.mobile" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.mobile }" />
                         <small v-if="submitted && !kurator.mobile" class="text-red-500">El teléfono es
                             obligatorio.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Sitio<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Sitio<span class="text-red-600">*</span></label>
                         <Select v-model="kurator.site_id" :options="sites" optionLabel="siteName" optionValue="id"
                             filter class="w-full" placeholder="Seleccione un sitio"
                             :class="{ 'p-invalid': submitted && !kurator.site_id }" />
@@ -263,16 +270,14 @@ function goToAppointments(kurator) {
                             obligatorio.</small>
                     </div>
                     <div v-if="!isEditMode">
-                        <label class="block font-bold mb-1">Contraseña<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Contraseña<span class="text-red-600">*</span></label>
                         <Password v-model="kurator.password" toggleMask :feedback="false" class="w-full"
                             inputClass="w-full" :class="{ 'p-invalid': submitted && !kurator.password }" />
                         <small v-if="submitted && !kurator.password" class="text-red-500">La contraseña es
                             obligatoria.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Tipo de Kurador<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Tipo de Kurador<span class="text-red-600">*</span></label>
                         <Select v-model="kurator.type_kurator" :options="types" optionLabel="value" optionValue="value"
                             filter class="w-full" placeholder="Seleccione un tipo"
                             :class="{ 'p-invalid': submitted && !kurator.type_kurator }" />
@@ -280,8 +285,7 @@ function goToAppointments(kurator) {
                             obligatorio.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Especialidad<span
-                                class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Especialidad<span class="text-red-600">*</span></label>
                         <InputText v-model="kurator.specialty" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.specialty }" />
                         <small v-if="submitted && !kurator.specialty" class="text-red-500">La especialidad es

@@ -74,7 +74,7 @@ class PatientController extends Controller
             'name' => 'required|string|max:255',
             'fatherLastName' => 'required|string|max:255',
             'motherLastName' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255|unique:user_details,contactEmail',
+            'email' => 'required|email|max:255|unique:users,email',
             'mobile' => 'nullable|string|max:20',
             'sexo' => 'nullable|string|in:Hombre,Mujer',
             'site_id' => 'required|exists:list_sites,id',
@@ -145,11 +145,14 @@ class PatientController extends Controller
 
     public function update(Request $request, $id)
     {
+        $patient = Patient::findOrFail($id);
+        $userDetail = $patient->userDetail;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'fatherLastName' => 'required|string|max:255',
             'motherLastName' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $patient->userDetail->user_id,
             'mobile' => 'nullable|string|max:20',
             'sex' => 'required|string|in:Hombre,Mujer',
             'site_id' => 'required|exists:list_sites,id',
@@ -168,9 +171,6 @@ class PatientController extends Controller
         DB::beginTransaction();
 
         try {
-            $patient = Patient::findOrFail($id);
-            $userDetail = $patient->userDetail;
-
             // Actualizar tabla users directamente sin relación
             DB::table('users')
                 ->where('id', $userDetail->user_id)

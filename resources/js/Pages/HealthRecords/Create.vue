@@ -7,7 +7,6 @@ import Select from "primevue/select";
 import Button from "primevue/button";
 import Editor from "primevue/editor";
 import { useToast } from "primevue/usetoast";
-import { usePermissions } from "../../Composables/usePermissions";
 
 const page = usePage();
 const toast = useToast();
@@ -16,6 +15,7 @@ const props = defineProps({
     patient: Object,
     healthInstitutions: Array,
     healthRecord: Object,
+    permissions: Object,
 });
 
 const form = useForm({
@@ -38,9 +38,54 @@ const submitted = ref(false);
 watch(() => form.medicalInsurance, (val) => {
     if (val !== 'Sí') form.medical_info = '';
 });
+
 watch(() => form.health_institution_id, (val) => {
     if (val !== 5) form.health_institution = '';
 });
+
+const editorRestrictDeletion = computed(() => {
+    return props.permissions?.editor_edit_all_denied === true;
+});
+
+function handleEditorInput(fieldName, newValue) {
+    const oldValue = form[fieldName];
+
+    if (editorRestrictDeletion.value) {
+        const cleanOld = normalizeText(stripHtml(oldValue));
+        const cleanNew = normalizeText(stripHtml(newValue));
+
+        const deletion = cleanNew.length < cleanOld.length;
+
+        if (deletion) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Edición limitada',
+                detail: 'No tienes permiso para eliminar contenido de este campo.',
+                life: 3000,
+            });
+
+            form[fieldName] = oldValue;
+            return;
+        }
+    }
+
+    form[fieldName] = newValue;
+    form[fieldName] = '' + form[fieldName]; 
+}
+
+function stripHtml(html) {
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    return div.textContent || div.innerText || "";
+}
+
+function normalizeText(text) {
+    return text
+        .replace(/\s+/g, ' ')
+        .replace(/\n/g, ' ')
+        .trim()
+        .toLowerCase();
+}
 
 const submit = async () => {
     if (isSaving.value) return;
@@ -99,27 +144,6 @@ const submit = async () => {
         isSaving.value = false;
     }
 };
-
-const { can } = usePermissions();
-const editorFull = computed(() => can('editor:edit-all'));
-
-function handleEditorInput(fieldName, newValue) {
-    const oldValue = form[fieldName];
-
-    if (!editorFull.value && newValue.length < oldValue.length) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Edición limitada',
-            detail: 'No tienes permiso para borrar contenido existente.',
-            life: 3000,
-        });
-
-        form[fieldName] = oldValue;
-        return;
-    }
-
-    form[fieldName] = newValue;
-}
 
 </script>
 
@@ -189,7 +213,7 @@ function handleEditorInput(fieldName, newValue) {
                                 <label class="font-medium">Medicamentos <span class="text-red-500">*</span></label>
                                 <Editor :modelValue="form.medicines"
                                     @update:modelValue="(val) => handleEditorInput('medicines', val)"
-                                    editorStyle="height: 200px" class="w-full"
+                                    editorStyle="height: 100px" class="w-full"
                                     :class="{ 'p-invalid': submitted && !form.medicines }" />
 
                                 <small v-if="submitted && !form.medicines" class="text-red-500">
@@ -201,7 +225,7 @@ function handleEditorInput(fieldName, newValue) {
                                 <label class="font-medium">Alergias <span class="text-red-500">*</span></label>
                                 <Editor :modelValue="form.allergies"
                                     @update:modelValue="(val) => handleEditorInput('allergies', val)"
-                                    editorStyle="height: 200px" class="w-full"
+                                    editorStyle="height: 100px" class="w-full"
                                     :class="{ 'p-invalid': submitted && !form.allergies }" />
 
                                 <small v-if="submitted && !form.allergies" class="text-red-500">
@@ -214,7 +238,7 @@ function handleEditorInput(fieldName, newValue) {
                                         class="text-red-500">*</span></label>
                                 <Editor :modelValue="form.pathologicalBackground"
                                     @update:modelValue="(val) => handleEditorInput('pathologicalBackground', val)"
-                                    editorStyle="height: 200px" class="w-full"
+                                    editorStyle="height: 100px" class="w-full"
                                     :class="{ 'p-invalid': submitted && !form.pathologicalBackground }" />
 
                                 <small v-if="submitted && !form.pathologicalBackground" class="text-red-500">
@@ -226,7 +250,7 @@ function handleEditorInput(fieldName, newValue) {
                                 <label class="font-medium">Laboratorios <span class="text-red-500">*</span></label>
                                 <Editor :modelValue="form.laboratoryBackground"
                                     @update:modelValue="(val) => handleEditorInput('laboratoryBackground', val)"
-                                    editorStyle="height: 200px" class="w-full"
+                                    editorStyle="height: 100px" class="w-full"
                                     :class="{ 'p-invalid': submitted && !form.laboratoryBackground }" />
                                 <small v-if="submitted && !form.laboratoryBackground" class="text-red-500">
                                     Campo obligatorio.
@@ -237,7 +261,7 @@ function handleEditorInput(fieldName, newValue) {
                                 <label class="font-medium">Alimentación <span class="text-red-500">*</span></label>
                                 <Editor :modelValue="form.nourishmentBackground"
                                     @update:modelValue="(val) => handleEditorInput('nourishmentBackground', val)"
-                                    editorStyle="height: 200px" class="w-full"
+                                    editorStyle="height: 100px" class="w-full"
                                     :class="{ 'p-invalid': submitted && !form.nourishmentBackground }" />
                                 <small v-if="submitted && !form.nourishmentBackground" class="text-red-500">
                                     Campo obligatorio.

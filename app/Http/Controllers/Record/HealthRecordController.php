@@ -7,6 +7,7 @@ use App\Models\HealthInstitution;
 use App\Models\HealthRecord;
 use App\Models\Patient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -40,6 +41,8 @@ class HealthRecordController extends Controller
             ->where('id', $decryptpatientId)
             ->firstOrFail();
 
+
+
         return Inertia::render('HealthRecords/Create', [
             'patient' => [
                 'id' => $patient->id,
@@ -48,6 +51,10 @@ class HealthRecordController extends Controller
             ],
             'healthInstitutions' => $healthInstitutions,
             'healthRecord' => $healthRecord,
+            'permissions' => [
+                'editor_edit_all_denied' => Auth::user()->hasExplicitlyDenied('editor:edit-all'),
+                'editor_edit_all_allowed' => Auth::user()->can('editor:edit-all'),
+            ],
         ]);
     }
 
@@ -96,7 +103,7 @@ class HealthRecordController extends Controller
             Log::info('Crear expediente');
             Log::debug($e);
             DB::rollBack();
-            \Log::error('Error al crear expediente clínico', [
+            Log::error('Error al crear expediente clínico', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
             ]);
@@ -106,7 +113,6 @@ class HealthRecordController extends Controller
                 ->withInput();
         }
     }
-
 
     public function update(Request $request, HealthRecord $healthRecord)
     {
@@ -138,19 +144,25 @@ class HealthRecordController extends Controller
 
             unset($data['medical_info']);
 
-            /** 🔐 Verificación de permisos para edición restringida */
             $user = auth()->user();
-            $permissions = is_array($user->current_team_role_permissions) ? $user->current_team_role_permissions : [];
-
-            $hasPermission = in_array('*', $permissions) || in_array('editor:edit-all', $permissions);
             $isDenied = method_exists($user, 'hasExplicitlyDenied') && $user->hasExplicitlyDenied('editor:edit-all');
-            $fullEdit = $hasPermission && !$isDenied;
+            $fullEdit = !$isDenied;
 
+            Log::debug('Permiso explícitamente denegado:', [
+                'denegado' => $isDenied,
+                'permite_edicion_total' => $fullEdit,
+            ]);
 
-            $protectedFields = ['medicines', 'allergies', 'pathologicalBackground', 'laboratoryBackground', 'nourishmentBackground'];
+            $protectedFields = [
+                'medicines',
+                'allergies',
+                'pathologicalBackground',
+                'laboratoryBackground',
+                'nourishmentBackground'
+            ];
 
             foreach ($protectedFields as $field) {
-                if (!$fullEdit && strlen($data[$field]) < strlen($healthRecord->$field)) {
+                if (!$fullEdit && strlen(strip_tags($data[$field])) < strlen(strip_tags($healthRecord->$field))) {
                     $data[$field] = $healthRecord->$field;
                 }
             }
@@ -159,9 +171,9 @@ class HealthRecordController extends Controller
 
             return redirect()->back()->with('success', 'Expediente actualizado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Actualizar expediente clínico');
+            Log::info('Editar expediente clínico');
             Log::debug($e);
-            \Log::error('Error al actualizar expediente clínico', [
+            Log::error('Error al actualizar expediente clínico', [
                 'record_id' => $healthRecord->id,
                 'error' => $e->getMessage(),
             ]);
@@ -171,6 +183,7 @@ class HealthRecordController extends Controller
                 ->withInput();
         }
     }
+
 
     /**
      * Remove the specified resource from storage.

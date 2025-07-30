@@ -144,12 +144,6 @@ class KuratorController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userDetail->user_id),
             ],
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('user_details', 'contactEmail')->ignore($userDetail->id),
-            ],
             'site_id' => 'required|exists:list_sites,id',
             'specialty' => 'required|string|max:255',
             'type_kurator' => 'required|string|max:50',

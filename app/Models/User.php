@@ -73,13 +73,13 @@ class User extends Authenticatable
     }
 
     public function hasExplicitlyDenied(string $permission): bool
-{
-    return $this->deniedPermissions()->where('permission', $permission)->exists();
-}
+    {
+        return $this->deniedPermissions()->where('permission', $permission)->exists();
+    }
 
     public function currentTeamRolePermissions()
     {
-        $team = $this->currentTeam; 
+        $team = $this->currentTeam;
 
         if (!$team) {
             return [];
