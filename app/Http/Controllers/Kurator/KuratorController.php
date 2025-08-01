@@ -282,6 +282,7 @@ class KuratorController extends Controller
             )
             ->orderBy('patients.id')
             ->orderBy('appointments.dateStartVisit', 'desc')
+            ->where('appointments.state', 1)
             ->get();
 
         $appointments = $appointmentsRaw
@@ -294,7 +295,7 @@ class KuratorController extends Controller
                     ->first() ?? 'Sin expediente';
 
                 return [
-                    'patient_id' => $first->patient_id,
+                    'patient_id' => Crypt::encryptString($first->patient_id),
                     'patient_full_name' => $first->patient_full_name,
                     'health_record_uuid' => $firstFolio,
                     'appointments' => $items->filter(fn($r) => $r->appointment_id !== null)->map(fn($app) => [

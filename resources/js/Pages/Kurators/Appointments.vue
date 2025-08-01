@@ -6,7 +6,7 @@ import axios from "axios";
 import { router } from "@inertiajs/vue3";
 import {
     InputText, Toolbar, DataTable, Column,
-    Dialog, Button, InputIcon, Select, DatePicker
+    Dialog, Button, InputIcon, Select, DatePicker, Tooltip
 } from "primevue";
 
 const props = defineProps({
@@ -139,6 +139,11 @@ function goToWounds(appointments) {
     }));
 }
 
+//Expediente
+function healthRecord(patientId) {
+    router.get(route('health_records.create', patientId));
+}
+
 </script>
 
 <template>
@@ -178,8 +183,11 @@ function goToWounds(appointments) {
                 <Column field="patient_full_name" header="Paciente" style="width: 30%" />
                 <Column :exportable="false" header="Acciones" style="width: 30%">
                     <template #body="{ data }">
-                        <Button icon="pi pi-user-edit" outlined rounded severity="warning"
+                        <Button icon="pi pi-user-edit" outlined rounded severity="warning" class="mr-2"
                             v-tooltip.top="'Editar Paciente'" @click.stop="editPatient(data.patient_id)" />
+                        <Button icon="pi pi-folder-open" outlined rounded severity="info"
+                            v-tooltip.top="'Ver expediente'" @click="healthRecord(data.patient_id)" />
+
                     </template>
                 </Column>
 
@@ -354,7 +362,7 @@ function goToWounds(appointments) {
                 </div>
 
                 <div class="flex justify-end mt-4">
-                    <Button label="Cancelar" outlined severity="danger" @click="hidePatientDialog" />
+                    <Button label="Cancelar" text icon="pi pi-times" @click="hidePatientDialog" />
                     <Button label="Actualizar" icon="pi pi-check" :loading="isSavingPatient" class="ml-2"
                         type="submit" />
                 </div>

@@ -22,7 +22,6 @@ const props = defineProps({
     woundsPhase: Array,
     bodyLocations: Array,
     bodySublocation: Array,
-    grades: Array,
     wounds: Array,
     appointmentId: String,
     healthRecordId: String,
@@ -31,6 +30,9 @@ const props = defineProps({
 
 const dt = ref();
 const toast = useToast();
+
+//Catalogos
+const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -343,7 +345,7 @@ function goToWoundHis(wound) {
                         <label class="block font-bold mb-1">
                             Grado <span class="text-red-600">*</span>
                         </label>
-                        <Select v-model="formWound.grade_foot" :options="grades" optionLabel="label" optionValue="value"
+                        <Select v-model="formWound.grade_foot" :options="grades" optionLabel="name" optionValue="id"
                             placeholder="Seleccione un grado" filter class="w-full"
                             :class="{ 'p-invalid': submitted && !formWound.grade_foot }" />
                         <small v-if="submitted && !formWound.grade_foot" class="text-red-500">

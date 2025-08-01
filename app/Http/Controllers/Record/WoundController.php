@@ -202,9 +202,8 @@ class WoundController extends Controller
 
         $treatment = Treatment::with([
             'methods:id,treatment_id,treatment_method_id',
-            'submethods:id,treatment_id,treatment_submethod_id'
+            'submethods:id,treatment_id,treatment_submethod_id,treatment_method_id'
         ])->where('wound_id', $decryptWoundId)->first();
-
 
         return Inertia::render('Wounds/Edit', [
             'wound' => $wound,
@@ -214,11 +213,6 @@ class WoundController extends Controller
             'woundsPhase' => WoundPhase::where('state', 1)->get(),
             'bodyLocations' => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
-            'grades' => [
-                ['label' => '1', 'value' => 1],
-                ['label' => '2', 'value' => 2],
-                ['label' => '3', 'value' => 3],
-            ],
             'treatmentMethods' => Method::where('state', 1)
                 ->with(['submethods' => function ($q) {
                     $q->where('state', 1);
@@ -245,6 +239,7 @@ class WoundController extends Controller
                 'woundHealthDate' => 'nullable|date',
                 'grade_foot' => 'nullable',
                 'wound_type_other' => 'nullable|string|max:255',
+                'valoracion' => 'nullable|string|max:255',
                 'MESI' => 'nullable|string|max:255',
                 'woundBackground' => 'nullable|string|max:255',
                 'borde' => 'nullable|string|max:255',
@@ -258,7 +253,6 @@ class WoundController extends Controller
                 'tipo_dolor' => 'nullable|string|max:255',
                 'visual_scale' => 'nullable|string|max:255',
                 'blood_glucose' => 'nullable|string|max:255',
-                'note' => 'nullable|string',
             ];
 
             if (
@@ -274,6 +268,7 @@ class WoundController extends Controller
 
             if ($vascularRequired) {
                 $rules = array_merge($rules, [
+                    'valoracion' => 'required|string|max:255',
                     'ITB_derecho' => 'required|string|max:255',
                     'pulse_dorsal_derecho' => 'required|string|max:255',
                     'pulse_tibial_derecho' => 'required|string|max:255',

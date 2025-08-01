@@ -3,22 +3,22 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
-use App\Models\Media;
+use App\Models\MediaHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class MediaController extends Controller
+class MediaHistoryController extends Controller
 {
     public function index(Request $request)
     {
-        $woundId = $request->query('wound_id');
+        $woundHistoryId = $request->query('wound_history_id');
 
-        if (!$woundId) {
-            return response()->json(['error' => 'Falta wound_id'], 400);
+        if (!$woundHistoryId) {
+            return response()->json(['error' => 'Falta wound_history_id'], 400);
         }
 
-        $media = Media::where('wound_id', $woundId)
-            ->where('type', 'Herida')
+        $media = MediaHistory::where('wound_history_id', $woundHistoryId)
+            ->where('type', 'Antecedente')
             ->get(['id', 'content', 'position']);
 
         return response()->json($media);
@@ -28,23 +28,23 @@ class MediaController extends Controller
     {
         try {
             $request->validate([
-                'wound_id' => 'required|exists:wounds,id',
+                'wound_history_id' => 'required|exists:wound_histories,id',
                 'images' => 'required|array|min:1',
                 'rotations' => 'nullable|array',
             ]);
 
-            $woundId = $request->input('wound_id');
+            $woundHistoryId = $request->input('wound_history_id');
             $rotations = $request->input('rotations', []);
 
             foreach ($request->file('images') as $i => $image) {
                 $path = $image->store('wound_media', 'public');
                 $rotation = $rotations[$i] ?? 0;
 
-                Media::create([
-                    'wound_id' => $woundId,
+                MediaHistory::create([
+                    'wound_history_id' => $woundHistoryId,
                     'content' => $path,
                     'position' => $rotation,
-                    'type' => 'Herida',
+                    'type' => 'Antecedente',
                 ]);
             }
 

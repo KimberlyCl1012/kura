@@ -8,6 +8,7 @@ use App\Models\HealthRecord;
 use App\Models\Kurator;
 use App\Models\KuratorPatient;
 use App\Models\Site;
+use App\Models\Wound;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -141,6 +142,37 @@ class AppointmentController extends Controller
                 'success' => false,
                 'message' => 'Ocurrió un error al intentar eliminar la consulta.',
                 'error' => $e->getMessage(), // O quítalo en producción si no deseas exponer detalles
+            ], 500);
+        }
+    }
+
+    public function finish(Request $request)
+    {
+        try {
+            $woundId = $request->input('wound_id');
+            $appointmentId = $request->input('appointment_id');
+
+            if (!$woundId || !$appointmentId) {
+                return response()->json(['message' => 'IDs requeridos'], 422);
+            }
+
+            $wound = Wound::findOrFail($woundId);
+            $appointment = Appointment::findOrFail($appointmentId);
+
+            $wound->state = 3; //Estatus para cerrar consulta
+            $wound->save();
+
+            $appointment->state = 3; //Estatus para cerrar consulta
+            $appointment->save();
+
+            return response()->json([
+                'message' => 'Consulta finalizada correctamente.',
+                'redirect_to' => route('kurators.index'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al finalizar la consulta.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

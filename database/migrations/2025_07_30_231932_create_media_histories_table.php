@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('media_treatments', function (Blueprint $table) {
-           $table->id(); //'id_media'
-            $table->foreignId('wound_id')->nullable()->constrained('wounds');
-            $table->foreignId('treatment_id')->nullable()->constrained('treatments');
-            $table->longText('description',999)->nullable();
+        Schema::create('media_histories', function (Blueprint $table) {
+            $table->id(); //'id_media'
+            $table->foreignId('wound_history_id')->nullable()->constrained('wound_histories');
+            $table->longText('description', 999)->nullable();
             $table->string('content')->nullable();
             $table->string('position')->nullable();
             $table->string('type')->nullable();
@@ -28,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('media_treatments');
+        Schema::dropIfExists('media_histories');
     }
 };

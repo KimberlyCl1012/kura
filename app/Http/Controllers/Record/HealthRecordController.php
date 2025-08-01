@@ -16,17 +16,6 @@ use Str;
 
 class HealthRecordController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create($patientId)
     {
         try {
@@ -50,7 +39,19 @@ class HealthRecordController extends Controller
                 'name' => $patient->userDetail->name . ' ' . $patient->userDetail->fatherLastName . ' ' . $patient->userDetail->motherLastName,
             ],
             'healthInstitutions' => $healthInstitutions,
-            'healthRecord' => $healthRecord,
+            'healthRecord' => $healthRecord ? [
+                'healthRecordId' => $healthRecord->id,
+                'cryptHealthRecordId' => Crypt::encryptString($healthRecord->id),
+                'health_institution_id' => $healthRecord->health_institution_id,
+                'medicines' => $healthRecord->medicines,
+                'allergies' => $healthRecord->allergies,
+                'pathologicalBackground' => $healthRecord->pathologicalBackground,
+                'laboratoryBackground' => $healthRecord->laboratoryBackground,
+                'nourishmentBackground' => $healthRecord->nourishmentBackground,
+                'medicalInsurance' => $healthRecord->medicalInsurance,
+                'health_institution' => $healthRecord->health_institution,
+                'religion' => $healthRecord->religion,
+            ] : null,
             'permissions' => [
                 'editor_edit_all_denied' => Auth::user()->hasExplicitlyDenied('editor:edit-all'),
                 'editor_edit_all_allowed' => Auth::user()->can('editor:edit-all'),
@@ -58,9 +59,6 @@ class HealthRecordController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         try {
@@ -182,14 +180,5 @@ class HealthRecordController extends Controller
                 ->withErrors(['error' => 'Ocurrió un error al actualizar el expediente.'])
                 ->withInput();
         }
-    }
-
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

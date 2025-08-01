@@ -70,7 +70,7 @@ function handleEditorInput(fieldName, newValue) {
     }
 
     form[fieldName] = newValue;
-    form[fieldName] = '' + form[fieldName]; 
+    form[fieldName] = '' + form[fieldName];
 }
 
 function stripHtml(html) {
@@ -119,7 +119,7 @@ const submit = async () => {
 
     try {
         if (props.healthRecord) {
-            await form.put(route('health_records.update', props.healthRecord.id), {
+            await form.put(route('health_records.update', props.healthRecord.healthRecordId), {
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.add({ severity: 'success', summary: 'Actualizado', detail: 'Expediente actualizado.', life: 3000 });
@@ -145,6 +145,12 @@ const submit = async () => {
     }
 };
 
+//Records
+function goToRecords(healthRecordId) {
+    router.get(route('records.index', healthRecordId));
+}
+
+
 </script>
 
 <template>
@@ -152,11 +158,18 @@ const submit = async () => {
         <div class="card">
             <div class="bg-surface-0 dark:bg-surface-950 px-1 py-3 lg:px-20">
                 <div class="grid grid-cols-12 gap-8">
-                    <div class="col-span-12">
-                        <!-- Mostrar solo si tiene permiso 'delete' -->
-                        <h2 class="text-xl font-bold text-surface-900 dark:text-surface-0 mb-4">
-                            Expediente Médico
-                        </h2>
+                    <div class="col-span-12 grid grid-cols-12 mb-4">
+                        <div class="col-span-6 flex items-center">
+                            <h2 class="text-xl font-bold text-surface-900 dark:text-surface-0 m-0">
+                                Expediente Médico
+                            </h2>
+                        </div>
+
+                        <div v-if="props.healthRecord" class="col-span-6 flex items-center justify-end">
+                            <Button icon="pi pi-folder-open" outlined severity="danger" class="ml-2"
+                                label="Ver registros" v-tooltip.top="'Registro de heridas y antecedentes'"
+                                @click.stop="goToRecords(props.healthRecord.cryptHealthRecordId)" />
+                        </div>
                     </div>
 
                     <div class="col-span-12">

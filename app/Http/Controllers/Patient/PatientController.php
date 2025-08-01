@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserDetail;
 use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -145,7 +146,17 @@ class PatientController extends Controller
 
     public function update(Request $request, $id)
     {
-        $patient = Patient::findOrFail($id);
+        // Si viene encriptado, lo desencripta; si no, lo toma como entero
+        try {
+            $patientId = is_numeric($id)
+                ? $id
+                : Crypt::decryptString($id);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404, 'ID inválido');
+        }
+
+        $patient = Patient::findOrFail($patientId);
+
         $userDetail = $patient->userDetail;
 
         $validated = $request->validate([
@@ -228,27 +239,47 @@ class PatientController extends Controller
             $userId = $userDetail->user_id;
 
             DB::beginTransaction();
-            // Eliminar paciente
+
+            // Intento de borrado
             $patient->delete();
-            // Eliminar userDetail
             $userDetail->delete();
-            // Eliminar usuario
             DB::table('users')->where('id', $userId)->delete();
+
             DB::commit();
 
-            return back()->with('success', 'Paciente eliminado correctamente.');
+            return response()->json(['message' => 'Paciente eliminado correctamente.']);
+        } catch (QueryException $e) {
+            Log::info('Eliminar paciente');
+            Log::debug($e);
+            DB::rollBack();
+            Log::error($e);
+
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'No se puede eliminar el paciente tiene registros relacionados.'
+                ], 409); // Código 409: Conflicto
+            }
+
+            return response()->json(['message' => 'Error de base de datos.'], 500);
         } catch (\Throwable $e) {
             Log::info('Eliminar paciente');
             Log::debug($e);
             DB::rollBack();
             Log::error($e);
-            return back()->withErrors(['error' => 'Error al eliminar el paciente.']);
+            return response()->json(['message' => 'Error inesperado al eliminar el paciente.'], 500);
         }
     }
 
+
     public function show($id)
     {
-        $patient = Patient::with('userDetail')->findOrFail($id);
+        try {
+            $decryptpatientId = Crypt::decryptString($id);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404, 'ID inválido');
+        }
+
+        $patient = Patient::with('userDetail')->findOrFail($decryptpatientId);
 
         return response()->json([
             'name' => $patient->userDetail->name,

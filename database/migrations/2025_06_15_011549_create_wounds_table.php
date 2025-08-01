@@ -26,6 +26,7 @@ return new class extends Migration
             $table->date('woundBeginDate')->nullable();
             $table->date('woundHealthDate')->nullable();
             $table->string('grade_foot')->nullable();
+            $table->string('valoracion')->nullable();
             $table->string('MESI')->nullable();
             $table->string('borde')->nullable();
             $table->string('edema')->nullable();

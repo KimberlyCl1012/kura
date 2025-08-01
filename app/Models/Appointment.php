@@ -28,9 +28,9 @@ class Appointment extends Model
         return $this->hasMany(TreatmentLog::class); //, 'id_appointment'
     }
 
-    public function kurators()
+    public function kurator()
     {
-        return $this->belongsToMany(Kurator::class, 'kurator_pacient', 'id_paciente', 'id_kurador');
+        return $this->belongsTo(Kurator::class);
     }
 
     public function healthRecord()

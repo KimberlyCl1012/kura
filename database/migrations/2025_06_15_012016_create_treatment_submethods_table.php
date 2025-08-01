@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('treatment_submethods', function (Blueprint $table) {
             $table->id();
             $table->foreignId('treatment_id')->constrained('treatments')->onDelete('cascade');
+            $table->foreignId('treatment_method_id')->constrained('list_treatment_methods')->onDelete('cascade');
             $table->foreignId('treatment_submethod_id')->constrained('list_treatment_submethods')->onDelete('cascade');
             $table->timestamps();
         });

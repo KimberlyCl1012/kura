@@ -147,11 +147,27 @@ function confirmDeleteUser(data) {
 
 async function deleteUser() {
     try {
-        await axios.delete(route('patients.destroy', patient.value.patient_id));
-        toast.add({ severity: "success", summary: "Eliminado", detail: "Paciente eliminado", life: 3000 });
+        await axios.post(route('patients.destroy', patient.value.patient_id), {
+            _method: 'DELETE'
+        });
+
+        toast.add({
+            severity: "success",
+            summary: "Eliminado",
+            detail: "Paciente eliminado",
+            life: 3000,
+        });
+
         router.reload({ only: ['patients'] });
-    } catch {
-        toast.add({ severity: "error", summary: "Error", detail: "No se pudo eliminar", life: 3000 });
+    } catch (error) {
+        const detail = error?.response?.data?.message || "No se pudo eliminar";
+
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail,
+            life: 4000,
+        });
     } finally {
         deletePatientDialog.value = false;
     }

@@ -11,7 +11,10 @@ use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
+use App\Http\Controllers\Record\MediaAntecedentController;
 use App\Http\Controllers\Record\MediaController;
+use App\Http\Controllers\Record\MediaHistoryController;
+use App\Http\Controllers\Record\RecordController;
 use App\Http\Controllers\Record\TreatmentController;
 use App\Http\Controllers\Record\WoundController;
 use App\Http\Controllers\Record\WoundHistoryController;
@@ -78,6 +81,7 @@ Route::middleware([
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::put('/appointments/finish', [AppointmentController::class, 'finish'])->name('appointments.finish');
 
     //Wounds
     Route::get('/wounds/{appointmentId}/{healthrecordId}', [WoundController::class, 'index'])->name('wounds.index');
@@ -92,17 +96,25 @@ Route::middleware([
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
     Route::post('/media/upload', [MediaController::class, 'upload'])->name('media.upload');
 
+    //Media History
+    Route::get('/media_history', [MediaHistoryController::class, 'index'])->name('media_history.index');
+    Route::post('/media_history/upload', [MediaHistoryController::class, 'upload'])->name('media_history.upload');
+
     //Treatment
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
 
     //Wounds History
     Route::post('/wounds_histories', [WoundHistoryController::class, 'store'])->name('wounds_histories.store');
     Route::get('/wounds_histories/{woundHisId}', [WoundHistoryController::class, 'edit'])->name('wounds_histories.edit');
+    Route::put('/wounds_histories/{woundHisId}/edit', [WoundHistoryController::class, 'update'])->name('wounds_histories.update');
+
+    //Record
+    Route::get('/records/{healthRecordId}', [RecordController::class, 'index'])->name('records.index');
+
 
     // Relations
     Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');
     Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
-
 
 
     //Catalogues

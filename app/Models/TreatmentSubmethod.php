@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TreatmentSubmethod extends Model
 {
-     protected $fillable = [
+    protected $fillable = [
         'treatment_id',
+        'treatment_method_id',
         'treatment_submethod_id',
     ];
 
@@ -19,5 +20,10 @@ class TreatmentSubmethod extends Model
     public function submethod()
     {
         return $this->belongsTo(ListTreatmentSubmethod::class, 'treatment_submethod_id');
+    }
+
+    public function method()
+    {
+        return $this->belongsTo(ListTreatmentMethod::class, 'treatment_method_id');
     }
 }

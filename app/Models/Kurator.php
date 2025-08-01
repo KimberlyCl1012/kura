@@ -13,7 +13,7 @@ class Kurator extends Model
 
     public function patient()
     {
-        return $this->belongsToMany(Patient::class, 'kurator_pacient', 'id_kurator', 'id_pacient');
+        return $this->belongsToMany(Patient::class, 'kurator_patients', 'id_kurator', 'id_patient');
     }
 
     public function userDetail()
