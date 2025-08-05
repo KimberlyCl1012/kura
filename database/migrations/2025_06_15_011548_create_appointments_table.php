@@ -12,14 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('appointments', function (Blueprint $table) {
-              $table->id(); // 'id_appointment'
+            $table->id(); // 'id_appointment'
+            $table->foreignId('wound_id')->nullable()->constrained('wounds');
             $table->foreignId('site_id')->constrained('list_sites');
             $table->foreignId('health_record_id')->constrained('health_records');
             $table->foreignId('kurator_id')->constrained('kurators');
             $table->date('dateStartVisit')->nullable();
             $table->date('dateEndVisit')->nullable();
             $table->enum('typeVisit', ['Valoración', 'Urgencia', 'Seguimiento']);
-            $table->boolean('state')->default(1);
+            $table->unsignedTinyInteger('state')->default(1);
             $table->timestamps();
         });
     }

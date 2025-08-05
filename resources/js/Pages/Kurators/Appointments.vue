@@ -195,7 +195,7 @@ function healthRecord(patientId) {
                 <template #expansion="{ data }">
                     <div class="p-4 border-2 border-primary rounded-lg">
                         <div class="text-primary mb-3">
-                            Consultas del paciente: <b>{{ data.patient_full_name }}</b>
+                            Consulta del paciente: <b>{{ data.patient_full_name }}</b>
                         </div>
 
                         <DataTable :value="data.appointments" dataKey="id" :paginator="true" :rows="5"

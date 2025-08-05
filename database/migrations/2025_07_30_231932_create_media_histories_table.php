@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('media_histories', function (Blueprint $table) {
-            $table->id(); //'id_media'
+            $table->id(); //'id_media_histories'
             $table->foreignId('wound_history_id')->nullable()->constrained('wound_histories');
             $table->longText('description', 999)->nullable();
             $table->string('content')->nullable();

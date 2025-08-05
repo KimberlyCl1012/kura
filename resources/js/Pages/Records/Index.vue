@@ -1,171 +1,89 @@
 <script setup>
-import AppLayout from "@/Layouts/sakai/AppLayout.vue";
-import { ref, reactive } from "vue";
-import { useToast } from "primevue/usetoast";
-import axios from "axios";
+import AppLayout from "../../Layouts/sakai/AppLayout.vue";
+import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
-import { FilterMatchMode } from "@primevue/core/api";
-import {
-    InputText, Toolbar, DataTable, Column,
-    Dialog, Button, InputIcon, Select, DatePicker, Tooltip
-} from "primevue";
+import { Button, DataTable, Column } from "primevue";
+import axios from 'axios';
 
 const props = defineProps({
-    appointments: Array
+    wounds: Array
 });
 
-const toast = useToast();
-const dt = ref(null);
+const selectedWounds = ref([]);
 
-const filters = ref({
-    global: { value: null, matchMode: "contains" },
-});
 
-const expandedRows = ref({});
+const generatePdf = async () => {
+    const ids = selectedWounds.value.map(w => w.id);
+    
+    try {
+        const response = await axios.post(route('records.generate-pdf'), {
+            wound_ids: ids
+        }, {
+            responseType: 'blob' 
+        });
 
-const expandAll = () => {
-    const all = {};
-    props.appointments.forEach((appointment) => {
-        all[appointment.id] = true;
-    });
-    expandedRows.value = all;
-};
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
 
-const collapseAll = () => {
-    expandedRows.value = {};
-};
+        // Crear un enlace para descargar el archivo
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'reporte_heridas.pdf');
+        document.body.appendChild(link);
+        link.click();
 
-const onRowExpand = (event) => {
-    const patient = event.data.health_record?.patient;
-    const details = patient?.user_detail;
-    const fullName = details
-        ? `${details.name} ${details.fatherLastName}`
-        : 'Paciente desconocido';
-
-    const uuid = patient?.user_uuid || 'UUID no disponible';
-
-    toast.add({
-        severity: "info",
-        summary: "Paciente expandido",
-        detail: `${uuid} - ${fullName}`,
-        life: 2000,
-    });
-};
-
-const onRowCollapse = (event) => {
-    const patient = event.data.health_record?.patient;
-    const details = patient?.user_detail;
-    const fullName = details
-        ? `${details.name} ${details.fatherLastName}`
-        : 'Paciente desconocido';
-
-    const uuid = patient?.user_uuid || 'UUID no disponible';
-
-    toast.add({
-        severity: "warn",
-        summary: "Paciente colapsado",
-        detail: `${uuid} - ${fullName}`,
-        life: 2000,
-    });
+        // Limpieza
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error("Error al generar PDF:", error);
+    }
 };
 
 </script>
 
 <template>
-    <AppLayout title="Registros">
+    <AppLayout title="Listado de Heridas">
         <div class="card">
-            <Toolbar class="mb-6">
-                <template #start>
-                    <Button label="Exportar" class="mr-4" icon="pi pi-upload" severity="secondary"
-                        @click="dt?.exportCSV()" />
+            <div class="flex justify-end mb-3">
+                <Button icon="pi pi-file-pdf" label="Generar reporte" severity="danger" @click="generatePdf"
+                    :disabled="!selectedWounds.length" />
+            </div>
 
-                </template>
-                <template #end>
-                    <Button text icon="pi pi-plus" label="Expandir Todo" @click="expandAll" class="mr-2" />
-                    <Button text icon="pi pi-minus" label="Colapsar Todo" @click="collapseAll" />
-                </template>
-            </Toolbar>
+            <DataTable v-model:selection="selectedWounds" :value="wounds" dataKey="id" tableStyle="min-width: 70rem"
+                selectionMode="multiple" :paginator="true" :rows="10">
+                <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
-            <DataTable ref="dt" :value="appointments" v-model:expandedRows="expandedRows" dataKey="id" :paginator="true"
-                :rows="10" :filters="filters" :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros" @rowExpand="onRowExpand"
-                @rowCollapse="onRowCollapse">
-
-                <template #header>
-                    <div class="flex justify-between items-center">
-                        <h4 class="m-0">Registros del paciente</h4>
-                        <InputText v-model="filters.global.value" placeholder="Buscar..." />
-                    </div>
-                </template>
-
-                <Column expander style="width: 5rem" />
                 <Column header="Paciente">
                     <template #body="{ data }">
-                        {{ data.health_record?.patient?.user_uuid }} {{ data.health_record?.patient?.user_detail?.name
-                        }} {{
-                            data.health_record?.patient?.user_detail?.fatherLastName }}
-                    </template>
-                </Column>
-                <Column field="dateStartVisit" header="Fecha consulta">
-                    <template #body="{ data }">
-                        {{ data.dateStartVisit }}
-                    </template>
-                </Column>
-                <Column header="Kurador">
-                    <template #body="{ data }">
-                        {{ data.kurator?.user_uuid }} {{ data.kurator?.user_detail?.name }} {{
-                            data.kurator?.user_detail?.fatherLastName }}
+                        {{ data.appointment?.kurator?.user_detail?.name }}
+                        {{ data.appointment?.kurator?.user_detail?.fatherLastName }}
                     </template>
                 </Column>
 
-                <Column field="typeVisit" header="Tipo de visita">
+                <Column header="Tipo">
                     <template #body="{ data }">
-                        {{ data.typeVisit }}
+                        {{ data.wound_type?.name || 'N/A' }}
                     </template>
                 </Column>
 
-                <Column :exportable="false" header="Acciones">
+                <Column header="Subtipo">
                     <template #body="{ data }">
-                        <Button icon="pi pi-eye" outlined rounded severity="info" class="mr-2"
-                            v-tooltip.top="'Ver paciente'" @click.stop="editPatient(data.health_record.patient.id)" />
+                        {{ data.wound_subtype?.name || 'N/A' }}
                     </template>
                 </Column>
-                <template #expansion="slotProps">
-                    <div class="p-4 border rounded bg-gray-50">
-                        <h5 class="font-bold mb-2">Heridas:</h5>
-                        <div v-if="slotProps.data.wounds.length">
-                            <DataTable :value="slotProps.data.wounds" responsiveLayout="scroll">
-                                <Column header="#" style="min-width: 6rem">
-                                    <template #body="{ index }">{{ index + 1 }}</template>
-                                </Column>
-                                <Column header="Fecha creación">
-                                    <template #body="{ data }">
-                                        {{ data.created_at?.substring(0, 10) }}
-                                    </template>
-                                </Column>
-                                <Column header="Tipo">
-                                    <template #body="{ data }">
-                                        {{ data.wound_type?.name || 'N/A' }}
-                                    </template>
-                                </Column>
-                                <Column header="Subtipo">
-                                    <template #body="{ data }">
-                                        {{ data.wound_subtype?.name || 'N/A' }}
-                                    </template>
-                                </Column>
-                                <Column header="Ubicación">
-                                    <template #body="{ data }">
-                                        {{ data.body_location?.name || 'N/A' }}
-                                    </template>
-                                </Column>
-                            </DataTable>
-                        </div>
-                        <div v-else>
-                            <p class="text-gray-500">Sin heridas registradas.</p>
-                        </div>
-                    </div>
-                </template>
 
+                <Column header="Ubicación">
+                    <template #body="{ data }">
+                        {{ data.body_location?.name || 'N/A' }}
+                    </template>
+                </Column>
+
+                <Column header="Fecha creación">
+                    <template #body="{ data }">
+                        {{ data.created_at?.substring(0, 10) }}
+                    </template>
+                </Column>
             </DataTable>
         </div>
     </AppLayout>

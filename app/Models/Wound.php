@@ -16,6 +16,12 @@ class Wound extends Model
         return $this->belongsTo(HealthRecord::class);  // , 'id_healthRecord'
     }
 
+    public function appointment()
+    {
+        return $this->belongsTo(Appointment::class);
+    }
+
+
     public function woundPhase()
     {
         return $this->belongsTo(WoundPhase::class);  // , 'id_woundPhase'
@@ -44,5 +50,19 @@ class Wound extends Model
     public function histories()
     {
         return $this->hasMany(WoundHistory::class);
+    }
+
+    public function followUps()
+    {
+        return $this->hasMany(Appointment::class, 'wound_id');
+    }
+    public function measurements()
+    {
+        return $this->hasMany(Measurement::class);
+    }
+
+    public function media()
+    {
+        return $this->hasMany(Media::class);
     }
 }

@@ -11,20 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wounds', function (Blueprint $table) {
-            $table->id(); //'id_wound'
+        Schema::create('wound_follows', function (Blueprint $table) {
+            $table->id(); //'id_wound_follow'
+            $table->foreignId('wound_id')->constrained('wounds');
             $table->foreignId('appointment_id')->constrained('appointments');
-            $table->foreignId('health_record_id')->constrained('health_records');
             $table->foreignId('wound_phase_id')->constrained('list_wound_phases');
             $table->foreignId('wound_type_id')->constrained('list_wound_types');
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
             $table->foreignId('body_location_id')->constrained('list_body_locations');
             $table->foreignId('body_sublocation_id')->constrained('list_body_sublocations');
             $table->string('wound_type_other')->nullable();
-            $table->string('woundBackground')->default(0);
-            $table->date('woundCreationDate')->nullable();
-            $table->date('woundBeginDate')->nullable();
-            $table->date('woundHealthDate')->nullable();
             $table->string('grade_foot')->nullable();
             $table->string('valoracion')->nullable();
             $table->string('MESI')->nullable();
@@ -47,6 +43,18 @@ return new class extends Migration
             $table->string('pulse_tibial_derecho')->nullable();
             $table->string('pulse_popliteo_derecho')->nullable();
             $table->string('blood_glucose')->nullable();
+            $table->date('measurementDate');
+            $table->decimal('length', 8, 2)->nullable();
+            $table->decimal('width', 8, 2)->nullable();
+            $table->decimal('area', 8, 2)->nullable();
+            $table->decimal('depth', 8, 2)->nullable();
+            $table->decimal('volume', 8, 2)->nullable();
+            $table->string('tunneling')->nullable();
+            $table->string('undermining')->nullable();
+            $table->decimal('granulation_percent', 5, 2)->nullable();
+            $table->decimal('slough_percent', 5, 2)->nullable();
+            $table->decimal('necrosis_percent', 5, 2)->nullable();
+            $table->decimal('epithelialization_percent', 5, 2)->nullable();
             $table->longText('note', 999)->nullable();
             $table->unsignedTinyInteger('state')->default(1);
             $table->timestamps();
@@ -58,6 +66,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wounds');
+        Schema::dropIfExists('wound_follows');
     }
 };

@@ -11,17 +11,15 @@ use App\Http\Controllers\Permission\PermissionController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
-use App\Http\Controllers\Record\MediaAntecedentController;
 use App\Http\Controllers\Record\MediaController;
 use App\Http\Controllers\Record\MediaHistoryController;
 use App\Http\Controllers\Record\RecordController;
 use App\Http\Controllers\Record\TreatmentController;
 use App\Http\Controllers\Record\WoundController;
+use App\Http\Controllers\Record\WoundFollowController;
 use App\Http\Controllers\Record\WoundHistoryController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Middleware\HandleInertiaRequests;
-use Carbon\Exceptions\NotAPeriodException;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -82,6 +80,7 @@ Route::middleware([
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
     Route::put('/appointments/finish', [AppointmentController::class, 'finish'])->name('appointments.finish');
+    Route::get('/appointments/{appointmentId}/wounds/count', [AppointmentController::class, 'countWounds'])->name('appointments.countWounds');
 
     //Wounds
     Route::get('/wounds/{appointmentId}/{healthrecordId}', [WoundController::class, 'index'])->name('wounds.index');
@@ -103,6 +102,9 @@ Route::middleware([
     //Treatment
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
 
+    //Wound Follows
+    Route::get('/wounds_follow/{woundId}/edit', [WoundFollowController::class, 'edit'])->name('wounds_follow.edit');
+
     //Wounds History
     Route::post('/wounds_histories', [WoundHistoryController::class, 'store'])->name('wounds_histories.store');
     Route::get('/wounds_histories/{woundHisId}', [WoundHistoryController::class, 'edit'])->name('wounds_histories.edit');
@@ -110,6 +112,8 @@ Route::middleware([
 
     //Record
     Route::get('/records/{healthRecordId}', [RecordController::class, 'index'])->name('records.index');
+    Route::get('/records/{appointmentId}/show', [RecordController::class, 'show'])->name('records.show');
+    Route::post('/records/pdf', [RecordController::class, 'generatePdf'])->name('records.generate-pdf');
 
 
     // Relations

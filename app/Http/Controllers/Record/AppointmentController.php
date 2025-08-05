@@ -54,23 +54,54 @@ class AppointmentController extends Controller
             ->orderBy('appointments.created_at', 'desc')
             ->get();
 
+        $finalizedWounds = Wound::with([
+            'woundType:id,name',
+            'woundSubtype:id,name',
+            'bodyLocation:id,name',
+            'bodySublocation:id,name'
+        ])
+            ->where('state', 3)
+            ->get()
+            ->map(function ($wound) {
+                $type = $wound->woundType->name ?? $wound->wound_type_other ?? 'Tipo desconocido';
+                $subtype = $wound->woundSubtype->name ?? '';
+                $location = $wound->bodyLocation->name ?? '';
+                $sublocation = $wound->bodySublocation->name ?? '';
+
+                return [
+                    'id' => $wound->id,
+                    'health_record_id' => $wound->health_record_id,
+                    'name' => "{$type}"
+                        . ($subtype ? " ({$subtype})" : '')
+                        . ($location || $sublocation ? " - {$location}" . ($sublocation ? " / {$sublocation}" : '') : ''),
+                ];
+            });
+
+
         return Inertia::render('Appointments/Index', [
             'sites' => $sites,
             'kurators' => $kurators,
             'patientRecords' => $patientRecords,
             'appointments' => $appointments,
+            'finalizedWounds' => $finalizedWounds,
         ]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'dateStartVisit' => 'required|date',
             'site_id' => 'required|exists:list_sites,id',
             'health_record_id' => 'required|exists:health_records,id',
             'kurator_id' => 'required|exists:kurators,id',
             'typeVisit' => 'required|in:Valoración,Urgencia,Seguimiento',
-        ]);
+        ];
+
+        if ($request->typeVisit === 'Seguimiento') {
+            $rules['wound_id'] = 'required|exists:wounds,id';
+        }
+
+        $request->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -83,9 +114,7 @@ class AppointmentController extends Controller
                     'kurator_id' => $request->kurator_id,
                     'patient_id' => $patientId,
                 ],
-                [
-                    'state' => 1,
-                ]
+                ['state' => 1]
             );
 
             Appointment::create([
@@ -94,20 +123,22 @@ class AppointmentController extends Controller
                 'health_record_id' => $request->health_record_id,
                 'kurator_id' => $request->kurator_id,
                 'typeVisit' => $request->typeVisit,
-                'state' => true,
+                'wound_id' => $request->wound_id,
+                'state' => 1,
             ]);
+
+            //Actualizar estado de la herida si es seguimiento
+            if ($request->typeVisit === 'Seguimiento') {
+                Wound::where('id', $request->wound_id)->update(['state' => 2]);
+            }
 
             DB::commit();
 
             return redirect()->route('appointments.index')
                 ->with('success', 'Consulta creada correctamente.');
         } catch (\Exception $e) {
-            Log::info('Crear consulta');
-            Log::debug($e);
             DB::rollBack();
-            Log::error($e);
-            return back()
-                ->withErrors(['error' => 'Ocurrió un error al guardar la consulta: ' . $e->getMessage()])
+            return back()->withErrors(['error' => 'Ocurrió un error al guardar la consulta: ' . $e->getMessage()])
                 ->withInput();
         }
     }
@@ -116,7 +147,6 @@ class AppointmentController extends Controller
     {
         try {
             $hasWounds = $appointment->wounds()->exists();
-
             if ($hasWounds) {
                 return response()->json([
                     'success' => false,
@@ -146,23 +176,41 @@ class AppointmentController extends Controller
         }
     }
 
+    public function countWounds($appointmentId)
+    {
+        try {
+            $count = Wound::where('appointment_id', $appointmentId)->count();
+            return response()->json(['count' => $count]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al contar heridas.'], 500);
+        }
+    }
+
+
     public function finish(Request $request)
     {
         try {
-            $woundId = $request->input('wound_id');
             $appointmentId = $request->input('appointment_id');
 
-            if (!$woundId || !$appointmentId) {
-                return response()->json(['message' => 'IDs requeridos'], 422);
+            if (!$appointmentId) {
+                return response()->json(['message' => 'ID de consulta requerido'], 422);
             }
 
-            $wound = Wound::findOrFail($woundId);
+            // Verificar existencia de la cita
             $appointment = Appointment::findOrFail($appointmentId);
 
-            $wound->state = 3; //Estatus para cerrar consulta
-            $wound->save();
+            // Verificar si hay heridas
+            $woundCount = Wound::where('appointment_id', $appointmentId)->count();
 
-            $appointment->state = 3; //Estatus para cerrar consulta
+            if ($woundCount === 0) {
+                return response()->json(['message' => 'No hay heridas asociadas a esta consulta.'], 400);
+            }
+
+            // Actualizar todas las heridas de la cita
+            Wound::where('appointment_id', $appointmentId)->update(['state' => 3]);
+
+            // Actualizar el estado de la consulta
+            $appointment->state = 3;
             $appointment->save();
 
             return response()->json([

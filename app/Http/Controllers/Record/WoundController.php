@@ -60,6 +60,7 @@ class WoundController extends Controller
             ->where('wounds.state', 1)
             ->get();
 
+
         foreach ($wounds as $wound) {
             $wound->wound_id = Crypt::encryptString($wound->id);
 
@@ -88,6 +89,33 @@ class WoundController extends Controller
             $wound->histories = $histories;
         }
 
+        $followUps = Wound::select([
+            'wounds.*',
+            'list_wound_types.name as wound_type',
+            'list_wound_types.id as wound_type_id',
+            'list_wound_subtypes.name as wound_subtype',
+            'list_wound_subtypes.id as wound_subtype_id',
+            'list_body_locations.name as body_location',
+            'list_body_locations.id as body_location_id',
+            'list_body_sublocations.name as body_sublocation',
+            'list_body_sublocations.id as body_sublocation_id',
+            'list_wound_phases.name as wound_phase',
+            'list_wound_phases.id as wound_phase_id',
+        ])
+            ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
+            ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
+            ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
+            ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
+            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
+            ->where('wounds.health_record_id', $decryptHealthRecordId)
+            ->where('wounds.state', 2) // Seguimientos
+            ->get();
+
+        foreach ($followUps as $wound) {
+            $wound->wound_id = Crypt::encryptString($wound->id);
+        }
+
+
         // Obtener paciente
         $healthRecord = HealthRecord::with('patient.userDetail')->findOrFail($decryptHealthRecordId);
         $patient = $healthRecord->patient;
@@ -104,8 +132,9 @@ class WoundController extends Controller
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
             'appointmentId' => $decryptAppointmentId,
             'healthRecordId' => $decryptHealthRecordId,
+            'followUps' => $followUps,
             'patient' => [
-                'id' => $patient->id ?? null,
+                'id' => $patient->id,
                 'full_name' => $fullName,
             ],
         ]);

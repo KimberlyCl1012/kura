@@ -15,6 +15,7 @@ class Appointment extends Model
         'health_record_id',
         'kurator_id',
         'typeVisit',
+        'wound_id',
     ];
     // protected $primaryKey = 'id_appointment';
 
@@ -41,5 +42,10 @@ class Appointment extends Model
     public function wounds()
     {
         return $this->hasMany(Wound::class);
+    }
+
+    public function followedWound()
+    {
+        return $this->belongsTo(Wound::class, 'wound_id');
     }
 }

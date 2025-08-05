@@ -25,6 +25,7 @@ const props = defineProps({
     wounds: Array,
     appointmentId: String,
     healthRecordId: String,
+    followUps: Array,
     patient: Object,
 });
 
@@ -232,6 +233,12 @@ function goToWound(wound) {
 function goToWoundHis(wound) {
     router.visit(route('wounds_histories.edit', { woundHisId: wound.wound_history_id }));
 }
+
+//Seguimiento
+function goToFollow(wound) {
+    router.visit(route('wounds_follow.edit', { woundId: wound.wound_id }));
+}
+
 </script>
 
 <template>
@@ -250,7 +257,7 @@ function goToWoundHis(wound) {
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="wounds" dataKey="id" :paginator="true" :rows="10" :filters="filters"
+            <DataTable v-if="wounds.length > 0" ref="dt" :value="wounds" dataKey="id" :paginator="true" :rows="10" :filters="filters"
                 :rowsPerPageOptions="[5, 10, 25]"
                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
                 v-model:expandedRows="expandedRows" @rowExpand="onRowExpand" @rowCollapse="onRowCollapse"
@@ -286,7 +293,7 @@ function goToWoundHis(wound) {
                 <!-- Fila expandida para mostrar antecedentes -->
                 <template #expansion="{ data }">
                     <div class="p-4 border-2 border-primary rounded-lg">
-                        <h5>Antecedentes: Herida - {{ data.id }}</h5>
+                        <h5>Antecedentes de la herida</h5>
                         <DataTable v-if="data.histories && data.histories.length > 0" :value="data.histories"
                             responsiveLayout="scroll" size="small">
                             <Column header="#" style="min-width: 6rem">
@@ -308,6 +315,27 @@ function goToWoundHis(wound) {
                     </div>
                 </template>
             </DataTable>
+
+            <!-- Tabla de Seguimientos -->
+            <div class="card mt-6">
+                <h4 class="mb-4 font-bold">Seguimiento</h4>
+
+                <DataTable :value="followUps" dataKey="id" :paginator="true" :rows="10" responsiveLayout="scroll">
+                    <Column header="#" style="min-width: 6rem">
+                        <template #body="{ index }">{{ index + 1 }}</template>
+                    </Column>
+                    <Column field="wound_type" header="Tipo" />
+                    <Column field="wound_subtype" header="Subtipo" />
+                    <Column field="body_location" header="Ubicación" />
+                    <Column :exportable="false" header="Acciones" style="min-width: 8rem">
+                        <template #body="{ data }">
+                            <Button icon="pi pi-file-edit" outlined rounded class="mr-2" @click="goToFollow(data)"
+                                v-tooltip.top="'Configurar seguimiento'" />
+                        </template>
+                    </Column>
+                </DataTable>
+            </div>
+
         </div>
 
         <!-- Diálogo Crear/Editar -->

@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from "@/Layouts/sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
 import { router } from "@inertiajs/vue3";
@@ -16,6 +16,7 @@ const props = defineProps({
   kurators: Array,
   patientRecords: Array,
   appointments: Array,
+  finalizedWounds: Array,
 });
 
 const dt = ref();
@@ -37,6 +38,7 @@ const appointment = ref({
   health_record_id: null,
   kurator_id: null,
   typeVisit: null,
+  wound_id: null,
 });
 
 const typeOptions = [
@@ -91,6 +93,16 @@ async function save() {
     }
   }
 
+  if (appointment.value.typeVisit === 'Seguimiento' && !appointment.value.wound_id) {
+    toast.add({
+      severity: "warn",
+      summary: "Validación",
+      detail: "Debe seleccionar una herida para seguimiento.",
+      life: 3000,
+    });
+    return;
+  }
+
   isSaving.value = true;
   try {
     const payload = {
@@ -142,6 +154,19 @@ async function destroy() {
 function clearFilter() {
   filters.value.global.value = null;
 }
+
+//Seguimiento
+const woundOptions = ref([]);
+
+watch([() => appointment.value.typeVisit, () => appointment.value.health_record_id], ([type, recordId]) => {
+  if (type === 'Seguimiento' && recordId) {
+    woundOptions.value = props.finalizedWounds.filter(w => w.health_record_id === recordId);
+  } else {
+    woundOptions.value = [];
+    appointment.value.wound_id = null;
+  }
+});
+
 </script>
 
 <template>
@@ -247,6 +272,18 @@ function clearFilter() {
             <small v-if="submitted && !appointment.typeVisit" class="text-red-500">El tipo de visita es
               obligatorio.</small>
           </div>
+
+          <!-- Herida para seguimiento -->
+          <div v-if="appointment.typeVisit === 'Seguimiento'">
+            <label for="wound_id" class="block font-bold mb-1">
+              Herida a dar seguimiento <span class="text-red-500">*</span>
+            </label>
+            <Select id="wound_id" v-model="appointment.wound_id" :options="woundOptions" optionLabel="name"
+              optionValue="id" filter class="w-full" placeholder="Seleccione la herida"
+              :class="{ 'p-invalid': submitted && !appointment.wound_id }" />
+            <small v-if="submitted && !appointment.wound_id" class="text-red-500">Debe seleccionar una herida.</small>
+          </div>
+
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
