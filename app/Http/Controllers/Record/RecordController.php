@@ -25,8 +25,10 @@ class RecordController extends Controller
             'woundType:id,name',
             'woundSubtype:id,name',
             'bodyLocation:id,name',
+            'healthRecord.patient.userDetail',
         ])
             ->where('health_record_id', $decrypthealthRecordId)
+            ->where('state', 3)
             ->orderByDesc('created_at')
             ->get();
 
@@ -58,14 +60,22 @@ class RecordController extends Controller
             'woundSubtype:id,name,description,wound_type_id',
             'bodyLocation:id,name',
             'bodySublocation:id,name',
-            'measurements' => fn($q) => $q->latest()->limit(1),
+            'measurements',
             'media:id,wound_id,content,type,position',
             'appointment:id,dateStartVisit,typeVisit,kurator_id',
             'appointment.kurator:id,user_detail_id,specialty,type_identification,identification',
             'appointment.kurator.userDetail:id,name,fatherLastName,motherLastName',
-            'healthRecord:id,patient_id,medicines,allergies,pathologicalBackground,laboratoryBackground,nourishmentBackground,medicalInsurance,health_institution,religion',
-            'healthRecord.patient:id,user_detail_id,dateOfBirth,identification',
+            'healthRecord:id,patient_id,medicines,allergies,pathologicalBackground,laboratoryBackground,nourishmentBackground,medicalInsurance,health_institution,religion,record_uuid',
+            'healthRecord.patient:id,user_detail_id,dateOfBirth,identification,user_uuid',
             'healthRecord.patient.userDetail:id,name,fatherLastName,motherLastName',
+            'treatments.methods.method',
+            'treatments.submethods.submethod',
+            'histories.woundPhase',
+            'histories.woundType',
+            'histories.woundSubtype',
+            'histories.bodyLocation',
+            'histories.bodySublocation',
+            'histories.mediaHistories',
         ])
             ->whereIn('id', $woundIds)
             ->get();

@@ -15,4 +15,9 @@ class HealthRecord extends Model
     {
         return $this->belongsTo(Patient::class); //, 'id_userDetail'
     }
+
+    public function healthInstitution()
+    {
+        return $this->belongsTo(HealthInstitution::class);
+    }
 }

@@ -19,11 +19,11 @@ class TreatmentSubmethod extends Model
 
     public function submethod()
     {
-        return $this->belongsTo(ListTreatmentSubmethod::class, 'treatment_submethod_id');
+        return $this->belongsTo(Submethod::class, 'treatment_submethod_id');
     }
 
     public function method()
     {
-        return $this->belongsTo(ListTreatmentMethod::class, 'treatment_method_id');
+        return $this->belongsTo(Method::class, 'treatment_method_id');
     }
 }

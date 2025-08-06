@@ -18,6 +18,6 @@ class TreatmentMethod extends Model
 
     public function method()
     {
-        return $this->belongsTo(ListTreatmentMethod::class, 'treatment_method_id');
+        return $this->belongsTo(Method::class, 'treatment_method_id');
     }
 }

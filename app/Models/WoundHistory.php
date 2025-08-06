@@ -45,4 +45,9 @@ class WoundHistory extends Model
     {
         return $this->belongsTo(Wound::class);
     }
+
+    public function mediaHistories()
+    {
+        return $this->hasMany(MediaHistory::class, 'wound_history_id');
+    }
 }

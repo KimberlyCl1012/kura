@@ -14,12 +14,12 @@ const selectedWounds = ref([]);
 
 const generatePdf = async () => {
     const ids = selectedWounds.value.map(w => w.id);
-    
+
     try {
         const response = await axios.post(route('records.generate-pdf'), {
             wound_ids: ids
         }, {
-            responseType: 'blob' 
+            responseType: 'blob'
         });
 
         const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -56,8 +56,9 @@ const generatePdf = async () => {
 
                 <Column header="Paciente">
                     <template #body="{ data }">
-                        {{ data.appointment?.kurator?.user_detail?.name }}
-                        {{ data.appointment?.kurator?.user_detail?.fatherLastName }}
+                         {{ data.health_record?.patient?.user_uuid || 'N/A' }}
+                        {{ data.health_record?.patient?.user_detail?.name || 'N/A' }}
+                        {{ data.health_record?.patient?.user_detail?.fatherLastName || '' }}
                     </template>
                 </Column>
 

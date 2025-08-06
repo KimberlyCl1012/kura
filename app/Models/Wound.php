@@ -65,4 +65,9 @@ class Wound extends Model
     {
         return $this->hasMany(Media::class);
     }
+
+    public function treatments()
+    {
+        return $this->hasMany(Treatment::class);
+    }
 }
