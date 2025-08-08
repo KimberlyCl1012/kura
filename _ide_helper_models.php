@@ -869,7 +869,7 @@ namespace App\Models{
  * @property string|null $exudado_cantidad
  * @property string|null $exudado_tipo
  * @property string|null $olor
- * @property string|null $piel_perisional
+ * @property string|null $piel_perilesional
  * @property string|null $infeccion
  * @property string|null $tipo_dolor
  * @property string|null $visual_scale
@@ -974,7 +974,7 @@ namespace App\Models{
  * @property string|null $exudado_cantidad
  * @property string|null $exudado_tipo
  * @property string|null $olor
- * @property string|null $piel_perisional
+ * @property string|null $piel_perilesional
  * @property string|null $infeccion
  * @property string|null $tipo_dolor
  * @property string|null $visual_scale

@@ -12,29 +12,44 @@ class MediaController extends Controller
     public function index(Request $request)
     {
         $woundId = $request->query('wound_id');
+        $appointmentId = $request->query('appointment_id');
+        $type = $request->query('type');
 
         if (!$woundId) {
             return response()->json(['error' => 'Falta wound_id'], 400);
         }
 
-        $media = Media::where('wound_id', $woundId)
-            ->where('type', 'Herida')
-            ->get(['id', 'content', 'position']);
+        $query = Media::where('wound_id', $woundId);
+
+        if ($appointmentId) {
+            $query->where('appointment_id', $appointmentId);
+        }
+
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $media = $query->get(['id', 'content', 'position']);
 
         return response()->json($media);
     }
+
 
     public function upload(Request $request)
     {
         try {
             $request->validate([
                 'wound_id' => 'required|exists:wounds,id',
+                'appointment_id' => 'nullable|exists:appointments,id',
                 'images' => 'required|array|min:1',
                 'rotations' => 'nullable|array',
+                'type' => 'required|String',
             ]);
 
             $woundId = $request->input('wound_id');
+            $appointmentId = $request->input('appointment_id');
             $rotations = $request->input('rotations', []);
+            $type = $request->input('type');
 
             foreach ($request->file('images') as $i => $image) {
                 $path = $image->store('wound_media', 'public');
@@ -42,9 +57,10 @@ class MediaController extends Controller
 
                 Media::create([
                     'wound_id' => $woundId,
+                    'appointment_id' => $appointmentId,
                     'content' => $path,
                     'position' => $rotation,
-                    'type' => 'Herida',
+                    'type' => $type,
                 ]);
             }
 
@@ -55,7 +71,7 @@ class MediaController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            Log::info('Subir imagenes');
+            Log::info('Subir imágenes');
             Log::debug($e);
             Log::error('Error al subir imágenes de herida', [
                 'error' => $e->getMessage(),

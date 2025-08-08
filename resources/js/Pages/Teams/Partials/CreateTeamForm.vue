@@ -44,7 +44,7 @@ const createTeam = () => {
                 </div>
             </div>
 
-            <div class="col-span-6 sm:col-span-4">
+            <div class="col-span-6 sm:col-span-4 mt-5">
                 <InputLabel for="name" value="Nombre del rol" />
                 <InputText type="text" id="name" v-model="form.name" required autofocus
                 autocomplete="username" class="dark:!bg-surface-900 w-full mt-2" />

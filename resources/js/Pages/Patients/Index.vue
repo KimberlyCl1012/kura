@@ -28,7 +28,7 @@ const sex = [
 ];
 
 const identificationTypes = ["INE", "CURP", "Pasaporte", "Visa", "Otro"];
-const kinshipOptions = ["Padre", "Madre", "Hermano", "Amigo", "Otro"];
+const kinshipOptions = ["Padre", "Madre", "Hermano", "Hijo"];
 
 const patientDialog = ref(false);
 const deletePatientDialog = ref(false);
@@ -41,6 +41,7 @@ function openNew() {
     patient.value = {
         name: "", fatherLastName: "", motherLastName: "", email: "",
         dateOfBirth: null, type_identification: "", identification: "",
+         type_identification_kinship: "", identification_kinship: "",
         streetAddress: "", city: "", postalCode: "",
         relativeName: "", kinship: "", relativeMobile: "",
         state_id: null, site_id: null, consent: 0,
@@ -59,6 +60,8 @@ function editUser(data) {
         state_id: data.state_id || null,
         kinship: data.kinship || null,
         type_identification: data.type_identification || null,
+        type_identification_kinship: data.type_identification_kinship || null,
+        identification_kinship: data.identification_kinship || null,
         consent: data.consent == 1 ? 1 : 0,
     };
     submitted.value = false;
@@ -100,6 +103,18 @@ async function saveUser() {
             life: 3000,
         });
         return;
+    }
+
+    if (patient.value.kinship) {
+        if (!patient.value.type_identification_kinship || !patient.value.identification_kinship) {
+            toast.add({
+                severity: "warn",
+                summary: "Validación representante",
+                detail: "Debe ingresar tipo y número de identificación del familiar",
+                life: 3000,
+            });
+            return;
+        }
     }
 
     isSaving.value = true;
@@ -299,9 +314,30 @@ function healthRecord(data) {
                         <label for="dateOfBirth" class="block font-bold mb-1">Fecha de nacimiento<span
                                 class="text-red-600">*</span></label>
                         <DatePicker class="w-full" inputId="in_label" showIcon iconDisplay="input" id="dateOfBirth"
-                            v-model="patient.dateOfBirth" variant="filled" />
+                            placeholder="mm/dd/yyyy" v-model="patient.dateOfBirth" variant="filled" />
                         <small v-if="submitted && !patient.dateOfBirth" class="text-red-500">La fecha es
                             obligatoria.</small>
+                    </div>
+
+                    <div>
+                        <label for="type_identification" class="block font-bold mb-1">Tipo de identificación<span
+                                class="text-red-600">*</span></label>
+                        <Select id="type_identification" :options="identificationTypes"
+                            v-model="patient.type_identification" placeholder="Seleccione un tipo"
+                            :class="{ 'p-invalid': submitted && !patient.type_identification }" class="w-full" />
+                        <small v-if="submitted && !patient.type_identification" class="text-red-500">El tipo de
+                            identificación
+                            es obligatorio.</small>
+                    </div>
+
+                    <div>
+                        <label for="identification" class="block font-bold mb-1">Número de identificación<span
+                                class="text-red-600">*</span></label>
+                        <InputText id="identification" v-model="patient.identification" class="w-full"
+                            :class="{ 'p-invalid': submitted && !patient.identification }" />
+                        <small v-if="submitted && !patient.identification" class="text-red-500">El número de
+                            identificación es
+                            obligatorio.</small>
                     </div>
 
                     <div>
@@ -346,24 +382,27 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="type_identification" class="block font-bold mb-1">Tipo de identificación<span
-                                class="text-red-600">*</span></label>
-                        <Select id="type_identification" :options="identificationTypes"
-                            v-model="patient.type_identification" placeholder="Seleccione un tipo"
-                            :class="{ 'p-invalid': submitted && !patient.type_identification }" class="w-full" />
-                        <small v-if="submitted && !patient.type_identification" class="text-red-500">El tipo de
-                            identificación
-                            es obligatorio.</small>
+                        <label for="type_identification_kinship" class="block font-bold mb-1">Tipo de
+                            identificación del representante legal<span class="text-red-600">*</span></label>
+                        <Select id="type_identification_kinship" :options="identificationTypes"
+                            v-model="patient.type_identification_kinship" placeholder="Seleccione un tipo"
+                            class="w-full"
+                            :class="{ 'p-invalid': submitted && patient.kinship && !patient.type_identification_kinship }" />
+                        <small v-if="submitted && patient.kinship && !patient.type_identification_kinship"
+                            class="text-red-500">
+                            El tipo de identificación es obligatorio.
+                        </small>
                     </div>
 
                     <div>
-                        <label for="identification" class="block font-bold mb-1">Número de identificación<span
+                        <label for="identification_kinship" class="block font-bold mb-1">Número de identificación del representante legal<span
                                 class="text-red-600">*</span></label>
-                        <InputText id="identification" v-model="patient.identification" class="w-full"
-                            :class="{ 'p-invalid': submitted && !patient.identification }" />
-                        <small v-if="submitted && !patient.identification" class="text-red-500">El número de
-                            identificación es
-                            obligatorio.</small>
+                        <InputText id="identification_kinship" v-model="patient.identification_kinship" class="w-full"
+                            :class="{ 'p-invalid': submitted && patient.kinship && !patient.identification_kinship }" />
+                        <small v-if="submitted && patient.kinship && !patient.identification_kinship"
+                            class="text-red-500">
+                            El número de identificación es obligatorio.
+                        </small>
                     </div>
                 </div>
 

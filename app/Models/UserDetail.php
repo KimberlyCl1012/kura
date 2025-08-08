@@ -11,6 +11,10 @@ class UserDetail extends Model
     protected $guarded = [];
     // protected $primaryKey = 'id_userDetail';
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function company()
     {

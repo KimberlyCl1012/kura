@@ -97,12 +97,12 @@
         </table>
     </header>
 
-    {{-- Expediente médico --}}
+    {{-- Historia clínica --}}
     @php
         $healthRecord = $firstWound->healthRecord;
     @endphp
 
-    <div class="section-title">Expediente Médico</div>
+    <div class="section-title">Historia clínica</div>
     <table>
         <tr>
             <th>Medicamentos</th>

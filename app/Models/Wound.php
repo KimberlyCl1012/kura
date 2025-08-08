@@ -70,4 +70,9 @@ class Wound extends Model
     {
         return $this->hasMany(Treatment::class);
     }
+
+    protected $casts = [
+        'piel_perilesional' => 'array',
+        'infeccion' => 'array',
+    ];
 }

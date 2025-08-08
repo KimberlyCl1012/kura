@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Kurator;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\HealthRecord;
 use App\Models\Kurator;
 use App\Models\Patient;
@@ -23,12 +24,25 @@ use Str;
 
 class KuratorController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected function logChange(array $data)
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
         $kurators = DB::table('kurators')
+            ->where('kurators.state', 1) // Solo activos
             ->join('user_details', 'user_details.id', '=', 'kurators.user_detail_id')
             ->join('users', 'user_details.user_id', '=', 'users.id')
             ->join('list_sites', 'user_details.site_id', '=', 'list_sites.id')
@@ -65,6 +79,8 @@ class KuratorController extends Controller
         ]);
     }
 
+
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -85,12 +101,25 @@ class KuratorController extends Controller
         DB::beginTransaction();
 
         try {
+            // 1. Crear usuario
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => bcrypt($request->password),
             ]);
 
+            $this->logChange([
+                'logType'    => 'Kurador',
+                'table'      => 'users',
+                'primaryKey' => $user->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode([
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ]),
+            ]);
+
+            // 2. Crear detalles
             $userDetail = UserDetail::create([
                 'user_id' => $user->id,
                 'name' => $request->name,
@@ -100,13 +129,32 @@ class KuratorController extends Controller
                 'mobile' => $request->mobile,
                 'contactEmail' => $request->email,
                 'site_id' => $request->site_id,
+                'company_id' => 1,
             ]);
 
+            $this->logChange([
+                'logType'    => 'Kurador',
+                'table'      => 'user_details',
+                'primaryKey' => $userDetail->id,
+                'secondaryKey' => $user->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode($userDetail->only([
+                    'name',
+                    'fatherLastName',
+                    'motherLastName',
+                    'sex',
+                    'mobile',
+                    'contactEmail',
+                    'site_id'
+                ])),
+            ]);
+
+            // 3. Crear kurador
             $anio = Carbon::now()->format('Y');
             $site = str_pad($userDetail->site_id, 2, '0', STR_PAD_LEFT);
             $random = strtoupper(Str::random(3));
 
-            Kurator::create([
+            $kurator = Kurator::create([
                 'user_uuid' => 'KU' . $anio . '-' . $site . $random,
                 'user_detail_id' => $userDetail->id,
                 'specialty' => $request->specialty,
@@ -115,14 +163,27 @@ class KuratorController extends Controller
                 'identification' => $request->identification,
             ]);
 
+            $this->logChange([
+                'logType'    => 'Kurador',
+                'table'      => 'kurators',
+                'primaryKey' => $kurator->id,
+                'secondaryKey' => $userDetail->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode($kurator->only([
+                    'user_uuid',
+                    'specialty',
+                    'type_kurator',
+                    'type_identification',
+                    'identification'
+                ])),
+            ]);
+
             DB::commit();
 
             return redirect()->route('kurators.index')->with('success', 'Kurador creado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Crear kurador');
-            Log::debug($e);
-            DB::rollBack();
             Log::error($e);
+            DB::rollBack();
             return back()->withErrors(['error' => 'Error al crear el kurador.'])->withInput();
         }
     }
@@ -131,6 +192,7 @@ class KuratorController extends Controller
     {
         $kurator = Kurator::findOrFail($id);
         $userDetail = $kurator->userDetail;
+        $user = User::find($userDetail->user_id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -142,7 +204,7 @@ class KuratorController extends Controller
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')->ignore($userDetail->user_id),
+                Rule::unique('users', 'email')->ignore($user->id),
             ],
             'site_id' => 'required|exists:list_sites,id',
             'specialty' => 'required|string|max:255',
@@ -154,27 +216,78 @@ class KuratorController extends Controller
         DB::beginTransaction();
 
         try {
+            // LOG CAMBIOS EN USERS
+            $userCampos = ['name', 'email'];
+            foreach ($userCampos as $campo) {
+                $valorAnterior = $user->$campo;
+                $valorNuevo = $request->$campo;
 
-            DB::table('users')
-                ->where('id', $userDetail->user_id)
-                ->update([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'updated_at' => now(),
-                ]);
+                if ((string) $valorAnterior !== (string) $valorNuevo) {
+                    $this->logChange([
+                        'logType'    => 'Kurador',
+                        'table'      => 'users',
+                        'primaryKey' => $user->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $valorAnterior,
+                        'newValue'   => $valorNuevo,
+                    ]);
+                }
+            }
 
-            DB::table('user_details')
-                ->where('id', $userDetail->id)
-                ->update([
-                    'name' => $request->name,
-                    'fatherLastName' => $request->fatherLastName,
-                    'motherLastName' => $request->motherLastName,
-                    'sex' => $request->sex,
-                    'mobile' => $request->mobile,
-                    'contactEmail' => $request->email,
-                    'site_id' => $request->site_id,
-                    'updated_at' => now(),
-                ]);
+            // LOG CAMBIOS EN USER_DETAILS
+            $userDetailCampos = ['name', 'fatherLastName', 'motherLastName', 'sex', 'mobile', 'contactEmail', 'site_id'];
+            foreach ($userDetailCampos as $campo) {
+                $valorAnterior = $userDetail->$campo;
+                $valorNuevo = $campo === 'contactEmail' ? $request->email : $request->$campo;
+
+                if ((string) $valorAnterior !== (string) $valorNuevo) {
+                    $this->logChange([
+                        'logType'    => 'Kurador',
+                        'table'      => 'user_details',
+                        'primaryKey' => $userDetail->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $valorAnterior,
+                        'newValue'   => $valorNuevo,
+                    ]);
+                }
+            }
+
+            // LOG CAMBIOS EN KURATORS
+            $kuratorCampos = ['specialty', 'type_kurator', 'type_identification', 'identification'];
+            foreach ($kuratorCampos as $campo) {
+                $valorAnterior = $kurator->$campo;
+                $valorNuevo = $request->$campo;
+
+                if ((string) $valorAnterior !== (string) $valorNuevo) {
+                    $this->logChange([
+                        'logType'    => 'Kurador',
+                        'table'      => 'kurators',
+                        'primaryKey' => $kurator->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $valorAnterior,
+                        'newValue'   => $valorNuevo,
+                    ]);
+                }
+            }
+
+            // ACTUALIZAR EN BASE DE DATOS
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+            ]);
+
+            $userDetail->update([
+                'name' => $request->name,
+                'fatherLastName' => $request->fatherLastName,
+                'motherLastName' => $request->motherLastName,
+                'sex' => $request->sex,
+                'mobile' => $request->mobile,
+                'contactEmail' => $request->email,
+                'site_id' => $request->site_id,
+            ]);
 
             $kurator->update([
                 'specialty' => $request->specialty,
@@ -187,10 +300,8 @@ class KuratorController extends Controller
 
             return redirect()->route('kurators.index')->with('success', 'Kurador actualizado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Editar kurador');
-            Log::debug($e);
-            DB::rollBack();
             Log::error($e);
+            DB::rollBack();
             return back()->withErrors(['error' => 'Error al actualizar el kurador.'])->withInput();
         }
     }
@@ -199,29 +310,28 @@ class KuratorController extends Controller
     {
         try {
             $kurator = Kurator::findOrFail($id);
-            $userDetail = $kurator->userDetail;
-            $userId = $userDetail->user_id;
 
             DB::beginTransaction();
 
-            $kurator->delete();
-            $userDetail->delete();
-            DB::table('users')->where('id', $userId)->delete();
+            $kurator->update(['state' => 0]);
+
+            $this->logChange([
+                'logType'    => 'Kurador',
+                'table'      => 'kurators',
+                'primaryKey' => $kurator->id,
+                'changeType' => 'delete',
+                'fieldName'  => 'state',
+                'oldValue'   => 1,
+                'newValue'   => 0,
+            ]);
 
             DB::commit();
 
-            // Respuesta JSON exitosa para peticiones ajax
-            return response()->json([
-                'message' => 'Kurador eliminado correctamente.'
-            ], 200);
+            return response()->json(['message' => 'Kurador desactivado correctamente.'], 200);
         } catch (\Throwable $e) {
-            Log::info('Eliminar kurador');
-            Log::debug($e);
-            DB::rollBack();
             Log::error($e);
-            return response()->json([
-                'error' => 'Error al eliminar el kurador.'
-            ], 500);
+            DB::rollBack();
+            return response()->json(['error' => 'Error al desactivar el kurador.'], 500);
         }
     }
 

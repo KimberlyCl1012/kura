@@ -52,16 +52,15 @@ const submit = async () => {
 </script>
 
 <template>
+
   <Head title="Iniciar sesión" />
   <FloatingConfigurator />
 
   <div
-    class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-[100vw] overflow-hidden"
-  >
+    class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-[100vw] overflow-hidden">
     <div class="flex flex-col items-center justify-center">
       <div class="card">
-        <div
-          style="
+        <div style="
             border-radius: 56px;
             padding: 0.3rem;
             background: linear-gradient(
@@ -69,12 +68,8 @@ const submit = async () => {
               var(--primary-color) 10%,
               rgba(33, 150, 243, 0) 30%
             );
-          "
-        >
-          <div
-            class="w-full bg-surface-0 dark:bg-surface-900 py-10 px-8 sm:px-10"
-            style="border-radius: 53px"
-          >
+          ">
+          <div class="w-full bg-surface-0 dark:bg-surface-900 py-10 px-8 sm:px-10" style="border-radius: 53px">
             <div class="text-center mb-8">
               <!-- <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-8 w-16 shrink-0 mx-auto">
                             <path
@@ -93,50 +88,24 @@ const submit = async () => {
                                 />
                             </g>
                         </svg> -->
-              <div
-                class="flex items-center justify-center bg-surface-0 dark:bg-surface-950 p-5"
-              >
-                <img
-                  src="../../img/logos/red/kura_1.svg"
-                  alt="Procomsa Logo"
-                  class="bg-white w-4/6 max-w-sm rounded-md mx-auto"
-                />
+              <div class="flex items-center justify-center bg-surface-0 dark:bg-surface-950 p-5">
+                <img src="../../img/logos/red/kura_1.svg" alt="Procomsa Logo"
+                  class="bg-white w-4/6 max-w-sm rounded-md mx-auto" />
               </div>
               <!-- <span class="text-muted-color font-medium">Sign in to continue</span> -->
             </div>
             <form @submit.prevent="submit">
               <div>
-                <label
-                  for="email"
-                  class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2"
-                  >Correo electrónico</label
-                >
-                <InputText
-                  id="email"
-                  type="email"
-                  placeholder="Correo electrónico"
-                  class="w-full md:w-[30rem] mb-2"
-                  v-model="form.email"
-                  autofocus
-                  autocomplete="username"
-                />
+                <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Correo
+                  electrónico</label>
+                <InputText id="email" type="email" placeholder="Correo electrónico" class="w-full md:w-[30rem] mb-2"
+                  v-model="form.email" autofocus autocomplete="username" />
                 <InputError class="text-red-500" :message="form.errors.email" />
 
-                <label
-                  for="password"
-                  class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2 mt-5"
-                  >Contraseña</label
-                >
-                <Password
-                  id="password"
-                  v-model="form.password"
-                  placeholder="Contraseña"
-                  :toggleMask="true"
-                  fluid
-                  class="mb-2"
-                  autocomplete="current-password"
-                  :feedback="false"
-                ></Password>
+                <label for="password"
+                  class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2 mt-5">Contraseña</label>
+                <Password id="password" v-model="form.password" placeholder="Contraseña" :toggleMask="true" fluid
+                  class="mb-2" autocomplete="current-password" :feedback="false"></Password>
                 <InputError class="text-red-500" :message="form.errors.password" />
 
                 <div class="flex items-center justify-between mt-2 mb-8 gap-8">
@@ -149,18 +118,13 @@ const submit = async () => {
                 ></Checkbox>
                 <label for="rememberme1">Remember me</label>
               </div> -->
-                  <span
+                  <!-- <span
                     class="font-medium no-underline ml-2 text-right cursor-pointer text-primary"
                     >Olvidaste tu contraseña?</span
-                  >
+                  > -->
                 </div>
-                <Button
-                  type="submit"
-                  :class="{ 'opacity-25': form.processing }"
-                  :disabled="form.processing"
-                  label="Iniciar sesión"
-                  class="w-full"
-                ></Button>
+                <Button type="submit" :class="{ 'opacity-25': form.processing }" :disabled="form.processing"
+                  label="Iniciar sesión" class="w-full"></Button>
               </div>
             </form>
           </div>

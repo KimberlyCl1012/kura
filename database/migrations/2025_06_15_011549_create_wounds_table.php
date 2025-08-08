@@ -20,7 +20,6 @@ return new class extends Migration
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
             $table->foreignId('body_location_id')->constrained('list_body_locations');
             $table->foreignId('body_sublocation_id')->constrained('list_body_sublocations');
-            $table->string('wound_type_other')->nullable();
             $table->string('woundBackground')->default(0);
             $table->date('woundCreationDate')->nullable();
             $table->date('woundBeginDate')->nullable();
@@ -34,8 +33,8 @@ return new class extends Migration
             $table->string('exudado_cantidad')->nullable();
             $table->string('exudado_tipo')->nullable();
             $table->string('olor')->nullable();
-            $table->string('piel_perisional')->nullable();
-            $table->string('infeccion')->nullable();
+            $table->json('piel_perilesional')->nullable();
+            $table->json('infeccion')->nullable();
             $table->string('tipo_dolor')->nullable();
             $table->string('visual_scale')->nullable();
             $table->string('ITB_izquierdo')->nullable();
@@ -46,6 +45,7 @@ return new class extends Migration
             $table->string('pulse_dorsal_derecho')->nullable();
             $table->string('pulse_tibial_derecho')->nullable();
             $table->string('pulse_popliteo_derecho')->nullable();
+            $table->string('monofilamento')->nullable();
             $table->string('blood_glucose')->nullable();
             $table->longText('note', 999)->nullable();
             $table->unsignedTinyInteger('state')->default(1);

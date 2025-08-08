@@ -26,6 +26,14 @@ const props = defineProps({
   treatment: Object,
 });
 
+
+const requiresVascular = computed(() =>
+  [
+    18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32, 33,
+  ].includes(formWound.value.body_location_id)
+);
+
 // UI y estado
 const toast = useToast();
 const currentStep = ref(1);
@@ -37,23 +45,35 @@ const errors = ref({});
 
 // Catálogos
 const bordes = ref([{ name: "Adherido" }, { name: "No adherido" }, { name: "Enrollado" }, { name: "Epitalizado" }]);
-const valoracion = ref([{ name: "MESI" }, { name: "No aplica" }]);
+const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }]);
 const edema = ref([{ name: "+++" }, { name: "++" }, { name: "+" }, { name: "No aplica" }]);
 const dolor = ref([{ name: "En reposo" }, { name: "Con movimiento" }, { name: "Ninguno" }]);
 const exudado_cantidad = ref([{ name: "Abundante" }, { name: "Moderado" }, { name: "Bajo" }]);
 const exudado_tipo = ref([{ name: "Seroso" }, { name: "Purulento" }, { name: "Hemático" }, { name: "Serohemático" }]);
 const olor = ref([{ name: "Mal olor" }, { name: "No aplica" }]);
 const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
-const piel_perisional = ref([
-  { name: "Eritema" }, { name: "Escoriación" }, { name: "Maceración" }, { name: "Reseca" },
-  { name: "Equimosis" }, { name: "Indurada" }, { name: "Queratosis" }, { name: "Integra" },
-  { name: "Hiperpigmentada" }
+const piel_perilesional = ref([
+  { label: "Eritema", value: "Eritema" },
+  { label: "Escoriación", value: "Escoriación" },
+  { label: "Maceración", value: "Maceración" },
+  { label: "Reseca", value: "Reseca" },
+  { label: "Equimosis", value: "Equimosis" },
+  { label: "Indurada", value: "Indurada" },
+  { label: "Queratosis", value: "Queratosis" },
+  { label: "Integra", value: "Integra" },
+  { label: "Hiperpigmentada", value: "Hiperpigmentada" },
 ]);
 const infeccion = ref([
-  { name: "Celulitis" }, { name: "Pirexia" }, { name: "Aumento del dolor" },
-  { name: "Rapida extensión del area ulcerada" }, { name: "Mal olor" }, { name: "Incremento del exudado" },
-  { name: "Eritema" }, { name: "No aplica" }
+  { label: "Celulitis", value: "Celulitis" },
+  { label: "Pirexia", value: "Pirexia" },
+  { label: "Aumento del dolor", value: "Aumento del dolor" },
+  { label: "Rapida extensión del area ulcerada", value: "Rapida extensión del area ulcerada" },
+  { label: "Mal olor", value: "Mal olor" },
+  { label: "Incremento del exudado", value: "Incremento del exudado" },
+  { label: "Eritema", value: "Eritema" },
+  { label: "No aplica", value: "No aplica" },
 ]);
+
 const tipo_dolor = ref([{ name: "Nociceptivo" }, { name: "Neuropático" }]);
 
 // Formulario principal
@@ -61,7 +81,6 @@ const formWound = ref({
   wound_type_id: null,
   grade_foot: null,
   wound_subtype_id: null,
-  wound_type_other: "",
   body_location_id: null,
   body_sublocation_id: null,
   wound_phase_id: null,
@@ -75,8 +94,8 @@ const formWound = ref({
   exudado_cantidad: null,
   exudado_tipo: null,
   olor: null,
-  piel_perisional: null,
-  infeccion: null,
+  piel_perilesional: [],
+  infeccion: [],
   tipo_dolor: null,
   visual_scale: "",
   blood_glucose: "",
@@ -96,6 +115,52 @@ async function saveUser() {
   errors.value = {};
 
   const woundId = formWound.value.id;
+
+  // VALIDACIÓN: campos vasculares si aplica
+  if (
+    [
+      18, 19, 20, 21, 22, 23, 24, 25,
+      26, 27, 28, 29, 30, 31, 32, 33
+    ].includes(formWound.value.body_location_id)
+  ) {
+    const requiredVascularFields = [
+      'valoracion',
+      'ITB_izquierdo',
+      'ITB_derecho',
+      'pulse_dorsal_izquierdo',
+      'pulse_dorsal_derecho',
+      'pulse_popliteo_izquierdo',
+      'pulse_popliteo_derecho',
+      'pulse_tibial_izquierdo',
+      'pulse_tibial_derecho',
+      'monofilamento',
+      'blood_glucose'
+    ];
+
+    if (['MESI', 'Manual'].includes(formWound.value.valoracion)) {
+      requiredVascularFields.push('MESI');
+    }
+
+    const vascularErrors = requiredVascularFields.filter(
+      (field) => !formWound.value[field] && formWound.value[field] !== 0
+    );
+
+    if (vascularErrors.length > 0) {
+      vascularErrors.forEach((field) => {
+        errors.value[field] = 'Este campo es obligatorio.';
+      });
+
+      toast.add({
+        severity: 'error',
+        summary: 'Error de validación',
+        detail: 'Por favor complete los campos vasculares en la evaluación de la herida.',
+        life: 4000,
+      });
+
+      isSavingUser.value = false;
+      return;
+    }
+  }
 
   const payload = {
     ...formWound.value,
@@ -146,6 +211,11 @@ const isInitialLoadLocation = ref(true);
 
 onMounted(() => {
   if (props.wound) {
+    // Forzar tipo y ubicación para que los watchers se activen correctamente
+    formWound.value.wound_type_id = null;
+    formWound.value.body_location_id = null;
+
+    // Asignar valores completos
     Object.assign(formWound.value, {
       ...props.wound,
       id: props.wound.id || props.wound.wound_id,
@@ -153,60 +223,100 @@ onMounted(() => {
       woundHealthDate: props.wound.woundHealthDate ? new Date(props.wound.woundHealthDate) : null,
       grade_foot: props.wound.grade_foot ? parseInt(props.wound.grade_foot) : null,
     });
-    if (formWound.value.wound_type_id) loadSubtypes(formWound.value.wound_type_id);
-    if (formWound.value.body_location_id) loadSublocations(formWound.value.body_location_id);
+
+    // Llamar explícitamente las cargas iniciales si los valores existen
+    if (props.wound.wound_type_id) {
+      formWound.value.wound_type_id = parseInt(props.wound.wound_type_id);
+      loadSubtypes(formWound.value.wound_type_id);
+    }
+
+    if (props.wound.body_location_id) {
+      formWound.value.body_location_id = parseInt(props.wound.body_location_id);
+      loadSublocations(formWound.value.body_location_id);
+    }
+
+    //Measurement
+    if (props.measurement) {
+      Object.assign(formWound.value, {
+        measurementDate: props.measurement.measurementDate ? new Date(props.measurement.measurementDate) : null,
+        length: props.measurement.length,
+        width: props.measurement.width,
+        area: props.measurement.area,
+        depth: props.measurement.depth,
+        volume: props.measurement.volume,
+        tunneling: props.measurement.tunneling,
+        undermining: props.measurement.undermining,
+        granulation_percent: props.measurement.granulation_percent,
+        slough_percent: props.measurement.slough_percent,
+        necrosis_percent: props.measurement.necrosis_percent,
+        epithelialization_percent: props.measurement.epithelialization_percent,
+      });
+    }
   }
-
-  if (props.measurement) {
-    Object.assign(formWound.value, {
-      measurementDate: new Date(props.measurement.measurementDate),
-      length: props.measurement.length,
-      width: props.measurement.width,
-      area: props.measurement.area,
-      depth: props.measurement.depth,
-      volume: props.measurement.volume,
-      tunneling: props.measurement.tunneling,
-      undermining: props.measurement.undermining,
-      granulation_percent: props.measurement.granulation_percent ?? props.measurement.redPercentaje,
-      slough_percent: props.measurement.slough_percent ?? props.measurement.yellowPercentaje,
-      necrosis_percent: props.measurement.necrosis_percent ?? props.measurement.blackPercentaje,
-      epithelialization_percent: props.measurement.epithelialization_percent,
-    });
-  }
-
-
 });
 
-// Cargar subtipos y sublocalizaciones
+// Función para cargar subtipos desde el backend
 async function loadSubtypes(typeId) {
   try {
     const { data } = await axios.get(`/wound_types/${typeId}/subtypes`);
     woundSubtypes.value = data;
-  } catch {
-    toast.add({ severity: "error", summary: "Error", detail: "No se pudieron cargar los subtipos.", life: 5000 });
+  } catch (error) {
+    console.error('Error al cargar subtipos:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron cargar los subtipos.',
+      life: 5000,
+    });
   }
 }
+
+// Función para cargar sublocalizaciones desde el backend
 async function loadSublocations(locationId) {
   try {
     const { data } = await axios.get(`/body_locations/${locationId}/sublocations`);
     bodySublocations.value = data;
-  } catch {
-    toast.add({ severity: "error", summary: "Error", detail: "No se pudieron cargar las sublocalizaciones.", life: 5000 });
+  } catch (error) {
+    console.error('Error al cargar sublocalizaciones:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron cargar las sublocalizaciones.',
+      life: 5000,
+    });
   }
 }
 
-// Watchers de subtipos y sublocalización
+// Watcher para cambios en tipo de herida
 watch(() => formWound.value.wound_type_id, (newVal) => {
-  if (isInitialLoadType.value) return isInitialLoadType.value = false;
+  if (isInitialLoadType.value) {
+    isInitialLoadType.value = false;
+    return;
+  }
+
+  const typeId = parseInt(newVal);
   formWound.value.wound_subtype_id = null;
   woundSubtypes.value = [];
-  if (newVal) loadSubtypes(newVal);
+
+  if (typeId) {
+    loadSubtypes(typeId);
+  }
 });
+
+// Watcher para cambios en ubicación corporal
 watch(() => formWound.value.body_location_id, (newVal) => {
-  if (isInitialLoadLocation.value) return isInitialLoadLocation.value = false;
+  if (isInitialLoadLocation.value) {
+    isInitialLoadLocation.value = false;
+    return;
+  }
+
+  const locationId = parseInt(newVal);
   formWound.value.body_sublocation_id = null;
   bodySublocations.value = [];
-  if (newVal) loadSublocations(newVal);
+
+  if (locationId) {
+    loadSublocations(locationId);
+  }
 });
 
 // Área y volumen automáticos
@@ -252,7 +362,7 @@ async function saveMeasurement() {
   errors.value = {};
 
   const requiredFields = [
-    'measurementDate', 'length', 'width', 'tunneling', 'undermining',
+    'measurementDate', 'length', 'width', 'undermining',
     'granulation_percent', 'slough_percent', 'necrosis_percent', 'epithelialization_percent',
   ];
 
@@ -263,7 +373,6 @@ async function saveMeasurement() {
     area: 'Área',
     depth: 'Profundidad',
     volume: 'Volumen',
-    tunneling: 'Tunelización',
     undermining: 'Socavamiento',
     granulation_percent: 'Tejido de granulación (%)',
     slough_percent: 'Tejido de esfácelo (%)',
@@ -585,6 +694,23 @@ const selectedMethodsWithSubmethods = computed(() => {
   );
 });
 
+watch(
+    () => formTreat.value.methods,
+    (newMethods) => {
+        const validMap = {};
+        newMethods.forEach(methodId => {
+            if (Array.isArray(formTreat.value.submethodsByMethod[methodId])) {
+                validMap[methodId] = formTreat.value.submethodsByMethod[methodId];
+            } else {
+                validMap[methodId] = [];
+            }
+        });
+        formTreat.value.submethodsByMethod = validMap;
+    },
+    { deep: true }
+);
+
+
 const storeTreatment = async () => {
   submittedTreatment.value = true;
   errors.value = {};
@@ -825,22 +951,6 @@ const finishConsultation = async () => {
                   </small>
                 </div>
 
-                <!-- Otro tipo (condicional) -->
-                <div v-if="
-                  formWound.wound_type_id === 9 ||
-                  [7, 11, 25, 33, 46].includes(formWound.wound_subtype_id)
-                ">
-                  <label class="flex items-center gap-1 mb-1 font-medium">
-                    Indicar tipo de herida <span class="text-red-600">*</span>
-                  </label>
-                  <InputText v-model="formWound.wound_type_other" class="w-full min-w-0" :class="{
-                    'p-invalid': submittedUser && !formWound.wound_type_other,
-                  }" />
-                  <small v-if="submittedUser && !formWound.wound_type_other" class="text-red-500">
-                    Debe especificar otro tipo de herida.
-                  </small>
-                </div>
-
                 <!-- Subtipo de herida -->
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
@@ -903,7 +1013,7 @@ const finishConsultation = async () => {
                   <label class="flex items-center gap-1 mb-1 font-medium">Fecha que inició la herida <span
                       class="text-red-600">*</span></label>
                   <DatePicker v-model="formWound.woundBeginDate" class="w-full min-w-0" inputId="woundBeginDate"
-                    placeholder="Seleccione una fecha" showIcon />
+                    placeholder="mm/dd/yyyy" showIcon />
                   <small v-if="submittedUser && !formWound.woundBeginDate" class="text-red-500">
                     Debe seleccionar la fecha de inicio.
                   </small>
@@ -924,26 +1034,7 @@ const finishConsultation = async () => {
 
             <form @submit.prevent="saveUser" class="flex flex-col flex-grow overflow-auto">
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4">
-                <template v-if="
-                  [
-                    18,
-                    19,
-                    20,
-                    21,
-                    22,
-                    23,
-                    24,
-                    25,
-                    26,
-                    27,
-                    28,
-                    29,
-                    30,
-                    31,
-                    32,
-                    33,
-                  ].includes(formWound.body_location_id)
-                ">
+                <template v-if="requiresVascular">
                   <!-- Campos vasculares -->
                   <div class="col-span-full">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">
@@ -953,7 +1044,7 @@ const finishConsultation = async () => {
 
                   <div>
                     <label class="flex items-center gap-1 mb-1 font-medium">
-                      Índice tobillo brazo Manual
+                      Índice tobillo brazo
                       <span class="text-red-600">*</span>
                     </label>
                     <Select id="valoracion" v-model="formWound.valoracion" :options="valoracion" filter
@@ -964,9 +1055,9 @@ const finishConsultation = async () => {
                       }}</small>
                   </div>
 
-                  <div v-if="['MESI'].includes(formWound.valoracion)">
+                  <div v-if="['MESI', 'Manual'].includes(formWound.valoracion)">
                     <label class="flex items-center gap-1 mb-1 font-medium">
-                      MESI <span class="text-red-600">*</span>
+                      {{ formWound.valoracion }} <span class="text-red-600">*</span>
                     </label>
                     <InputText id="MESI" v-model="formWound.MESI" class="w-full min-w-0" />
                     <small v-if="errors.MESI" class="text-red-500">{{
@@ -1099,7 +1190,7 @@ const finishConsultation = async () => {
                     <span class="text-red-600">*</span>
                   </label>
                   <DatePicker v-model="formWound.woundHealthDate" inputId="woundHealthDate" class="w-full min-w-0"
-                    placeholder="Seleccione una fecha" showIcon />
+                    placeholder="mm/dd/yyyy" showIcon />
                   <small v-if="errors.woundHealthDate" class="text-red-500">{{
                     errors.woundHealthDate
                     }}</small>
@@ -1181,9 +1272,8 @@ const finishConsultation = async () => {
                   <label class="flex items-center gap-1 mb-1 font-medium">
                     Infección <span class="text-red-600">*</span>
                   </label>
-                  <Select id="infeccion" v-model="formWound.infeccion" :options="infeccion" filter optionLabel="name"
-                    optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
-                  </Select>
+                  <MultiSelect id="infeccion" v-model="formWound.infeccion" :options="infeccion" optionLabel="label"
+                    optionValue="value" class="w-full min-w-0" filter placeholder="Selecciona una o más opciones" />
                   <small v-if="errors.infeccion" class="text-red-500">{{
                     errors.infeccion
                     }}</small>
@@ -1210,15 +1300,16 @@ const finishConsultation = async () => {
                     errors.borde
                     }}</small>
                 </div>
+
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
-                    Piel perisional <span class="text-red-600">*</span>
+                    Piel perilesional <span class="text-red-600">*</span>
                   </label>
-                  <Select id="piel_perisional" v-model="formWound.piel_perisional" :options="piel_perisional" filter
-                    optionLabel="name" optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
-                  </Select>
-                  <small v-if="errors.piel_perisional" class="text-red-500">{{
-                    errors.piel_perisional
+                  <MultiSelect id="piel_perilesional" v-model="formWound.piel_perilesional" :options="piel_perilesional"
+                    filter optionLabel="label" optionValue="value" class="w-full min-w-0"
+                    placeholder="Selecciona una o más opciones" />
+                  <small v-if="errors.piel_perilesional" class="text-red-500">{{
+                    errors.piel_perilesional
                     }}</small>
                 </div>
               </div>
@@ -1244,7 +1335,7 @@ const finishConsultation = async () => {
                   <span class="text-red-600">*</span>
                 </label>
                 <DatePicker v-model="formWound.measurementDate" inputId="measurementDate" class="w-full min-w-0"
-                  placeholder="Seleccione una fecha" showIcon />
+                  placeholder="mm/dd/yyyy" showIcon />
                 <small v-if="errors.measurementDate" class="text-red-500">{{
                   errors.measurementDate
                   }}</small>
@@ -1271,8 +1362,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.area" class="w-full min-w-0" disabled />
               </div>
               <div>
-                <label class="flex items-center gap-1 mb-1 font-medium">Profundidad (cm)<span
-                    class="text-red-600">*</span></label>
+                <label class="flex items-center gap-1 mb-1 font-medium">Profundidad (cm)</label>
                 <InputText v-model="formWound.depth" class="w-full min-w-0" />
                 <small v-if="errors.depth" class="text-red-500">{{
                   errors.depth
@@ -1285,8 +1375,7 @@ const finishConsultation = async () => {
               </div>
 
               <div>
-                <label class="flex items-center gap-1 mb-1 font-medium">Tunelización<span
-                    class="text-red-600">*</span></label>
+                <label class="flex items-center gap-1 mb-1 font-medium">Tunelización</label>
                 <InputText v-model="formWound.tunneling" class="w-full min-w-0" />
                 <small v-if="errors.tunneling" class="text-red-500">{{
                   errors.tunneling

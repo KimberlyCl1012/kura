@@ -4,6 +4,7 @@ use App\Http\Controllers\Catalogues\AddressController;
 use App\Http\Controllers\Catalogues\BodyLocationController;
 use App\Http\Controllers\Catalogues\SiteController;
 use App\Http\Controllers\Catalogues\WoundPhaseController;
+use App\Http\Controllers\Catalogues\WoundSubtypeController;
 use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
 use App\Http\Controllers\Patient\PatientController;
@@ -103,7 +104,8 @@ Route::middleware([
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
 
     //Wound Follows
-    Route::get('/wounds_follow/{woundId}/edit', [WoundFollowController::class, 'edit'])->name('wounds_follow.edit');
+    Route::get('/wounds_follow/{appointmentId}/{woundId}/edit', [WoundFollowController::class, 'edit'])->name('wounds_follow.edit');
+    Route::put('/wounds_follow/{woundId}', [WoundFollowController::class, 'update'])->name('wounds_follow.update');
 
     //Wounds History
     Route::post('/wounds_histories', [WoundHistoryController::class, 'store'])->name('wounds_histories.store');
@@ -151,4 +153,10 @@ Route::middleware([
     Route::post('/wound_types', [WoundTypeController::class, 'store'])->name('wound_types.store');
     Route::put('/wound_types/{id}', [WoundTypeController::class, 'update'])->name('wound_types.update');
     Route::delete('/wound_types/{id}', [WoundTypeController::class, 'destroy'])->name('wound_types.destroy');
+
+    //Wound Subtypes
+    Route::get('/wound_subtypes', [WoundSubtypeController::class, 'index'])->name('wound_subtypes.index');
+    Route::post('/wound_subtypes', [WoundSubtypeController::class, 'store'])->name('wound_subtypes.store');
+    Route::put('/wound_subtypes/{id}', [WoundSubtypeController::class, 'update'])->name('wound_subtypes.update');
+    Route::delete('/wound_subtypes/{id}', [WoundSubtypeController::class, 'destroy'])->name('wound_subtypes.destroy');
 });

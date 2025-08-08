@@ -23,7 +23,9 @@ return new class extends Migration
             $table->string('city')->nullable();
             $table->string('postalCode', 12)->nullable();
             $table->string('relativeName')->nullable();
-            $table->enum('kinship', ['Padre', 'Madre', 'Hermano', 'Amigo', 'Otro'])->nullable();
+            $table->string('type_identification_kinship')->nullable();
+            $table->string('identification_kinship')->nullable();
+            $table->enum('kinship', ['Padre', 'Madre', 'Hermano', 'Hijo'])->nullable();
             $table->string('relativeMobile')->nullable();
             $table->boolean('consent')->default(0);
             $table->boolean('state')->default(1);

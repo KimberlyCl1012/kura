@@ -16,22 +16,26 @@ class TreatmentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'treatment_id' => 'nullable|exists:treatments,id',
+            'appointment_id' => 'required|exists:appointments,id',
             'wound_id' => 'required|exists:wounds,id',
             'description' => 'required|string',
             'method_ids' => 'required|array|min:1',
             'method_ids.*' => 'exists:list_treatment_methods,id',
             'submethodsByMethod' => 'required|array',
-            'submethodsByMethod.*' => 'array',
+            'submethodsByMethod.*' => 'array|min:1',
         ], [
+            'appointment_id.required' => 'El ID de la consulta es obligatorio.',
             'description.required' => 'La descripción es obligatoria.',
             'method_ids.required' => 'Debe seleccionar al menos un método.',
             'submethodsByMethod.*.array' => 'Debe seleccionar al menos un submétodo por método.',
         ]);
 
+        // Validar que cada método tenga al menos un submétodo asociado
         foreach ($request->method_ids as $methodId) {
             if (empty($request->submethodsByMethod[$methodId]) || !is_array($request->submethodsByMethod[$methodId])) {
                 return response()->json([
-                    'message' => 'Cada método seleccionado debe tener al menos un submétodo.',
+                    'message' => 'Cada método debe tener al menos un submétodo.',
                     'errors' => [
                         "submethodsByMethod.$methodId" => ['Debe seleccionar al menos un submétodo para este método.']
                     ]
@@ -42,24 +46,35 @@ class TreatmentController extends Controller
         try {
             DB::beginTransaction();
 
-            $treatment = Treatment::firstOrCreate(
-                ['wound_id' => $request->wound_id],
-                ['beginDate' => now(), 'state' => 1]
-            );
+            if ($request->filled('treatment_id')) {
+                // Actualizar tratamiento existente
+                $treatment = Treatment::findOrFail($request->treatment_id);
+                $treatment->update([
+                    'description' => $request->description,
+                ]);
 
-            $treatment->update(['description' => $request->description]);
+                // Eliminar métodos y submétodos anteriores
+                $treatment->methods()->delete();
+                $treatment->submethods()->delete();
+            } else {
+                // Crear nuevo tratamiento
+                $treatment = Treatment::create([
+                    'wound_id' => $request->wound_id,
+                    'appointment_id' => $request->appointment_id,
+                    'beginDate' => now(),
+                    'description' => $request->description,
+                    'state' => 1,
+                ]);
+            }
 
-            $treatment->methods()->delete();
-            $treatment->submethods()->delete();
-
+            // Guardar nuevos métodos y submétodos
             foreach ($request->method_ids as $methodId) {
                 TreatmentMethod::create([
                     'treatment_id' => $treatment->id,
                     'treatment_method_id' => $methodId,
                 ]);
 
-                $submethods = $request->submethodsByMethod[$methodId] ?? [];
-                foreach ($submethods as $subId) {
+                foreach ($request->submethodsByMethod[$methodId] as $subId) {
                     TreatmentSubmethod::create([
                         'treatment_id' => $treatment->id,
                         'treatment_method_id' => $methodId,
@@ -70,16 +85,23 @@ class TreatmentController extends Controller
 
             DB::commit();
 
-            return response()->json(['message' => 'Tratamiento guardado correctamente.']);
+            return response()->json([
+                'message' => $request->filled('treatment_id')
+                    ? 'Tratamiento actualizado correctamente.'
+                    : 'Tratamiento registrado correctamente.',
+                'treatment_id' => $treatment->id,
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e);
+            Log::error('Error al guardar tratamiento: ' . $e->getMessage());
+
             return response()->json([
-                'message' => 'Error al guardar tratamiento',
+                'message' => 'Error al guardar el tratamiento.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
+
 
     public function getTreatmentMethodsWithSubmethods()
     {

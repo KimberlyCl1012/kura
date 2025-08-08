@@ -14,25 +14,25 @@ class HealthInstitutionSeeder extends Seeder
     public function run(): void
     {
         HealthInstitution::create([
-            'name'  => 'Secretaría de Salud',
-            'description'   => '',
-            'state'     => 1
-        ]);
-
-        HealthInstitution::create([
             'name'  => 'Instituto Mexicano del Seguro Social (IMSS)',
             'description'   => '',
             'state'     => 1
         ]);
 
         HealthInstitution::create([
-            'name'  => 'Instituto Nacional de Cancerología (INCAN)',
+            'name'  => 'Instituto de Seguridad y Servicios Sociales de los Trabajadores del Estado (ISSSTE)',
             'description'   => '',
             'state'     => 1
         ]);
 
         HealthInstitution::create([
-            'name'  => 'Instituto Nacional de Pediatría (INP)',
+            'name'  => 'Instituto Mexicano del Seguro Social (IMSS Bienestar) ​',
+            'description'   => '',
+            'state'     => 1
+        ]);
+
+        HealthInstitution::create([
+            'name'  => 'Secretaría de Salud de México (SSA)',
             'description'   => '',
             'state'     => 1
         ]);

@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id(); //'id_media'
+            $table->foreignId('appointment_id')->nullable()->constrained('appointments');
             $table->foreignId('wound_id')->nullable()->constrained('wounds');
-            $table->longText('description',999)->nullable();
-            $table->string('content')->nullable();
-            $table->string('position')->nullable();
-            $table->string('type')->nullable();
+            $table->longText('description', 999)->nullable();
+            $table->string('content');
+            $table->string('position');
+            $table->string('type');
             $table->timestamps();
         });
     }

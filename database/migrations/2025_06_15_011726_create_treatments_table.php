@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('treatments', function (Blueprint $table) {
             $table->id(); //'id_treatment'
             $table->foreignId('wound_id')->nullable()->constrained('wounds');
+            $table->foreignId('appointment_id')->nullable()->constrained('appointments');
             $table->longText('description',999)->nullable();
             $table->date('beginDate');
             $table->boolean('state')->default(1);

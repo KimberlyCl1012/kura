@@ -154,14 +154,14 @@ function goToRecords(healthRecordId) {
 </script>
 
 <template>
-    <AppLayout title="Expediente Médico">
+    <AppLayout title="Historia clínica">
         <div class="card">
             <div class="bg-surface-0 dark:bg-surface-950 px-1 py-3 lg:px-20">
                 <div class="grid grid-cols-12 gap-8">
                     <div class="col-span-12 grid grid-cols-12 mb-4">
                         <div class="col-span-6 flex items-center">
                             <h2 class="text-xl font-bold text-surface-900 dark:text-surface-0 m-0">
-                                Expediente Médico
+                                Historia clínica
                             </h2>
                         </div>
 

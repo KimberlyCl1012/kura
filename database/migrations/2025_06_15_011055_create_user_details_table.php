@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('user_details', function (Blueprint $table) {
             $table->id(); //'id_userDetail'
-            $table->foreignId('user_id')->nullable()->constrained('users');
-            $table->foreignId('company_id')->nullable()->constrained('list_companies');
-            $table->foreignId('site_id')->nullable()->constrained('list_sites');
+            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('company_id')->constrained('list_companies');
+            $table->foreignId('site_id')->constrained('list_sites');
             $table->string('sex');
             $table->string('name');
             $table->string('fatherLastName');

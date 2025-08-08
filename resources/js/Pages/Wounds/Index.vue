@@ -54,7 +54,6 @@ const formWound = ref({
     wound_type_id: null,
     grade_foot: null,
     wound_subtype_id: null,
-    wound_type_other: "",
     body_location_id: null,
     body_sublocation_id: null,
     wound_phase_id: null,
@@ -132,7 +131,6 @@ function resetForm() {
         wound_type_id: null,
         grade_foot: null,
         wound_subtype_id: null,
-        wound_type_other: "",
         body_location_id: null,
         body_sublocation_id: null,
         wound_phase_id: null,
@@ -157,11 +155,6 @@ async function saveUser() {
         { key: "wound_type_id", label: "Tipo de herida" },
         { key: "grade_foot", label: "Grado", condition: () => formWound.value.wound_type_id === 8 },
         { key: "wound_subtype_id", label: "Tipo de herida (Localización secundaria)" },
-        {
-            key: "wound_type_other",
-            label: "Otro tipo de herida",
-            condition: () => [7, 25, 33, 46].includes(formWound.value.wound_subtype_id),
-        },
         { key: "body_location_id", label: "Ubicación corporal" },
         { key: "body_sublocation_id", label: "Ubicación corporal (Localización secundaria)" },
         { key: "wound_phase_id", label: "Fase de la herida" },
@@ -236,8 +229,12 @@ function goToWoundHis(wound) {
 
 //Seguimiento
 function goToFollow(wound) {
-    router.visit(route('wounds_follow.edit', { woundId: wound.wound_id }));
+    router.visit(route('wounds_follow.edit', { 
+        appointmentId: props.appointmentId, 
+        woundId: wound.wound_id 
+    }));
 }
+
 
 </script>
 
@@ -317,7 +314,7 @@ function goToFollow(wound) {
             </DataTable>
 
             <!-- Tabla de Seguimientos -->
-            <div class="card mt-6">
+            <div v-if="followUps.length > 0" class="card mt-6">
                 <h4 class="mb-4 font-bold">Seguimiento</h4>
 
                 <DataTable :value="followUps" dataKey="id" :paginator="true" :rows="10" responsiveLayout="scroll">
@@ -381,19 +378,6 @@ function goToFollow(wound) {
                         </small>
                     </div>
 
-                    <!-- Otro tipo -->
-                    <div
-                        v-if="formWound.wound_type_id === 9 || [7, 11, 25, 33, 46].includes(formWound.wound_subtype_id)">
-                        <label class="block font-bold mb-1">
-                            Indicar tipo de herida <span class="text-red-600">*</span>
-                        </label>
-                        <InputText v-model="formWound.wound_type_other" class="w-full"
-                            :class="{ 'p-invalid': submitted && !formWound.wound_type_other }" />
-                        <small v-if="submitted && !formWound.wound_type_other" class="text-red-500">
-                            Debe especificar otro tipo de herida.
-                        </small>
-                    </div>
-
                     <!-- Ubicación corporal -->
                     <div>
                         <label class="block font-bold mb-1">
@@ -438,7 +422,7 @@ function goToFollow(wound) {
                         <label class="block font-bold mb-1">
                             Fecha que inició la herida <span class="text-red-600">*</span>
                         </label>
-                        <DatePicker v-model="formWound.woundBeginDate" class="w-full" inputId="woundBeginDate"
+                        <DatePicker v-model="formWound.woundBeginDate" class="w-full" inputId="woundBeginDate" placeholder="mm/dd/yyyy"
                             :class="{ 'p-invalid': submitted && !formWound.woundBeginDate }" variant="filled" showIcon
                             iconDisplay="input" />
                         <small v-if="submitted && !formWound.woundBeginDate" class="text-red-500">

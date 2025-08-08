@@ -148,7 +148,6 @@ class WoundController extends Controller
                 'health_record_id'    => 'required|exists:health_records,id',
                 'wound_type_id'       => 'required|exists:list_wound_types,id',
                 'wound_subtype_id'    => 'required|exists:list_wound_subtypes,id',
-                'wound_type_other'    => 'nullable|string|max:255',
                 'body_location_id'    => 'required|exists:list_body_locations,id',
                 'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
                 'wound_phase_id'      => 'required|exists:list_wound_phases,id',
@@ -173,7 +172,6 @@ class WoundController extends Controller
                 'wound_type_id'       => $request->wound_type_id,
                 'grade_foot'          => $request->grade_foot,
                 'wound_subtype_id'    => $request->wound_subtype_id,
-                'wound_type_other'    => $request->wound_type_other,
                 'body_location_id'    => $request->body_location_id,
                 'body_sublocation_id' => $request->body_sublocation_id,
                 'wound_phase_id'      => $request->wound_phase_id,
@@ -267,7 +265,6 @@ class WoundController extends Controller
                 'woundBeginDate' => 'nullable|date',
                 'woundHealthDate' => 'nullable|date',
                 'grade_foot' => 'nullable',
-                'wound_type_other' => 'nullable|string|max:255',
                 'valoracion' => 'nullable|string|max:255',
                 'MESI' => 'nullable|string|max:255',
                 'woundBackground' => 'nullable|string|max:255',
@@ -277,19 +274,13 @@ class WoundController extends Controller
                 'exudado_cantidad' => 'nullable|string|max:255',
                 'exudado_tipo' => 'nullable|string|max:255',
                 'olor' => 'nullable|string|max:255',
-                'piel_perisional' => 'nullable|string|max:255',
-                'infeccion' => 'nullable|string|max:255',
+                'piel_perilesional' => 'nullable|array',
+                'infeccion' => 'nullable|array',
                 'tipo_dolor' => 'nullable|string|max:255',
                 'visual_scale' => 'nullable|string|max:255',
+                'monofilamento' => 'nullable|string|max:255',
                 'blood_glucose' => 'nullable|string|max:255',
             ];
-
-            if (
-                $request->wound_type_id == 9 ||
-                in_array($request->wound_subtype_id, [7, 11, 25, 33, 46])
-            ) {
-                $rules['wound_type_other'] = 'required|string|max:255';
-            }
 
             if ($request->wound_type_id == 8) {
                 $rules['grade_foot'] = 'required';

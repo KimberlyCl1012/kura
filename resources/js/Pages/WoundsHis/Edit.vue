@@ -27,70 +27,94 @@ const submittedUser = ref(false);
 const errors = ref({});
 
 const bordes = ref([{ name: "Adherido" }, { name: "No adherido" }, { name: "Enrollado" }, { name: "Epitalizado" }]);
-const valoracion = ref([{ name: "MESI" }, { name: "No aplica" }]);
+const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }]);
 const edema = ref([{ name: "+++" }, { name: "++" }, { name: "+" }, { name: "No aplica" }]);
 const dolor = ref([{ name: "En reposo" }, { name: "Con movimiento" }, { name: "Ninguno" }]);
 const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
 const exudado_cantidad = ref([{ name: "Abundante" }, { name: "Moderado" }, { name: "Bajo" }]);
 const exudado_tipo = ref([{ name: "Seroso" }, { name: "Purulento" }, { name: "Hemático" }, { name: "Serohemático" }]);
 const olor = ref([{ name: "Mal olor" }, { name: "No aplica" }]);
-const piel_perisional = ref([
-  { name: "Eritema" }, { name: "Escoriación" }, { name: "Maceración" }, { name: "Reseca" },
-  { name: "Equimosis" }, { name: "Indurada" }, { name: "Queratosis" }, { name: "Integra" },
-  { name: "Hiperpigmentada" }
+const piel_perilesional = ref([
+  { label: "Eritema", value: "Eritema" },
+  { label: "Escoriación", value: "Escoriación" },
+  { label: "Maceración", value: "Maceración" },
+  { label: "Reseca", value: "Reseca" },
+  { label: "Equimosis", value: "Equimosis" },
+  { label: "Indurada", value: "Indurada" },
+  { label: "Queratosis", value: "Queratosis" },
+  { label: "Integra", value: "Integra" },
+  { label: "Hiperpigmentada", value: "Hiperpigmentada" },
 ]);
 const infeccion = ref([
-  { name: "Celulitis" }, { name: "Pirexia" }, { name: "Aumento del dolor" },
-  { name: "Rapida extensión del area ulcerada" }, { name: "Mal olor" }, { name: "Incremento del exudado" },
-  { name: "Eritema" }, { name: "No aplica" }
+  { label: "Celulitis", value: "Celulitis" },
+  { label: "Pirexia", value: "Pirexia" },
+  { label: "Aumento del dolor", value: "Aumento del dolor" },
+  { label: "Rapida extensión del area ulcerada", value: "Rapida extensión del area ulcerada" },
+  { label: "Mal olor", value: "Mal olor" },
+  { label: "Incremento del exudado", value: "Incremento del exudado" },
+  { label: "Eritema", value: "Eritema" },
+  { label: "No aplica", value: "No aplica" },
 ]);
 const tipo_dolor = ref([{ name: "Nociceptivo" }, { name: "Neuropático" }]);
 
 const formWoundHistory = ref({
-  id: props.woundHistory?.id ?? null,
-  wound_type_id: props.woundHistory?.wound_type_id ?? null,
-  grade_foot: props.woundHistory.grade_foot ? parseInt(props.woundHistory.grade_foot) : null,
-  wound_subtype_id: props.woundHistory?.wound_subtype_id ?? null,
-  wound_type_other: props.woundHistory?.wound_type_other ?? "",
-  body_location_id: props.woundHistory?.body_location_id ?? null,
-  body_sublocation_id: props.woundHistory?.body_sublocation_id ?? null,
-  wound_phase_id: props.woundHistory?.wound_phase_id ?? null,
-  woundBeginDate: props.woundHistory?.woundBeginDate ?? null,
-  woundHealthDate: props.woundHistory?.woundHealthDate ?? null,
-  valoracion: props.woundHistory?.valoracion ?? "",
-  MESI: props.woundHistory?.MESI ?? "",
-  borde: props.woundHistory?.borde ?? null,
-  edema: props.woundHistory?.edema ?? null,
-  dolor: props.woundHistory?.dolor ?? null,
-  exudado_cantidad: props.woundHistory?.exudado_cantidad ?? null,
-  exudado_tipo: props.woundHistory?.exudado_tipo ?? null,
-  olor: props.woundHistory?.olor ?? null,
-  piel_perisional: props.woundHistory?.piel_perisional ?? null,
-  infeccion: props.woundHistory?.infeccion ?? null,
-  tipo_dolor: props.woundHistory?.tipo_dolor ?? null,
-  visual_scale: props.woundHistory?.visual_scale ?? "",
-  blood_glucose: props.woundHistory?.blood_glucose ?? "",
-  ITB_izquierdo: props.woundHistory?.ITB_izquierdo ?? "",
-  pulse_dorsal_izquierdo: props.woundHistory?.pulse_dorsal_izquierdo ?? "",
-  pulse_tibial_izquierdo: props.woundHistory?.pulse_tibial_izquierdo ?? "",
-  pulse_popliteo_izquierdo: props.woundHistory?.pulse_popliteo_izquierdo ?? "",
-  ITB_derecho: props.woundHistory?.ITB_derecho ?? "",
-  pulse_dorsal_derecho: props.woundHistory?.pulse_dorsal_derecho ?? "",
-  pulse_tibial_derecho: props.woundHistory?.pulse_tibial_derecho ?? "",
-  pulse_popliteo_derecho: props.woundHistory?.pulse_popliteo_derecho ?? "",
-  // Dimensiones
-  length: props.woundHistory?.length ?? '',
-  width: props.woundHistory?.width ?? '',
-  depth: props.woundHistory?.depth ?? '',
-  area: props.woundHistory?.area ?? '',
-  volume: props.woundHistory?.volume ?? '',
-  tunneling: props.woundHistory?.tunneling ?? '',
-  undermining: props.woundHistory?.undermining ?? '',
-  granulation_percent: props.woundHistory?.granulation_percent ?? '',
-  slough_percent: props.woundHistory?.slough_percent ?? '',
-  necrosis_percent: props.woundHistory?.necrosis_percent ?? '',
-  epithelialization_percent: props.woundHistory?.epithelialization_percent ?? '',
-  description: props.woundHistory?.description ?? ''
+  id: null,
+  wound_type_id: null,
+  grade_foot: null,
+  wound_subtype_id: null,
+  body_location_id: null,
+  body_sublocation_id: null,
+  wound_phase_id: null,
+  woundBeginDate: null,
+  woundHealthDate: null,
+  valoracion: "",
+  MESI: "",
+  borde: null,
+  edema: null,
+  dolor: null,
+  exudado_cantidad: null,
+  exudado_tipo: null,
+  olor: null,
+  piel_perilesional: null,
+  infeccion: null,
+  tipo_dolor: null,
+  visual_scale: "",
+  blood_glucose: "",
+  ITB_izquierdo: "",
+  pulse_dorsal_izquierdo: "",
+  pulse_tibial_izquierdo: "",
+  pulse_popliteo_izquierdo: "",
+  ITB_derecho: "",
+  pulse_dorsal_derecho: "",
+  pulse_tibial_derecho: "",
+  pulse_popliteo_derecho: "",
+  length: '',
+  width: '',
+  depth: '',
+  area: '',
+  volume: '',
+  tunneling: '',
+  undermining: '',
+  granulation_percent: '',
+  slough_percent: '',
+  necrosis_percent: '',
+  epithelialization_percent: '',
+  description: ''
+});
+
+const requiresVascular = computed(() =>
+  [
+    18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32, 33,
+  ].includes(formWoundHistory.value.body_location_id)
+);
+
+function goToStep(step) {
+  currentStep.value = step;
+}
+
+const showVascularFields = computed(() => {
+  return formWoundHistory.value.body_location_id === 3 || formWoundHistory.value.body_location_id === 5;
 });
 
 const saveUser = async () => {
@@ -98,10 +122,57 @@ const saveUser = async () => {
   isSavingUser.value = true;
   errors.value = {};
 
-  try {
-    const payload = { ...formWoundHistory.value };
+  if (requiresVascular.value) {
+    const requiredVascularFields = [
+      'valoracion',
+      'ITB_izquierdo',
+      'ITB_derecho',
+      'pulse_dorsal_izquierdo',
+      'pulse_dorsal_derecho',
+      'pulse_popliteo_izquierdo',
+      'pulse_popliteo_derecho',
+      'pulse_tibial_izquierdo',
+      'pulse_tibial_derecho',
+      'blood_glucose'
+    ];
 
-    const response = await axios.put(`/wounds_histories/${props.woundHistory.id}/edit`, payload);
+    if (['MESI', 'Manual'].includes(formWoundHistory.value.valoracion)) {
+      requiredVascularFields.push('MESI');
+    }
+
+    const vascularErrors = requiredVascularFields.filter(
+      (field) => !formWoundHistory.value[field] && formWoundHistory.value[field] !== 0
+    );
+
+    if (vascularErrors.length > 0) {
+      vascularErrors.forEach((field) => {
+        errors.value[field] = 'Este campo es obligatorio.';
+      });
+
+      toast.add({
+        severity: 'error',
+        summary: 'Error de validación',
+        detail: 'Por favor complete los campos vasculares en la evaluación de la herida.',
+        life: 4000,
+      });
+
+      isSavingUser.value = false;
+      return;
+    }
+  }
+
+  try {
+    const payload = {
+      ...formWoundHistory.value,
+      woundBeginDate: formWoundHistory.value.woundBeginDate
+        ? new Date(formWoundHistory.value.woundBeginDate).toISOString().slice(0, 10)
+        : null,
+      woundHealthDate: formWoundHistory.value.woundHealthDate
+        ? new Date(formWoundHistory.value.woundHealthDate).toISOString().slice(0, 10)
+        : null,
+    };
+
+    const response = await axios.put(`/wounds_histories/${formWoundHistory.value.id}/edit`, payload);
 
     if (response.data?.message) {
       toast.add({ severity: 'success', summary: 'Éxito', detail: response.data.message, life: 3000 });
@@ -121,57 +192,98 @@ const saveUser = async () => {
   }
 };
 
+// Carga inicial forzada de datos
 const woundSubtypes = ref([]);
 const bodySublocations = ref([]);
 const isInitialLoadType = ref(true);
 const isInitialLoadLocation = ref(true);
 
-// Cargar subtipos y sublocalizaciones
-async function loadSubtypes(typeId) {
-  try {
-    const { data } = await axios.get(`/wound_types/${typeId}/subtypes`);
-    woundSubtypes.value = data;
-  } catch {
-    toast.add({ severity: "error", summary: "Error", detail: "No se pudieron cargar los subtipos.", life: 5000 });
-  }
-}
-async function loadSublocations(locationId) {
-  try {
-    const { data } = await axios.get(`/body_locations/${locationId}/sublocations`);
-    bodySublocations.value = data;
-  } catch {
-    toast.add({ severity: "error", summary: "Error", detail: "No se pudieron cargar las sublocalizaciones.", life: 5000 });
-  }
-}
-
-// Watchers de subtipos y sublocalización
-watch(() => formWoundHistory.value.wound_type_id, (newVal) => {
-  if (isInitialLoadType.value) return isInitialLoadType.value = false;
-  formWoundHistory.value.wound_subtype_id = null;
-  woundSubtypes.value = [];
-  if (newVal) loadSubtypes(newVal);
-});
-watch(() => formWoundHistory.value.body_location_id, (newVal) => {
-  if (isInitialLoadLocation.value) return isInitialLoadLocation.value = false;
-  formWoundHistory.value.body_sublocation_id = null;
-  bodySublocations.value = [];
-  if (newVal) loadSublocations(newVal);
-});
-
 onMounted(() => {
-  if (formWoundHistory.value.wound_type_id) {
-    loadSubtypes(formWoundHistory.value.wound_type_id);
-    isInitialLoadType.value = false;
-  }
+  if (props.woundHistory) {
+    formWoundHistory.value.wound_type_id = null;
+    formWoundHistory.value.body_location_id = null;
 
-  if (formWoundHistory.value.body_location_id) {
-    loadSublocations(formWoundHistory.value.body_location_id);
-    isInitialLoadLocation.value = false;
+    Object.assign(formWoundHistory.value, {
+      ...props.woundHistory,
+      id: props.woundHistory.id,
+      woundBeginDate: props.woundHistory.woundBeginDate ? new Date(props.woundHistory.woundBeginDate) : null,
+      woundHealthDate: props.woundHistory.woundHealthDate ? new Date(props.woundHistory.woundHealthDate) : null,
+      grade_foot: props.woundHistory.grade_foot ? parseInt(props.woundHistory.grade_foot) : null,
+    });
+
+    if (props.woundHistory.wound_type_id) {
+      formWoundHistory.value.wound_type_id = parseInt(props.woundHistory.wound_type_id);
+      loadSubtypes(formWoundHistory.value.wound_type_id);
+    }
+
+    if (props.woundHistory.body_location_id) {
+      formWoundHistory.value.body_location_id = parseInt(props.woundHistory.body_location_id);
+      loadSublocations(formWoundHistory.value.body_location_id);
+    }
   }
 
   loadExistingImages();
 });
 
+async function loadSubtypes(typeId) {
+  try {
+    const { data } = await axios.get(`/wound_types/${typeId}/subtypes`);
+    woundSubtypes.value = data;
+  } catch (error) {
+    console.error('Error al cargar subtipos:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron cargar los subtipos.',
+      life: 5000,
+    });
+  }
+}
+
+async function loadSublocations(locationId) {
+  try {
+    const { data } = await axios.get(`/body_locations/${locationId}/sublocations`);
+    bodySublocations.value = data;
+  } catch (error) {
+    console.error('Error al cargar sublocalizaciones:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron cargar las sublocalizaciones.',
+      life: 5000,
+    });
+  }
+}
+
+watch(() => formWoundHistory.value.wound_type_id, (newVal) => {
+  if (isInitialLoadType.value) {
+    isInitialLoadType.value = false;
+    return;
+  }
+
+  const typeId = parseInt(newVal);
+  formWoundHistory.value.wound_subtype_id = null;
+  woundSubtypes.value = [];
+
+  if (typeId) {
+    loadSubtypes(typeId);
+  }
+});
+
+watch(() => formWoundHistory.value.body_location_id, (newVal) => {
+  if (isInitialLoadLocation.value) {
+    isInitialLoadLocation.value = false;
+    return;
+  }
+
+  const locationId = parseInt(newVal);
+  formWoundHistory.value.body_sublocation_id = null;
+  bodySublocations.value = [];
+
+  if (locationId) {
+    loadSublocations(locationId);
+  }
+});
 
 watch(() => [formWoundHistory.value.length, formWoundHistory.value.width], ([length, width]) => {
   const l = parseFloat(length);
@@ -195,7 +307,6 @@ watch(() => formWoundHistory.value.depth, (depth) => {
   formWoundHistory.value.volume = (!isNaN(d) && !isNaN(a)) ? (a * d).toFixed(2) : '';
 });
 
-// Validación de escala visual
 function onVisualScaleInput(event) {
   const input = event.target.value.replace("/10", "");
   let number = parseInt(input);
@@ -208,7 +319,6 @@ function onVisualScaleInput(event) {
   }
 }
 
-// Actualiza la barra de colores
 function adjustProgress() { }
 
 const totalPercentage = computed(() => {
@@ -223,11 +333,7 @@ function percentWidth(field) {
   const value = parseFloat(formWoundHistory.value[field]) || 0;
   const total = totalPercentage.value;
   if (total === 0) return 0;
-
-  if (total > 100) {
-    return ((value / total) * 100).toFixed(2);
-  }
-
+  if (total > 100) return ((value / total) * 100).toFixed(2);
   return value.toFixed(2);
 }
 
@@ -238,59 +344,58 @@ function percentOffset(...fields) {
     const val = parseFloat(formWoundHistory.value[field]) || 0;
     sum += val;
   }
-  if (total > 100) {
-    return ((sum / total) * 100).toFixed(2) + '%';
-  }
+  if (total > 100) return ((sum / total) * 100).toFixed(2) + '%';
   return sum + '%';
 }
 
-//Evidencia de la herida
-const MAX_FILES = 4
+// -------------------------
+// Evidencia fotográfica
+// -------------------------
+const MAX_FILES = 4;
+const zoomImageUrl = ref('');
+const zoomRotation = ref(0);
+const showZoomModal = ref(false);
+const showLimitModal = ref(false);
+const uploadFiles = ref([]);
+const totalSize = ref(0);
+const totalSizePercent = ref(0);
+const existingImages = ref([]);
+const selectedImage = ref('');
+const selectedImageRotation = ref(0);
+const fileUploadRef = ref(null);
+const showConfirmUploadModal = ref(false);
 
-const zoomImageUrl = ref('')
-const zoomRotation = ref(0)
-const showZoomModal = ref(false)
-const showLimitModal = ref(false)
-
-const uploadFiles = ref([])
-const totalSize = ref(0)
-const totalSizePercent = ref(0)
-
-const existingImages = ref([])
-const selectedImage = ref('')
-const selectedImageRotation = ref(0)
-// funciones auxiliares
-const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` })
+const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` });
 
 const updateTotalSize = () => {
-  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0)
-  totalSizePercent.value = totalSize.value / 10
-}
+  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0);
+  totalSizePercent.value = totalSize.value / 10;
+};
 
 const resetUploads = () => {
-  uploadFiles.value = []
-  totalSize.value = 0
-  totalSizePercent.value = 0
-}
+  uploadFiles.value = [];
+  totalSize.value = 0;
+  totalSizePercent.value = 0;
+};
 
 const isLimitReached = (incomingCount) =>
-  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES
+  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES;
 
 const openZoomModal = (src, rotation) => {
-  zoomImageUrl.value = src
-  zoomRotation.value = rotation
-  showZoomModal.value = true
-}
+  zoomImageUrl.value = src;
+  zoomRotation.value = rotation;
+  showZoomModal.value = true;
+};
 
 const closeLimitModal = () => {
-  showLimitModal.value = false
-}
+  showLimitModal.value = false;
+};
 
 const onSelectedFiles = (event) => {
-  const incoming = event.files
+  const incoming = event.files;
   if (isLimitReached(incoming.length)) {
-    showLimitModal.value = true
-    return
+    showLimitModal.value = true;
+    return;
   }
 
   incoming.forEach(file => {
@@ -301,116 +406,97 @@ const onSelectedFiles = (event) => {
       type: file.type,
       objectURL: URL.createObjectURL(file),
       rotation: 0,
-    })
-  })
+    });
+  });
 
-  updateTotalSize()
-}
+  updateTotalSize();
+};
 
 const rotateImage = (index, direction) => {
-  const file = uploadFiles.value[index]
+  const file = uploadFiles.value[index];
   file.rotation = direction === 'left'
     ? (file.rotation - 5 + 360) % 360
-    : (file.rotation + 5) % 360
-}
+    : (file.rotation + 5) % 360;
+};
 
 const removeFile = (index) => {
-  uploadFiles.value.splice(index, 1)
-  updateTotalSize()
-}
-
-const clearTemplatedUpload = (clear) => {
-  clear()
-  resetUploads()
-}
+  uploadFiles.value.splice(index, 1);
+  updateTotalSize();
+};
 
 const selectImage = (img) => {
-  selectedImage.value = `/storage/${img.content}`
-  selectedImageRotation.value = img.position || 0
-}
+  selectedImage.value = `/storage/${img.content}`;
+  selectedImageRotation.value = img.position || 0;
+};
 
 const downloadSelectedImage = () => {
-  const link = document.createElement('a')
-  link.href = selectedImage.value
-  link.download = selectedImage.value.split('/').pop()
-  link.click()
-}
+  const link = document.createElement('a');
+  link.href = selectedImage.value;
+  link.download = selectedImage.value.split('/').pop();
+  link.click();
+};
 
 const loadExistingImages = async () => {
-  const woundHistoryId = props.woundHistory.id
-  if (!woundHistoryId) return
+  const woundHistoryId = props.woundHistory?.id;
+  if (!woundHistoryId) return;
 
   try {
     const { data } = await axios.get('/media_history', {
       params: { wound_history_id: woundHistoryId }
-    })
-    existingImages.value = data
+    });
+    existingImages.value = data;
   } catch (error) {
     if (error.response?.status !== 404) {
-      console.error('Error al cargar imágenes:', error)
+      console.error('Error al cargar imágenes:', error);
     }
   }
-}
+};
 
 const uploadEvent = async () => {
   if (!props.woundHistory.id) {
-    toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 })
-    return
+    toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 });
+    return;
   }
 
   if (!uploadFiles.value.length) {
-    toast.add({ severity: 'warn', summary: 'Sin archivos', detail: 'Debes seleccionar imágenes para subir.', life: 3000 })
-    return
+    toast.add({ severity: 'warn', summary: 'Sin archivos', detail: 'Debes seleccionar imágenes para subir.', life: 3000 });
+    return;
   }
 
-  const formData = new FormData()
+  const formData = new FormData();
   uploadFiles.value.forEach((file, index) => {
-    formData.append('images[]', file.raw, file.name)
-    formData.append(`rotations[${index}]`, file.rotation || 0)
-  })
-  formData.append('wound_history_id', props.woundHistory.id)
+    formData.append('images[]', file.raw, file.name);
+    formData.append(`rotations[${index}]`, file.rotation || 0);
+  });
+  formData.append('wound_history_id', props.woundHistory.id);
 
   try {
-    await axios.post('/media_history/upload', formData)
-    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 })
-    resetUploads()
-    await loadExistingImages()
+    await axios.post('/media_history/upload', formData);
+    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 });
+    resetUploads();
+    await loadExistingImages();
   } catch (err) {
-    console.error(err)
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 })
+    console.error(err);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 });
   }
-}
+};
+
+const confirmUpload = async () => {
+  showConfirmUploadModal.value = false;
+  await uploadEvent();
+
+  resetUploads();
+  if (fileUploadRef.value) {
+    fileUploadRef.value.clear();
+  }
+};
 
 watch(existingImages, (imgs) => {
   if (imgs.length > 0 && !selectedImage.value) {
-    selectImage(imgs[0])
+    selectImage(imgs[0]);
   }
-})
-
-// carga inicial de imágenes
-loadExistingImages()
-
-const fileUploadClearCallback = ref(null)
-
-const fileUploadRef = ref(null)
-
-//Confirmación de carga de imagenes
-const showConfirmUploadModal = ref(false)
-
-const confirmUpload = async () => {
-  showConfirmUploadModal.value = false
-  await uploadEvent()
-
-  // Limpiar componente y estado después de subida exitosa
-  resetUploads()
-  if (fileUploadRef.value) {
-    fileUploadRef.value.clear()
-  }
-}
-
-
+});
 </script>
-
 <template>
   <AppLayout title="Antecedente de la herida">
     <div class="card max-w-6xl mx-auto min-h-screen flex flex-col">
@@ -464,22 +550,6 @@ const confirmUpload = async () => {
                     :class="{ 'p-invalid': submittedUser && !formWoundHistory.grade_foot }" />
                   <small v-if="submittedUser && !formWoundHistory.grade_foot" class="text-red-500">
                     Debe seleccionar el grado.
-                  </small>
-                </div>
-
-                <!-- Otro tipo (condicional) -->
-                <div v-if="
-                  formWoundHistory.wound_type_id === 9 ||
-                  [7, 11, 25, 33, 46].includes(formWoundHistory.wound_subtype_id)
-                ">
-                  <label class="flex items-center gap-1 mb-1 font-medium">
-                    Indicar tipo de herida <span class="text-red-600">*</span>
-                  </label>
-                  <InputText v-model="formWoundHistory.wound_type_other" class="w-full min-w-0" :class="{
-                    'p-invalid': submittedUser && !formWoundHistory.wound_type_other,
-                  }" />
-                  <small v-if="submittedUser && !formWoundHistory.wound_type_other" class="text-red-500">
-                    Debe especificar otro tipo de herida.
                   </small>
                 </div>
 
@@ -545,9 +615,9 @@ const confirmUpload = async () => {
                   <label class="flex items-center gap-1 mb-1 font-medium">Fecha que inició la herida <span
                       class="text-red-600">*</span></label>
                   <DatePicker v-model="formWoundHistory.woundBeginDate" class="w-full min-w-0" inputId="woundBeginDate"
-                    :class="{
+                    placeholder="mm/dd/yyyy" :class="{
                       'p-invalid': submittedUser && !formWoundHistory.woundBeginDate,
-                    }" placeholder="Seleccione una fecha" showIcon />
+                    }" showIcon />
                   <small v-if="submittedUser && !formWoundHistory.woundBeginDate" class="text-red-500">
                     Debe seleccionar la fecha de inicio.
                   </small>
@@ -595,7 +665,7 @@ const confirmUpload = async () => {
 
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
-                    Índice tobillo brazo Manual
+                    Índice tobillo brazo
                     <span class="text-red-600">*</span>
                   </label>
                   <Select id="valoracion" v-model="formWoundHistory.valoracion" :options="valoracion" filter
@@ -605,14 +675,14 @@ const confirmUpload = async () => {
                   }}</small>
                 </div>
 
-                <div v-if="['MESI'].includes(formWoundHistory.valoracion)">
+                <div v-if="['MESI', 'Manual'].includes(formWoundHistory.valoracion)">
                   <label class="flex items-center gap-1 mb-1 font-medium">
-                    MESI <span class="text-red-600">*</span>
+                    {{ formWoundHistory.valoracion }} <span class="text-red-600">*</span>
                   </label>
                   <InputText id="MESI" v-model="formWoundHistory.MESI" class="w-full min-w-0" />
                   <small v-if="errors.MESI" class="text-red-500">{{
                     errors.MESI
-                  }}</small>
+                    }}</small>
                 </div>
 
                 <div>
@@ -730,7 +800,7 @@ const confirmUpload = async () => {
                   <span class="text-red-600">*</span>
                 </label>
                 <DatePicker v-model="formWoundHistory.woundHealthDate" inputId="woundHealthDate" class="w-full min-w-0"
-                  placeholder="Seleccione una fecha" showIcon />
+                  placeholder="mm/dd/yyyy" showIcon />
                 <small v-if="errors.woundHealthDate" class="text-red-500">{{
                   errors.woundHealthDate
                 }}</small>
@@ -844,14 +914,14 @@ const confirmUpload = async () => {
               </div>
               <div>
                 <label class="flex items-center gap-1 mb-1 font-medium">
-                  Piel perisional <span class="text-red-600">*</span>
+                  Piel perilesional <span class="text-red-600">*</span>
                 </label>
-                <Select id="piel_perisional" v-model="formWoundHistory.piel_perisional" :options="piel_perisional"
+                <Select id="piel_perilesional" v-model="formWoundHistory.piel_perilesional" :options="piel_perilesional"
                   filter optionLabel="name" optionValue="name" class="w-full min-w-0"
                   placeholder="Seleccione una opción">
                 </Select>
-                <small v-if="errors.piel_perisional" class="text-red-500">{{
-                  errors.piel_perisional
+                <small v-if="errors.piel_perilesional" class="text-red-500">{{
+                  errors.piel_perilesional
                 }}</small>
               </div>
 
@@ -868,7 +938,7 @@ const confirmUpload = async () => {
                   <span class="text-red-600">*</span>
                 </label>
                 <DatePicker v-model="formWoundHistory.measurementDate" inputId="measurementDate" class="w-full min-w-0"
-                  placeholder="Seleccione una fecha" showIcon />
+                  placeholder="mm/dd/yyyy" showIcon />
                 <small v-if="errors.measurementDate" class="text-red-500">{{
                   errors.measurementDate
                 }}</small>

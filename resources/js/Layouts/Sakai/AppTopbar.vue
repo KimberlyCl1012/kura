@@ -31,9 +31,6 @@ const logout = () => {
   router.post(route("logout"));
 };
 
-console.log("✅ userRole:", userRole.value);
-console.log("✅ userPermissions:", userPermissions.value);
-
 </script>
 
 <template>
@@ -62,7 +59,7 @@ console.log("✅ userPermissions:", userPermissions.value);
               </button>
             </template>
             <template #content>
-              <div style="width: 150px" v-if="userRole == 'owner'">
+              <div style="width: 150px">
                 <div class="block px-4 py-2 text-xs text-gray-400">Catálogos</div>
                 <DropdownLink :href="route('users.index')">
                   • Usuarios
@@ -78,6 +75,9 @@ console.log("✅ userPermissions:", userPermissions.value);
                 </DropdownLink>
                 <DropdownLink :href="route('wound_types.index')">
                   • Tipo de heridas
+                </DropdownLink>
+                <DropdownLink :href="route('wound_subtypes.index')">
+                  • Subtipos de heridas
                 </DropdownLink>
                 <DropdownLink :href="route('wound_phases.index')">
                   • Fase de heridas
@@ -99,7 +99,7 @@ console.log("✅ userPermissions:", userPermissions.value);
                 <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
                   • Roles
                 </DropdownLink>
-                <DropdownLink :href="route('teams.create')"> • Crear Rol </DropdownLink>
+                <!-- <DropdownLink :href="route('teams.create')"> • Crear Rol </DropdownLink> -->
                 <DropdownLink :href="route('permissions.index')"> • Permisos </DropdownLink>
 
                 <div class="border-t border-gray-200" v-if="$page.props.auth.user.all_teams.length > 1" />

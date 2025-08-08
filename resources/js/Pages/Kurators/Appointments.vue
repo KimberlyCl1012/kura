@@ -33,7 +33,7 @@ const sexOptions = [
 ];
 
 const identificationTypesOptions = props.identificationTypes || ["INE", "CURP", "Pasaporte", "Visa", "Otro"];
-const kinshipOptionsLocal = props.kinshipOptions || ["Padre", "Madre", "Hermano", "Amigo", "Otro"];
+const kinshipOptionsLocal = props.kinshipOptions || ["Padre", "Madre", "Hermano", "Hijo"];
 
 const expandedRows = ref({});
 
@@ -291,7 +291,7 @@ function healthRecord(patientId) {
                         <label for="dateOfBirth" class="block font-bold mb-1">
                             Fecha de nacimiento <span class="text-red-500">*</span>
                         </label>
-                        <DatePicker class="w-full" inputId="dateOfBirth" showIcon v-model="patient.dateOfBirth"
+                        <DatePicker class="w-full" inputId="dateOfBirth" showIcon v-model="patient.dateOfBirth" placeholder="mm/dd/yyyy"
                             :class="{ 'p-invalid': submittedPatient && !patient.dateOfBirth }" />
                         <small v-if="submittedPatient && !patient.dateOfBirth" class="text-red-500">La fecha es
                             obligatoria.</small>

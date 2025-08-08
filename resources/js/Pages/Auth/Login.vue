@@ -10,7 +10,10 @@ import Password from "primevue/password";
 import * as yup from "yup";
 
 const schema = yup.object({
-    email: yup.string().email("El correo no es válido").required("El correo es requerido"),
+    email: yup
+        .string()
+        .email("El correo no es válido")
+        .required("El correo es requerido"),
     password: yup.string().required("La contraseña es requerida"),
 });
 
@@ -60,14 +63,14 @@ const submit = async () => {
         <div class="flex flex-col items-center justify-center">
             <div class="card">
                 <div style="
-            border-radius: 56px;
-            padding: 0.3rem;
-            background: linear-gradient(
-              180deg,
-              var(--primary-color) 10%,
-              rgba(33, 150, 243, 0) 30%
-            );
-          ">
+                        border-radius: 56px;
+                        padding: 0.3rem;
+                        background: linear-gradient(
+                            180deg,
+                            var(--primary-color) 10%,
+                            rgba(33, 150, 243, 0) 30%
+                        );
+                    ">
                     <div class="w-full bg-surface-0 dark:bg-surface-900 py-10 px-8 sm:px-10"
                         style="border-radius: 53px">
                         <div class="text-center mb-8">
@@ -121,9 +124,9 @@ const submit = async () => {
                 ></Checkbox>
                 <label for="rememberme1">Remember me</label>
               </div> -->
-                                    <span
+                                    <!-- <span
                                         class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Olvidaste
-                                        tu contraseña?</span>
+                                        tu contraseña?</span> -->
                                 </div>
                                 <Button type="submit" :class="{ 'opacity-25': form.processing }"
                                     :disabled="form.processing" label="Iniciar sesión" class="w-full"></Button>

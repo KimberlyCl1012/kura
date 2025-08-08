@@ -50,4 +50,9 @@ class WoundHistory extends Model
     {
         return $this->hasMany(MediaHistory::class, 'wound_history_id');
     }
+
+    protected $casts = [
+        'piel_perilesional' => 'array',
+        'infeccion' => 'array',
+    ];
 }

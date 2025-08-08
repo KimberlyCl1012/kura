@@ -15,7 +15,7 @@ class CompanySeeder extends Seeder
     {
         Company::create([
             'name' => 'Kura+',
-            'description' => 'Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. Lorem Ipsum ha sido',
+            'description' => '',
             'state' =>   1
         ]);
     }

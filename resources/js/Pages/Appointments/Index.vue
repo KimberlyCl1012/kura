@@ -220,7 +220,7 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
               Fecha de la consulta
               <span class="text-red-500">*</span>
             </label>
-            <DatePicker id="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full" variant="filled"
+            <DatePicker id="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full" variant="filled" placeholder="mm/dd/yyyy"
               showIcon :minDate="today" />
             <small v-if="submitted && !appointment.dateStartVisit" class="text-red-500">Campo requerido</small>
           </div>

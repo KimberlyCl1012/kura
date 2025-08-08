@@ -20,8 +20,8 @@ export default defineConfig({
         viteStaticCopy({
             targets: [
                 {
-                    src: "resources/img/logos/red/*", // Carpeta o archivo que quieres copiar
-                    dest: "img/svg", // Carpeta de destino dentro de dist/
+                    src: "resources/img/logos/red/*", // copiar desde aquí
+                    dest: "img/svg",
                 },
             ],
         }),

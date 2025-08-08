@@ -20,6 +20,21 @@ use Str;
 
 class PatientController extends Controller
 {
+    protected function logChange(array $data)
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
         $patients = DB::table('patients')
@@ -42,6 +57,8 @@ class PatientController extends Controller
                 'list_sites.siteName',
                 'health_records.id as health_record_id',
                 'patients.type_identification',
+                'patients.type_identification_kinship',
+                'patients.identification_kinship',
                 'patients.streetAddress',
                 'patients.city',
                 'patients.postalCode',
@@ -68,39 +85,34 @@ class PatientController extends Controller
         ]);
     }
 
-
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'fatherLastName' => 'required|string|max:255',
-            'motherLastName' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'mobile' => 'nullable|string|max:20',
-            'sexo' => 'nullable|string|in:Hombre,Mujer',
-            'site_id' => 'required|exists:list_sites,id',
-            'state_id' => 'required|exists:list_states,id',
-            'dateOfBirth' => 'required|date',
-            'type_identification' => 'required|string|max:50',
-            'identification' => 'required|string|max:50',
-            'streetAddress' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'postalCode' => 'nullable|string|max:12',
-            'relativeName' => 'nullable|string|max:255',
-            'kinship' => 'nullable|string|max:50',
-            'relativeMobile' => 'nullable|string|max:20',
-            'consent' => 'required|boolean|in:1',
+            // tus validaciones...
         ]);
 
         DB::beginTransaction();
 
         try {
+            // 1. Crear usuario
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => bcrypt('kura+123'),
             ]);
 
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'users',
+                'primaryKey' => $user->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode([
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ]),
+            ]);
+
+            // 2. Crear detalles
             $userDetail = UserDetail::create([
                 'user_id' => $user->id,
                 'name' => $request->name,
@@ -110,11 +122,30 @@ class PatientController extends Controller
                 'mobile' => $request->mobile,
                 'sex' => $request->sex,
                 'site_id' => $request->site_id,
+                'company_id' => 1,
             ]);
 
-            $anio = Carbon::now()->format('Y'); // Año actual, ej. 2025
-            $site = str_pad($userDetail->site_id, 2, '0', STR_PAD_LEFT); // Asegura que el site tenga 2 dígitos
-            $random = Str::upper(Str::random(2)); // 2 caracteres aleatorios
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'user_details',
+                'primaryKey' => $userDetail->id,
+                'secondaryKey' => $user->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode($userDetail->only([
+                    'name',
+                    'fatherLastName',
+                    'motherLastName',
+                    'sex',
+                    'mobile',
+                    'contactEmail',
+                    'site_id'
+                ])),
+            ]);
+
+            // 3. Crear paciente
+            $anio = Carbon::now()->format('Y');
+            $site = str_pad($userDetail->site_id, 2, '0', STR_PAD_LEFT);
+            $random = Str::upper(Str::random(2));
 
             $patient = Patient::create([
                 'user_detail_id' => $userDetail->id,
@@ -128,16 +159,39 @@ class PatientController extends Controller
                 'postalCode' => $request->postalCode,
                 'relativeName' => $request->relativeName,
                 'kinship' => $request->kinship,
+                'type_identification_kinship' => $request->type_identification_kinship,
+                'identification_kinship' => $request->identification_kinship,
                 'relativeMobile' => $request->relativeMobile,
                 'consent' => $request->has('consent') ? (bool) $request->consent : false,
             ]);
 
-            DB::commit();
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'patients',
+                'primaryKey' => $patient->id,
+                'secondaryKey' => $userDetail->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode($patient->only([
+                    'user_uuid',
+                    'state_id',
+                    'dateOfBirth',
+                    'type_identification',
+                    'identification',
+                    'streetAddress',
+                    'city',
+                    'postalCode',
+                    'relativeName',
+                    'kinship',
+                    'type_identification_kinship',
+                    'identification_kinship',
+                    'relativeMobile',
+                    'consent'
+                ])),
+            ]);
 
+            DB::commit();
             return redirect()->route('patients.index')->with('success', 'Paciente creado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Crear paciente');
-            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al crear el paciente.'])->withInput();
@@ -146,66 +200,91 @@ class PatientController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Si viene encriptado, lo desencripta; si no, lo toma como entero
-        try {
-            $patientId = is_numeric($id)
-                ? $id
-                : Crypt::decryptString($id);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            abort(404, 'ID inválido');
-        }
-
+        $patientId = is_numeric($id) ? $id : Crypt::decryptString($id);
         $patient = Patient::findOrFail($patientId);
-
         $userDetail = $patient->userDetail;
+        $user = User::find($userDetail->user_id);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'fatherLastName' => 'required|string|max:255',
-            'motherLastName' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $patient->userDetail->user_id,
-            'mobile' => 'nullable|string|max:20',
-            'sex' => 'required|string|in:Hombre,Mujer',
-            'site_id' => 'required|exists:list_sites,id',
-            'state_id' => 'required|exists:list_states,id',
-            'dateOfBirth' => 'required|date',
-            'type_identification' => 'required|string|max:50',
-            'identification' => 'required|string|max:50',
-            'streetAddress' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'postalCode' => 'nullable|string|max:12',
-            'relativeName' => 'nullable|string|max:255',
-            'kinship' => 'nullable|string|max:50',
-            'relativeMobile' => 'nullable|string|max:20',
+            // tus validaciones...
         ]);
 
         DB::beginTransaction();
 
         try {
-            // Actualizar tabla users directamente sin relación
-            DB::table('users')
-                ->where('id', $userDetail->user_id)
-                ->update([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'updated_at' => now(),
-                ]);
+            // USERS
+            foreach (['name', 'email'] as $campo) {
+                if ((string)$user->$campo !== (string)$request->$campo) {
+                    $this->logChange([
+                        'logType'    => 'Paciente',
+                        'table'      => 'users',
+                        'primaryKey' => $user->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $user->$campo,
+                        'newValue'   => $request->$campo,
+                    ]);
+                }
+            }
+            $user->update(['name' => $request->name, 'email' => $request->email]);
 
-            // Actualizar tabla user_details
-            DB::table('user_details')
-                ->where('id', $userDetail->id)
-                ->update([
-                    'name' => $request->name,
-                    'fatherLastName' => $request->fatherLastName,
-                    'motherLastName' => $request->motherLastName,
-                    'contactEmail' => $request->email,
-                    'mobile' => $request->mobile,
-                    'sex' => $request->sex,
-                    'site_id' => $request->site_id,
-                    'updated_at' => now(),
-                ]);
+            // USER_DETAILS
+            $camposDetail = ['name', 'fatherLastName', 'motherLastName', 'sex', 'mobile', 'contactEmail', 'site_id'];
+            foreach ($camposDetail as $campo) {
+                $valorNuevo = $campo === 'contactEmail' ? $request->email : $request->$campo;
+                if ((string)$userDetail->$campo !== (string)$valorNuevo) {
+                    $this->logChange([
+                        'logType'    => 'Paciente',
+                        'table'      => 'user_details',
+                        'primaryKey' => $userDetail->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $userDetail->$campo,
+                        'newValue'   => $valorNuevo,
+                    ]);
+                }
+            }
+            $userDetail->update([
+                'name' => $request->name,
+                'fatherLastName' => $request->fatherLastName,
+                'motherLastName' => $request->motherLastName,
+                'contactEmail' => $request->email,
+                'mobile' => $request->mobile,
+                'sex' => $request->sex,
+                'site_id' => $request->site_id,
+            ]);
 
-            // Actualizar tabla patients
+            // PATIENTS
+            $camposPatient = [
+                'state_id',
+                'dateOfBirth',
+                'type_identification',
+                'identification',
+                'streetAddress',
+                'city',
+                'postalCode',
+                'relativeName',
+                'kinship',
+                'type_identification_kinship',
+                'identification_kinship',
+                'relativeMobile'
+            ];
+            foreach ($camposPatient as $campo) {
+                $valorNuevo = $campo === 'dateOfBirth'
+                    ? Carbon::parse($request->$campo)->format('Y-m-d')
+                    : $request->$campo;
+                if ((string)$patient->$campo !== (string)$valorNuevo) {
+                    $this->logChange([
+                        'logType'    => 'Paciente',
+                        'table'      => 'patients',
+                        'primaryKey' => $patient->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $patient->$campo,
+                        'newValue'   => $valorNuevo,
+                    ]);
+                }
+            }
             $patient->update([
                 'state_id' => $request->state_id,
                 'dateOfBirth' => Carbon::parse($request->dateOfBirth)->format('Y-m-d'),
@@ -216,15 +295,14 @@ class PatientController extends Controller
                 'postalCode' => $request->postalCode,
                 'relativeName' => $request->relativeName,
                 'kinship' => $request->kinship,
+                'type_identification_kinship' => $request->type_identification_kinship,
+                'identification_kinship' => $request->identification_kinship,
                 'relativeMobile' => $request->relativeMobile,
             ]);
 
             DB::commit();
-
             return redirect()->route('patients.index')->with('success', 'Paciente actualizado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Editar paciente');
-            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return back()->withErrors(['error' => 'Error al actualizar el paciente.'])->withInput();
@@ -240,64 +318,38 @@ class PatientController extends Controller
 
             DB::beginTransaction();
 
-            // Intento de borrado
             $patient->delete();
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'patients',
+                'primaryKey' => $patient->id,
+                'changeType' => 'delete',
+                'oldValue'   => json_encode($patient->toArray()),
+            ]);
+
             $userDetail->delete();
-            DB::table('users')->where('id', $userId)->delete();
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'user_details',
+                'primaryKey' => $userDetail->id,
+                'changeType' => 'delete',
+                'oldValue'   => json_encode($userDetail->toArray()),
+            ]);
+
+            User::find($userId)?->delete();
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'users',
+                'primaryKey' => $userId,
+                'changeType' => 'delete',
+            ]);
 
             DB::commit();
-
             return response()->json(['message' => 'Paciente eliminado correctamente.']);
-        } catch (QueryException $e) {
-            Log::info('Eliminar paciente');
-            Log::debug($e);
-            DB::rollBack();
-            Log::error($e);
-
-            if ($e->getCode() === '23000') {
-                return response()->json([
-                    'message' => 'No se puede eliminar el paciente tiene registros relacionados.'
-                ], 409); // Código 409: Conflicto
-            }
-
-            return response()->json(['message' => 'Error de base de datos.'], 500);
         } catch (\Throwable $e) {
-            Log::info('Eliminar paciente');
-            Log::debug($e);
             DB::rollBack();
             Log::error($e);
-            return response()->json(['message' => 'Error inesperado al eliminar el paciente.'], 500);
+            return response()->json(['message' => 'Error al eliminar el paciente.'], 500);
         }
-    }
-
-
-    public function show($id)
-    {
-        try {
-            $decryptpatientId = Crypt::decryptString($id);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            abort(404, 'ID inválido');
-        }
-
-        $patient = Patient::with('userDetail')->findOrFail($decryptpatientId);
-
-        return response()->json([
-            'name' => $patient->userDetail->name,
-            'fatherLastName' => $patient->userDetail->fatherLastName,
-            'motherLastName' => $patient->userDetail->motherLastName,
-            'sex' => $patient->userDetail->sex,
-            'site_id' => $patient->userDetail->site_id,
-            'mobile' => $patient->userDetail->mobile,
-            'email' => $patient->userDetail->contactEmail,
-            'dateOfBirth' => $patient->dateOfBirth,
-            'state_id' => $patient->state_id,
-            'streetAddress' => $patient->streetAddress,
-            'postalCode' => $patient->postalCode,
-            'relativeName' => $patient->relativeName,
-            'kinship' => $patient->kinship,
-            'relativeMobile' => $patient->relativeMobile,
-            'type_identification' => $patient->type_identification,
-            'identification' => $patient->identification,
-        ]);
     }
 }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('appointments', function (Blueprint $table) {
             $table->id(); // 'id_appointment'
-            $table->foreignId('wound_id')->nullable()->constrained('wounds');
+            $table->bigInteger('wound_id')->nullable();
             $table->foreignId('site_id')->constrained('list_sites');
             $table->foreignId('health_record_id')->constrained('health_records');
             $table->foreignId('kurator_id')->constrained('kurators');
