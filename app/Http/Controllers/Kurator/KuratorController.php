@@ -42,7 +42,6 @@ class KuratorController extends Controller
     public function index()
     {
         $kurators = DB::table('kurators')
-            ->where('kurators.state', 1) // Solo activos
             ->join('user_details', 'user_details.id', '=', 'kurators.user_detail_id')
             ->join('users', 'user_details.user_id', '=', 'users.id')
             ->join('list_sites', 'user_details.site_id', '=', 'list_sites.id')
@@ -65,6 +64,9 @@ class KuratorController extends Controller
                 'list_sites.siteName',
                 'users.email'
             )
+            ->where('kurators.state', 1)
+            ->where('user_details.state', 1)
+            ->where('users.state', 1)
             ->get()
             ->map(function ($kurator) {
                 $kurator->crypt_kurator = Crypt::encryptString($kurator->kurator_id);
@@ -310,24 +312,43 @@ class KuratorController extends Controller
     {
         try {
             $kurator = Kurator::findOrFail($id);
+            $userDetail = $kurator->userDetail;
+            $userId = $userDetail->user_id;
 
             DB::beginTransaction();
 
-            $kurator->update(['state' => 0]);
+            $oldKurator = $kurator->toArray();
+            $oldUserDetail = $userDetail->toArray();
+            $user = User::findOrFail($userId);
 
+            $kurator->update(['state' => 0]);
             $this->logChange([
                 'logType'    => 'Kurador',
                 'table'      => 'kurators',
                 'primaryKey' => $kurator->id,
-                'changeType' => 'delete',
-                'fieldName'  => 'state',
-                'oldValue'   => 1,
-                'newValue'   => 0,
+                'changeType' => 'destroy',
+                'oldValue'   => json_encode($oldKurator),
+                'newValue'   => json_encode($kurator->toArray()),
             ]);
 
+            $userDetail->update(['state' => 0]);
+            $this->logChange([
+                'logType'    => 'Paciente',
+                'table'      => 'user_details',
+                'primaryKey' => $userDetail->id,
+                'changeType' => 'destroy',
+                'oldValue'   => json_encode($oldUserDetail),
+                'newValue'   => json_encode($userDetail->toArray()),
+            ]);
+
+            $user->state = 0;
+            $user->save();
             DB::commit();
 
-            return response()->json(['message' => 'Kurador desactivado correctamente.'], 200);
+            return response()->json([
+                'message' => 'Paciente desactivado correctamente.',
+                'deleted_kurator_id' => $kurator->id,
+            ]);
         } catch (\Throwable $e) {
             Log::error($e);
             DB::rollBack();

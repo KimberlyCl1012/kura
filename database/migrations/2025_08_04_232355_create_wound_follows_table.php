@@ -55,7 +55,7 @@ return new class extends Migration
             $table->decimal('slough_percent', 5, 2);
             $table->decimal('necrosis_percent', 5, 2);
             $table->decimal('epithelialization_percent', 5, 2);
-            $table->longText('note', 999);
+            $table->longText('note', 999)->nullable();
             $table->unsignedTinyInteger('state')->default(1);
             $table->timestamps();
         });

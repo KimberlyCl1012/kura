@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\HealthInstitution;
 use App\Models\HealthRecord;
 use App\Models\Patient;
@@ -16,6 +17,21 @@ use Str;
 
 class HealthRecordController extends Controller
 {
+    protected function logChange(array $data): void
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function create($patientId)
     {
         try {
@@ -94,7 +110,33 @@ class HealthRecordController extends Controller
             $random = strtoupper(Str::random(3));
             $data['record_uuid'] = "EXP{$year}-{$data['patient_id']}{$random}";
 
-            HealthRecord::create($data);
+            $record = HealthRecord::create($data);
+
+            // Log de creación
+            $this->logChange([
+                'logType'    => 'Expediente',
+                'table'      => 'health_records',
+                'primaryKey' => $record->id,
+                'secondaryKey' => $data['patient_id'] ?? null,
+                'changeType' => 'create',
+                'newValue'   => json_encode($record->only([
+                    'id',
+                    'record_uuid',
+                    'patient_id',
+                    'health_institution_id',
+                    'health_institution',
+                    'medicines',
+                    'allergies',
+                    'pathologicalBackground',
+                    'laboratoryBackground',
+                    'nourishmentBackground',
+                    'medicalInsurance',
+                    'religion',
+                    'created_at',
+                ])),
+            ]);
+
+            DB::commit();
 
             return redirect()->back()->with('success', 'Expediente guardado correctamente.');
         } catch (\Throwable $e) {
@@ -159,13 +201,64 @@ class HealthRecordController extends Controller
                 'nourishmentBackground'
             ];
 
+            // Guardamos antes para comparar y loguear
+            $before = $healthRecord->replicate();
+
             foreach ($protectedFields as $field) {
-                if (!$fullEdit && strlen(strip_tags($data[$field])) < strlen(strip_tags($healthRecord->$field))) {
+                $newClean = strlen(strip_tags($data[$field] ?? ''));
+                $oldClean = strlen(strip_tags($healthRecord->$field ?? ''));
+
+                if (!$fullEdit && $newClean < $oldClean) {
+                    // Log del bloqueo de recorte
+                    $this->logChange([
+                        'logType'    => 'Expediente',
+                        'table'      => 'health_records',
+                        'primaryKey' => $healthRecord->id,
+                        'changeType' => 'permission-override',
+                        'fieldName'  => $field,
+                        'oldValue'   => $healthRecord->$field,
+                        'newValue'   => $data[$field],
+                    ]);
+
+                    // Revertimos al valor anterior
                     $data[$field] = $healthRecord->$field;
                 }
             }
 
+            DB::beginTransaction();
+
             $healthRecord->update($data);
+
+            // Log campo por campo solo si cambió
+            $campos = [
+                'health_institution_id',
+                'health_institution',
+                'medicines',
+                'allergies',
+                'pathologicalBackground',
+                'laboratoryBackground',
+                'nourishmentBackground',
+                'medicalInsurance',
+                'religion',
+            ];
+
+            foreach ($campos as $campo) {
+                $old = (string)($before->$campo ?? '');
+                $new = (string)($healthRecord->$campo ?? '');
+                if ($old !== $new) {
+                    $this->logChange([
+                        'logType'    => 'Expediente',
+                        'table'      => 'health_records',
+                        'primaryKey' => $healthRecord->id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $old,
+                        'newValue'   => $new,
+                    ]);
+                }
+            }
+
+            DB::commit();
 
             return redirect()->back()->with('success', 'Expediente actualizado correctamente.');
         } catch (\Throwable $e) {

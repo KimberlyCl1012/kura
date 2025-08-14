@@ -511,23 +511,43 @@ function percentOffset(...fields) {
   return sum + '%';
 }
 
+
+
 //Evidencia de la herida
 const MAX_FILES = 4
 
-const zoomImageUrl = ref('')
-const zoomRotation = ref(0)
-const showZoomModal = ref(false)
 const showLimitModal = ref(false)
-
+const existingImages = ref([])
 const uploadFiles = ref([])
 const totalSize = ref(0)
 const totalSizePercent = ref(0)
 
-const existingImages = ref([])
+const zoomImageUrl = ref('')
+const zoomRotation = ref(0)
+const showZoomModal = ref(false)
 const selectedImage = ref('')
 const selectedImageRotation = ref(0)
 // funciones auxiliares
 const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` })
+
+
+const openZoomModal = (src, rotation) => {
+  zoomImageUrl.value = src
+  zoomRotation.value = rotation
+  showZoomModal.value = true
+}
+
+const selectImage = (img) => {
+  selectedImage.value = `/storage/${img.content}`
+  selectedImageRotation.value = img.position || 0
+}
+
+const downloadSelectedImage = () => {
+  const link = document.createElement('a')
+  link.href = selectedImage.value
+  link.download = selectedImage.value.split('/').pop()
+  link.click()
+}
 
 const updateTotalSize = () => {
   totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0)
@@ -543,11 +563,6 @@ const resetUploads = () => {
 const isLimitReached = (incomingCount) =>
   existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES
 
-const openZoomModal = (src, rotation) => {
-  zoomImageUrl.value = src
-  zoomRotation.value = rotation
-  showZoomModal.value = true
-}
 
 const closeLimitModal = () => {
   showLimitModal.value = false
@@ -591,34 +606,6 @@ const clearTemplatedUpload = (clear) => {
   resetUploads()
 }
 
-const selectImage = (img) => {
-  selectedImage.value = `/storage/${img.content}`
-  selectedImageRotation.value = img.position || 0
-}
-
-const downloadSelectedImage = () => {
-  const link = document.createElement('a')
-  link.href = selectedImage.value
-  link.download = selectedImage.value.split('/').pop()
-  link.click()
-}
-
-const loadExistingImages = async () => {
-  const woundId = props.wound.id
-  if (!woundId) return
-
-  try {
-    const { data } = await axios.get('/media', {
-      params: { wound_id: woundId }
-    })
-    existingImages.value = data
-  } catch (error) {
-    if (error.response?.status !== 404) {
-      console.error('Error al cargar imágenes:', error)
-    }
-  }
-}
-
 const uploadEvent = async () => {
   if (!props.wound.id) {
     toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 })
@@ -635,7 +622,10 @@ const uploadEvent = async () => {
     formData.append('images[]', file.raw, file.name)
     formData.append(`rotations[${index}]`, file.rotation || 0)
   })
+
+  formData.append('type', 'Herida')
   formData.append('wound_id', props.wound.id)
+  formData.append('appointment_id', props.wound.appointment_id)
 
   try {
     await axios.post('/media/upload', formData)
@@ -654,8 +644,37 @@ watch(existingImages, (imgs) => {
   }
 })
 
+const loadExistingImages = async () => {
+  const woundId = props.wound?.id
+  const appointmentId = props.wound.appointment_id
+
+  if (!woundId || !appointmentId) return
+
+  try {
+    const { data } = await axios.get('/media', {
+      params: {
+        wound_id: woundId,
+        appointment_id: appointmentId,
+        type: 'Herida',
+      }
+    })
+    existingImages.value = data
+  } catch (error) {
+    console.error('Error al cargar imágenes:', error)
+  }
+}
+
 // carga inicial de imágenes
-loadExistingImages()
+watch(
+  () => props.wound.appointment_id,
+  (newVal) => {
+    if (newVal && props.wound?.id) {
+      loadExistingImages()
+    }
+  },
+  { immediate: true }
+)
+
 
 const fileUploadClearCallback = ref(null)
 
@@ -675,13 +694,24 @@ const confirmUpload = async () => {
   }
 }
 
-//Tratamiento 
+// // Tratamiento
+const treatmentId = ref(props.treatment?.id || null);
 const hasTreatment = ref(!!props.treatment);
 
 const formTreat = ref({
-  methods: [],
-  submethodsByMethod: {},
-  description: "",
+  methods: props.treatment?.methods.map(m => m.treatment_method_id) || [],
+  submethodsByMethod: props.treatment
+    ? (() => {
+      const map = {};
+      props.treatment.submethods.forEach(sub => {
+        const methodId = sub.treatment_method_id;
+        map[methodId] = map[methodId] || [];
+        map[methodId].push(sub.treatment_submethod_id);
+      });
+      return map;
+    })()
+    : {},
+  description: props.treatment?.description || "",
 });
 
 const isSavingTreatment = ref(false);
@@ -695,42 +725,30 @@ const selectedMethodsWithSubmethods = computed(() => {
 });
 
 watch(
-    () => formTreat.value.methods,
-    (newMethods) => {
-        const validMap = {};
-        newMethods.forEach(methodId => {
-            if (Array.isArray(formTreat.value.submethodsByMethod[methodId])) {
-                validMap[methodId] = formTreat.value.submethodsByMethod[methodId];
-            } else {
-                validMap[methodId] = [];
-            }
-        });
-        formTreat.value.submethodsByMethod = validMap;
-    },
-    { deep: true }
+  () => formTreat.value.methods,
+  (newMethods) => {
+    const validMap = {};
+    newMethods.forEach(methodId => {
+      if (Array.isArray(formTreat.value.submethodsByMethod[methodId])) {
+        validMap[methodId] = formTreat.value.submethodsByMethod[methodId];
+      } else {
+        validMap[methodId] = [];
+      }
+    });
+    formTreat.value.submethodsByMethod = validMap;
+  },
+  { deep: true }
 );
-
 
 const storeTreatment = async () => {
   submittedTreatment.value = true;
   errors.value = {};
 
-  if (!formWound.value.id) {
-    toast.add({
-      severity: "warn",
-      summary: "Advertencia",
-      detail: "Debe guardar la herida antes.",
-      life: 4000,
-    });
-    return;
-  }
-
   const missingSubmethods = formTreat.value.methods.filter(
-    methodId =>
+    (methodId) =>
       !formTreat.value.submethodsByMethod[methodId] ||
       formTreat.value.submethodsByMethod[methodId].length === 0
   );
-
   if (missingSubmethods.length > 0) {
     toast.add({
       severity: "error",
@@ -744,6 +762,8 @@ const storeTreatment = async () => {
   isSavingTreatment.value = true;
 
   const payload = {
+    treatment_id: treatmentId.value,
+    appointment_id: props.wound.appointment_id,
     wound_id: formWound.value.id,
     description: formTreat.value.description || null,
     method_ids: formTreat.value.methods,
@@ -751,32 +771,58 @@ const storeTreatment = async () => {
   };
 
   try {
-    await axios.post("/treatments", payload);
+    const { data } = await axios.post("/treatments", payload);
+
+    if (data?.treatment_id) {
+      treatmentId.value = data.treatment_id;
+    }
+
     toast.add({
       severity: "success",
       summary: "Éxito",
-      detail: "Tratamiento guardado.",
+      detail:
+        data?.message ||
+        (hasTreatment.value ? "Tratamiento actualizado." : "Tratamiento guardado."),
       life: 3000,
     });
+
     hasTreatment.value = true;
   } catch (error) {
     if (error.response?.status === 422) {
+      // Mostrar TODOS los mensajes de validación
       errors.value = error.response.data.errors || {};
 
-      const firstErrorKey = Object.keys(errors.value)[0];
-      const firstMessage = errors.value[firstErrorKey][0];
+      const allMessages = Object.values(errors.value)
+        .flat()
+        .filter(Boolean)
+        .join("\n");
 
       toast.add({
         severity: "error",
-        summary: "Error de validación",
-        detail: firstMessage,
-        life: 4000,
+        summary: "Errores de validación",
+        detail: allMessages || "Revisa los campos.",
+        life: 6000,
       });
+
+      // --- Alternativa: un toast por cada error ---
+      // Object.values(errors.value).flat().forEach(msg => {
+      //   toast.add({
+      //     severity: "error",
+      //     summary: "Error de validación",
+      //     detail: msg,
+      //     life: 4000,
+      //   });
+      // });
     } else {
+      const detail =
+        error.response?.data?.message ||
+        error.message ||
+        "No se pudo guardar el tratamiento.";
+
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "No se pudo guardar el tratamiento.",
+        detail,
         life: 4000,
       });
     }
@@ -799,9 +845,10 @@ onMounted(() => {
       }
     });
     formTreat.value.submethodsByMethod = map;
-
   }
 });
+// // Fin Tratamiento
+
 
 //Terminar consulta
 const showConfirmFinishDialog = ref(false);
@@ -1625,7 +1672,7 @@ const finishConsultation = async () => {
                 <Button label="Actualizar" icon="pi pi-check" type="submit" :loading="isSavingTreatment"
                   :disabled="isSavingTreatment" />
 
-                <Button v-if="hasTreatment" label="Terminar consulta" icon="pi pi-check" severity="danger"
+                <Button v-if="hasTreatment" label="Terminar consulta" icon="pi pi-sign-out" severity="danger"
                   :loading="isSavingTreatment" :disabled="isSavingTreatment" @click="confirmFinishConsultation" />
 
               </div>

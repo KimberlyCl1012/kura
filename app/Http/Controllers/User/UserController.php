@@ -32,7 +32,7 @@ class UserController extends Controller
         // // Comprobar si el usuario tiene un permiso específico
         // $canView = $user->hasTeamPermission($team, 'server:view');
 
-        $users = User::select('id', 'name', 'email')->get();
+        $users = User::select('id', 'name', 'email')->where('state',1)->get();
 
         return Inertia::render('Users/Index', [
             'users' => $users,

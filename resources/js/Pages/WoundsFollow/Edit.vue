@@ -243,12 +243,15 @@ watch(
     { immediate: true }
 )
 
-
 //Seguimiento de la herida
 const formFollow = ref({
     wound_id: props.wound?.id || null,
     appointment_id: props.appointmentId || null,
     wound_phase_id: props.follow?.wound_phase_id || null,
+    wound_type_id: props.wound?.wound_type_id || null,
+    wound_subtype_id: props.wound?.wound_subtype_id || null,
+    body_location_id: props.wound?.body_location_id || null,
+    body_sublocation_id: props.wound?.body_sublocation_id || null,
     edema: props.follow?.edema || '',
     dolor: props.follow?.dolor || '',
     tipo_dolor: props.follow?.tipo_dolor || '',
@@ -509,15 +512,11 @@ function percentOffsetFollow(...fields) {
 //Evidencia de la herida
 const MAX_FILES = 4
 
-
 const showLimitModalFollow = ref(false)
 const existingImagesFollow = ref([])
 const uploadFilesFollow = ref([])
 const totalSizeFollow = ref(0)
 const totalSizePercentFollow = ref(0)
-
-
-
 
 const zoomImageUrl = ref('')
 const zoomRotation = ref(0)

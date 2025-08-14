@@ -101,6 +101,7 @@ Route::middleware([
     Route::post('/media_history/upload', [MediaHistoryController::class, 'upload'])->name('media_history.upload');
 
     //Treatment
+    Route::post('/treatments/edit', [TreatmentController::class, 'update'])->name('treatment.update');
     Route::post('/treatments', [TreatmentController::class, 'store'])->name('treatment.store');
 
     //Wound Follows
@@ -116,7 +117,6 @@ Route::middleware([
     Route::get('/records/{healthRecordId}', [RecordController::class, 'index'])->name('records.index');
     Route::get('/records/{appointmentId}/show', [RecordController::class, 'show'])->name('records.show');
     Route::post('/records/pdf', [RecordController::class, 'generatePdf'])->name('records.generate-pdf');
-
 
     // Relations
     Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');

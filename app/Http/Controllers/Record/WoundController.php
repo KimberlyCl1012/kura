@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\BodyLocation;
 use App\Models\BodySublocation;
 use App\Models\HealthRecord;
@@ -28,6 +29,21 @@ use Inertia\Inertia;
 
 class WoundController extends Controller
 {
+    protected function logChange(array $data): void
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index(Request $request, $appointmentId, $healthRecordId)
     {
         try {
@@ -178,6 +194,29 @@ class WoundController extends Controller
                 'woundBeginDate'      => Carbon::parse($request->woundBeginDate)->format('Y-m-d'),
             ]);
 
+            // Log de creación
+            $this->logChange([
+                'logType'      => 'Herida',
+                'table'        => 'wounds',
+                'primaryKey'   => $wound->id,
+                'secondaryKey' => $request->health_record_id,
+                'changeType'   => 'create',
+                'newValue'     => json_encode($wound->only([
+                    'appointment_id',
+                    'health_record_id',
+                    'wound_type_id',
+                    'grade_foot',
+                    'wound_subtype_id',
+                    'body_location_id',
+                    'body_sublocation_id',
+                    'wound_phase_id',
+                    'woundBeginDate',
+                    'state',
+                ])),
+            ]);
+
+            DB::commit();
+
             return response()->json([
                 'message' => 'Herida creada exitosamente',
                 'wound'   => $wound,
@@ -302,7 +341,88 @@ class WoundController extends Controller
 
             $validated = $request->validate($rules);
 
+            // Normalizar fechas si vienen
+            foreach (['woundBeginDate', 'woundHealthDate'] as $dateField) {
+                if (!empty($validated[$dateField])) {
+                    $validated[$dateField] = Carbon::parse($validated[$dateField])->format('Y-m-d');
+                }
+            }
+
+            // Guardamos snapshot para comparar
+            $before = $wound->replicate();
+
+            DB::beginTransaction();
+
             $wound->update($validated);
+
+            // Campos a auditar (incluye arrays -> JSON)
+            $fields = [
+                'wound_type_id',
+                'wound_subtype_id',
+                'body_location_id',
+                'body_sublocation_id',
+                'wound_phase_id',
+                'woundBeginDate',
+                'woundHealthDate',
+                'grade_foot',
+                'valoracion',
+                'MESI',
+                'woundBackground',
+                'borde',
+                'edema',
+                'dolor',
+                'exudado_cantidad',
+                'exudado_tipo',
+                'olor',
+                'piel_perilesional',
+                'infeccion',
+                'tipo_dolor',
+                'visual_scale',
+                'monofilamento',
+                'blood_glucose',
+            ];
+
+            foreach ($fields as $field) {
+                $old = $before->$field ?? null;
+                $new = $wound->$field ?? null;
+
+                // Si son arrays (o json), los comparamos stringificados
+                $isArrayLike = in_array($field, ['piel_perilesional', 'infeccion'], true);
+                if ($isArrayLike) {
+                    $old = $old ? (is_array($old) ? $old : json_decode($old, true)) : null;
+                    $new = $new ? (is_array($new) ? $new : json_decode($new, true)) : null;
+
+                    $oldStr = json_encode($old, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $newStr = json_encode($new, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                    if ($oldStr !== $newStr) {
+                        $this->logChange([
+                            'logType'    => 'Herida',
+                            'table'      => 'wounds',
+                            'primaryKey' => $wound->id,
+                            'changeType' => 'update',
+                            'fieldName'  => $field,
+                            'oldValue'   => $oldStr,
+                            'newValue'   => $newStr,
+                        ]);
+                    }
+                } else {
+                    // Comparación simple como string
+                    if ((string)$old !== (string)$new) {
+                        $this->logChange([
+                            'logType'    => 'Herida',
+                            'table'      => 'wounds',
+                            'primaryKey' => $wound->id,
+                            'changeType' => 'update',
+                            'fieldName'  => $field,
+                            'oldValue'   => $old,
+                            'newValue'   => $new,
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,

@@ -3,12 +3,29 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\Media;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MediaController extends Controller
 {
+    protected function logChange(array $data): void
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $woundId = $request->query('wound_id');
@@ -51,18 +68,46 @@ class MediaController extends Controller
             $rotations = $request->input('rotations', []);
             $type = $request->input('type');
 
+            DB::beginTransaction();
+
+            $createdRows = [];
+
             foreach ($request->file('images') as $i => $image) {
                 $path = $image->store('wound_media', 'public');
                 $rotation = $rotations[$i] ?? 0;
 
-                Media::create([
-                    'wound_id' => $woundId,
+                $media = Media::create([
+                    'wound_id'       => $woundId,
                     'appointment_id' => $appointmentId,
-                    'content' => $path,
-                    'position' => $rotation,
-                    'type' => $type,
+                    'content'        => $path,
+                    'position'       => $rotation, // tu campo de rotación
+                    'type'           => $type,
                 ]);
+
+                $createdRows[] = [
+                    'id'             => $media->id,
+                    'wound_id'       => (int)$woundId,
+                    'appointment_id' => $appointmentId ? (int)$appointmentId : null,
+                    'content'        => $path,
+                    'position'       => $rotation,
+                    'type'           => $type,
+                    'created_at'     => $media->created_at?->toDateTimeString(),
+                ];
             }
+
+            $this->logChange([
+                'logType'      => 'Media',
+                'table'        => 'media',
+                'primaryKey'   => null,
+                'secondaryKey' => $woundId,
+                'changeType'   => 'bulk-create',
+                'newValue'     => json_encode([
+                    'count'   => count($createdRows),
+                    'items'   => $createdRows,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ]);
+
+            DB::commit();
 
             return response()->json(['message' => 'Imágenes guardadas correctamente.'], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {

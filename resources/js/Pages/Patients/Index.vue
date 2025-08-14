@@ -22,6 +22,11 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 
+const rows = ref([...props.patients]);
+watch(() => props.patients, (v) => {
+    rows.value = [...v];
+});
+
 const sex = [
     { label: "Hombre", value: "Hombre" },
     { label: "Mujer", value: "Mujer" },
@@ -41,7 +46,7 @@ function openNew() {
     patient.value = {
         name: "", fatherLastName: "", motherLastName: "", email: "",
         dateOfBirth: null, type_identification: "", identification: "",
-         type_identification_kinship: "", identification_kinship: "",
+        type_identification_kinship: "", identification_kinship: "",
         streetAddress: "", city: "", postalCode: "",
         relativeName: "", kinship: "", relativeMobile: "",
         state_id: null, site_id: null, consent: 0,
@@ -119,8 +124,7 @@ async function saveUser() {
 
     isSaving.value = true;
 
-    const payload = { ...patient.value };
-    payload.consent = patient.value.consent ? 1 : 0;
+    const payload = { ...patient.value, consent: patient.value.consent ? 1 : 0 };
 
     try {
         if (isEditMode.value) {
@@ -134,6 +138,7 @@ async function saveUser() {
             toast.add({ severity: "success", summary: "Guardado", detail: "Paciente creado", life: 3000 });
         }
         hideDialog();
+
         router.reload({ only: ['patients'] });
     } catch (e) {
         if (e.response && e.response.status === 422) {
@@ -154,35 +159,29 @@ async function saveUser() {
     }
 }
 
-
 function confirmDeleteUser(data) {
     patient.value = { ...data };
     deletePatientDialog.value = true;
 }
 
 async function deleteUser() {
+    const id = patient.value.patient_id;
+
     try {
-        await axios.post(route('patients.destroy', patient.value.patient_id), {
-            _method: 'DELETE'
-        });
+        const { data } = await axios.post(route('patients.destroy', id), { _method: 'DELETE' });
+
+        rows.value = rows.value.filter(p => p.patient_id !== id);
 
         toast.add({
             severity: "success",
             summary: "Eliminado",
-            detail: "Paciente eliminado",
+            detail: data?.message || "Paciente eliminado",
             life: 3000,
         });
 
-        router.reload({ only: ['patients'] });
     } catch (error) {
         const detail = error?.response?.data?.message || "No se pudo eliminar";
-
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail,
-            life: 4000,
-        });
+        toast.add({ severity: "error", summary: "Error", detail, life: 4000 });
     } finally {
         deletePatientDialog.value = false;
     }
@@ -192,13 +191,12 @@ function exportCSV() {
     dt.value.exportCSV();
 }
 
-//Expediente
+// Expediente
 function healthRecord(data) {
     router.get(route('health_records.create', data.crypt_patient));
 }
-
-
 </script>
+
 
 <template>
     <AppLayout title="Pacientes">
@@ -212,7 +210,7 @@ function healthRecord(data) {
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="patients" dataKey="patient_id" :paginator="true" :rows="10" :filters="filters"
+            <DataTable ref="dt" :value="rows" dataKey="patient_id" :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
@@ -231,15 +229,16 @@ function healthRecord(data) {
                         {{ index + 1 }}
                     </template>
                 </Column>
+
                 <Column field="name" header="Nombre" />
                 <Column field="email" header="Correo" />
                 <Column field="siteName" header="Sitio" />
+
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
                         <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined
                             rounded class="mr-2" @click="healthRecord(data)"
                             :severity="data.health_record_id ? 'info' : 'secondary'"
-                            :label="data.health_record_id ? '' : ''"
                             v-tooltip.top="data.health_record_id ? 'Ver expediente' : 'Crear expediente'" />
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)"
                             v-tooltip.top="'Editar'" />
@@ -247,8 +246,8 @@ function healthRecord(data) {
                             @click="confirmDeleteUser(data)" />
                     </template>
                 </Column>
-
             </DataTable>
+
         </div>
 
         <!-- Dialogo Crear/Editar Paciente -->
@@ -395,8 +394,8 @@ function healthRecord(data) {
                     </div>
 
                     <div>
-                        <label for="identification_kinship" class="block font-bold mb-1">Número de identificación del representante legal<span
-                                class="text-red-600">*</span></label>
+                        <label for="identification_kinship" class="block font-bold mb-1">Número de identificación del
+                            representante legal<span class="text-red-600">*</span></label>
                         <InputText id="identification_kinship" v-model="patient.identification_kinship" class="w-full"
                             :class="{ 'p-invalid': submitted && patient.kinship && !patient.identification_kinship }" />
                         <small v-if="submitted && patient.kinship && !patient.identification_kinship"

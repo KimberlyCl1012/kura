@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Record;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\BodyLocation;
 use App\Models\BodySublocation;
 use App\Models\Measurement;
@@ -18,11 +19,26 @@ use App\Models\WoundType;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class WoundFollowController extends Controller
 {
+    protected function logChange(array $data): void
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
 
     public function edit($appointmentId, $woundId)
     {
@@ -159,20 +175,169 @@ class WoundFollowController extends Controller
                 'note' => 'nullable|string',
             ]);
 
+            // Normalizar arrays a JSON para guardar
+            $validated['piel_perilesional'] = json_encode($request->piel_perilesional ?? []);
+            $validated['infeccion']         = json_encode($request->infeccion ?? []);
+
+            DB::beginTransaction();
+
             $follow = WoundFollow::firstOrNew([
-                'wound_id' => $validated['wound_id'],
+                'wound_id'       => $validated['wound_id'],
                 'appointment_id' => $validated['appointment_id'],
             ]);
 
+            $isCreate = $follow->exists === false;
+            $before   = $follow->exists ? $follow->replicate() : null;
+
             $follow->fill($validated);
-            $follow->piel_perilesional = json_encode($request->piel_perilesional ?? []);
-            $follow->infeccion = json_encode($request->infeccion ?? []);
             $follow->save();
 
-            return redirect()->back()->with('success', $follow->wasRecentlyCreated
+            if ($isCreate) {
+                // Log de creación
+                $this->logChange([
+                    'logType'      => 'Seguimiento',
+                    'table'        => 'wound_follows',
+                    'primaryKey'   => $follow->id,
+                    'secondaryKey' => $validated['wound_id'],
+                    'changeType'   => 'create',
+                    'newValue'     => json_encode($follow->only([
+                        'id',
+                        'wound_id',
+                        'appointment_id',
+                        'wound_phase_id',
+                        'wound_type_id',
+                        'wound_subtype_id',
+                        'body_location_id',
+                        'body_sublocation_id',
+                        'grade_foot',
+                        'valoracion',
+                        'MESI',
+                        'borde',
+                        'edema',
+                        'dolor',
+                        'exudado_cantidad',
+                        'exudado_tipo',
+                        'olor',
+                        'piel_perilesional',
+                        'infeccion',
+                        'tipo_dolor',
+                        'visual_scale',
+                        'ITB_izquierdo',
+                        'pulse_dorsal_izquierdo',
+                        'pulse_tibial_izquierdo',
+                        'pulse_popliteo_izquierdo',
+                        'ITB_derecho',
+                        'pulse_dorsal_derecho',
+                        'pulse_tibial_derecho',
+                        'pulse_popliteo_derecho',
+                        'monofilamento',
+                        'blood_glucose',
+                        'measurementDate',
+                        'length',
+                        'width',
+                        'area',
+                        'depth',
+                        'volume',
+                        'tunneling',
+                        'undermining',
+                        'granulation_percent',
+                        'slough_percent',
+                        'necrosis_percent',
+                        'epithelialization_percent',
+                        'note',
+                        'created_at'
+                    ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ]);
+            } else {
+                // Log campo por campo (incluye arrays como JSON string)
+                $fields = [
+                    'wound_phase_id',
+                    'wound_type_id',
+                    'wound_subtype_id',
+                    'body_location_id',
+                    'body_sublocation_id',
+                    'grade_foot',
+                    'valoracion',
+                    'MESI',
+                    'borde',
+                    'edema',
+                    'dolor',
+                    'exudado_cantidad',
+                    'exudado_tipo',
+                    'olor',
+                    'piel_perilesional',
+                    'infeccion',
+                    'tipo_dolor',
+                    'visual_scale',
+                    'ITB_izquierdo',
+                    'pulse_dorsal_izquierdo',
+                    'pulse_tibial_izquierdo',
+                    'pulse_popliteo_izquierdo',
+                    'ITB_derecho',
+                    'pulse_dorsal_derecho',
+                    'pulse_tibial_derecho',
+                    'pulse_popliteo_derecho',
+                    'monofilamento',
+                    'blood_glucose',
+                    'measurementDate',
+                    'length',
+                    'width',
+                    'area',
+                    'depth',
+                    'volume',
+                    'tunneling',
+                    'undermining',
+                    'granulation_percent',
+                    'slough_percent',
+                    'necrosis_percent',
+                    'epithelialization_percent',
+                    'note',
+                ];
+
+                foreach ($fields as $field) {
+                    $old = $before->$field ?? null;
+                    $new = $follow->$field ?? null;
+
+                    // Para arrays JSON
+                    $isJsonArray = in_array($field, ['piel_perilesional', 'infeccion'], true);
+                    if ($isJsonArray) {
+                        $oldStr = is_null($old) ? null : (is_array($old) ? json_encode($old) : (string)$old);
+                        $newStr = is_null($new) ? null : (is_array($new) ? json_encode($new) : (string)$new);
+
+                        if ($oldStr !== $newStr) {
+                            $this->logChange([
+                                'logType'    => 'Seguimiento',
+                                'table'      => 'wound_follows',
+                                'primaryKey' => $follow->id,
+                                'changeType' => 'update',
+                                'fieldName'  => $field,
+                                'oldValue'   => $oldStr,
+                                'newValue'   => $newStr,
+                            ]);
+                        }
+                    } else {
+                        if ((string)$old !== (string)$new) {
+                            $this->logChange([
+                                'logType'    => 'Seguimiento',
+                                'table'      => 'wound_follows',
+                                'primaryKey' => $follow->id,
+                                'changeType' => 'update',
+                                'fieldName'  => $field,
+                                'oldValue'   => $old,
+                                'newValue'   => $new,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->back()->with('success', $isCreate
                 ? 'Seguimiento creado correctamente.'
                 : 'Seguimiento actualizado correctamente.');
         } catch (DecryptException $e) {
+            DB::rollBack();
             Log::error('Error al desencriptar el woundId', [
                 'wound_id_raw' => $woundId,
                 'error' => $e->getMessage(),
@@ -182,6 +347,7 @@ class WoundFollowController extends Controller
                 'error' => 'ID de herida inválido o manipulado.',
             ]);
         } catch (\Throwable $e) {
+            DB::rollBack();
             Log::error('Error general al guardar seguimiento', [
                 'wound_id' => $woundId,
                 'error' => $e->getMessage(),
@@ -191,13 +357,5 @@ class WoundFollowController extends Controller
                 'error' => 'Ocurrió un error al guardar el seguimiento.',
             ]);
         }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

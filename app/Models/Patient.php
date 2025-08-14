@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
 {
-     use HasFactory;
+    use HasFactory;
     protected $guarded = [];
     // protected $primaryKey = 'id_patient';
 
