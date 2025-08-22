@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Site extends Model
 {
-     use HasFactory;
+    use HasFactory;
     protected $table = 'list_sites';
     protected $guarded = [];
     // protected $primaryKey = 'id_site';
@@ -25,10 +25,10 @@ class Site extends Model
     public function appointment()
     {
         return $this->hasMany(Appointment::class); //, 'id_appointment'
-    }    
+    }
 
     public function userDetail()
     {
         return $this->hasOne(UserDetail::class); //, 'id_appointment'
-    }   
+    }
 }

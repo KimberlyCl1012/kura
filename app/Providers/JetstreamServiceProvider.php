@@ -14,6 +14,7 @@ use Laravel\Jetstream\Jetstream;
 
 class JetstreamServiceProvider extends ServiceProvider
 {
+    public static array $rolesCatalog = [];
     /**
      * Register any application services.
      */
@@ -38,37 +39,18 @@ class JetstreamServiceProvider extends ServiceProvider
         Jetstream::deleteUsersUsing(DeleteUser::class);
     }
 
-    /**
-     * Configure the roles and permissions that are available within the application.
-     */
     protected function configurePermissions(): void
     {
         Jetstream::defaultApiTokenPermissions(['read']);
 
-        Jetstream::role('admin', 'Administrator', [
-            'create',
-            'read',
-            'update',
-            'delete',
-            'editor:edit-all', 
-        ])->description('Los usuarios administradores pueden realizar cualquier acción.');
+        $roles = (array) config('roles', []);
 
-        Jetstream::role('admin_clinico', 'Administrador Clínico', [
-            'read',
-            'update',
-        ])->description('Los usuarios editores tienen la capacidad de leer y actualizar.');
-
-        Jetstream::role('sup_clinico', 'Supervisor Clínico', [
-            'read',
-            'update',
-        ])->description('Los usuarios editores tienen la capacidad de leer y actualizar.');
-
-        Jetstream::role('pro_clinico', 'Profesional Clínico', [
-            'read'
-        ])->description('Los usuarios lectores tienen la capacidad de leer.');
-
-        Jetstream::role('usuario', 'Usuario', [
-            'read'
-        ])->description('Los usuarios lectores tienen la capacidad de leer.');
+        foreach ($roles as $key => $cfg) {
+            Jetstream::role(
+                $key,
+                $cfg['name'] ?? $key,
+                (array) ($cfg['permissions'] ?? [])
+            )->description($cfg['description'] ?? null);
+        }
     }
 }

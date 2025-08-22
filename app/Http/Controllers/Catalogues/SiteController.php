@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Catalogues;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -13,9 +14,21 @@ use Inertia\Inertia;
 
 class SiteController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected function logChange(array $data)
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
         $addresses = Address::all()->map(function ($address) {
@@ -50,92 +63,132 @@ class SiteController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'address_id' => 'required|exists:list_addresses,id',
-            'siteName' => 'required|string|max:255',
-            'email_admin' => 'required|email|max:255',
-            'phone' => 'required|string|max:50',
-            'description' => 'nullable|string',
+            'address_id'   => 'required|exists:list_addresses,id',
+            'siteName'     => 'required|string|max:255',
+            'email_admin'  => 'required|email|max:255',
+            'phone'        => 'required|string|max:50',
+            'description'  => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        try {
-            DB::beginTransaction();
+        DB::beginTransaction();
 
-            $siteId = DB::table('list_sites')->insertGetId([
-                'address_id' => $request->address_id,
-                'siteName' => $request->siteName,
+        try {
+            $payload = [
+                'address_id'  => $request->address_id,
+                'siteName'    => $request->siteName,
                 'email_admin' => $request->email_admin,
-                'phone' => $request->phone,
+                'phone'       => $request->phone,
                 'description' => $request->description,
-                'state' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'state'       => 1,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ];
+
+            $siteId = DB::table('list_sites')->insertGetId($payload);
+
+            $this->logChange([
+                'logType'      => 'Sitio',
+                'table'        => 'list_sites',
+                'primaryKey'   => (string)$siteId,
+                'secondaryKey' => (string)$request->address_id,
+                'changeType'   => 'create',
+                'newValue'     => json_encode($payload),
             ]);
 
             $siteData = DB::table('list_sites')->where('id', $siteId)->first();
-            $siteData->id = Crypt::encryptString($siteData->id);
-
             DB::commit();
+
+            $siteData->id = Crypt::encryptString($siteData->id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Sitio creado exitosamente',
-                'data' => $siteData,
+                'data'    => $siteData,
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Crear Sitio');
             Log::debug($e);
-            DB::rollBack();
             Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Ocurrió un error al registrar el sitio.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
 
     public function update(Request $request, $id)
     {
+        DB::beginTransaction();
+
         try {
             $decryptedId = Crypt::decryptString($id);
 
             $validator = Validator::make($request->all(), [
-                'address_id' => 'required|exists:list_addresses,id',
-                'siteName' => 'required|string|max:255',
-                'email_admin' => 'required|email|max:255',
-                'phone' => 'required|string|max:50',
-                'description' => 'nullable|string',
+                'address_id'   => 'required|exists:list_addresses,id',
+                'siteName'     => 'required|string|max:255',
+                'email_admin'  => 'required|email|max:255',
+                'phone'        => 'required|string|max:50',
+                'description'  => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            DB::table('list_sites')->where('id', $decryptedId)->update([
-                'address_id' => $request->address_id,
-                'siteName' => $request->siteName,
+            $old = DB::table('list_sites')->where('id', $decryptedId)->first();
+            if (!$old) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Sitio no encontrado'], 404);
+            }
+
+            $updates = [
+                'address_id'  => $request->address_id,
+                'siteName'    => $request->siteName,
                 'email_admin' => $request->email_admin,
-                'phone' => $request->phone,
+                'phone'       => $request->phone,
                 'description' => $request->description,
-                'updated_at' => now(),
-            ]);
+                'updated_at'  => now(),
+            ];
+
+            foreach (['address_id', 'siteName', 'email_admin', 'phone', 'description'] as $campo) {
+                $viejo = $old->$campo;
+                $nuevo = $updates[$campo];
+                if ((string)$viejo !== (string)$nuevo) {
+                    $this->logChange([
+                        'logType'      => 'Sitio',
+                        'table'        => 'list_sites',
+                        'primaryKey'   => (string)$decryptedId,
+                        'secondaryKey' => (string)$updates['address_id'],
+                        'changeType'   => 'update',
+                        'fieldName'    => $campo,
+                        'oldValue'     => $viejo,
+                        'newValue'     => $nuevo,
+                    ]);
+                }
+            }
+
+            DB::table('list_sites')->where('id', $decryptedId)->update($updates);
 
             $siteData = DB::table('list_sites')->where('id', $decryptedId)->first();
+            DB::commit();
+
             $siteData->id = Crypt::encryptString($siteData->id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Sitio actualizado correctamente',
-                'data' => $siteData,
+                'data'    => $siteData,
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Editar Sitio');
             Log::debug($e);
-            DB::rollBack();
             Log::error($e);
             return response()->json([
                 'success' => false,
@@ -146,23 +199,45 @@ class SiteController extends Controller
 
     public function destroy($id)
     {
+        DB::beginTransaction();
+
         try {
             $decryptedId = Crypt::decryptString($id);
 
+            $old = DB::table('list_sites')->where('id', $decryptedId)->first();
+            if (!$old) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Sitio no encontrado'], 404);
+            }
+
             DB::table('list_sites')->where('id', $decryptedId)->update([
-                'state' => 0,
+                'state'      => 0,
                 'updated_at' => now(),
             ]);
+
+            $new = DB::table('list_sites')->where('id', $decryptedId)->first();
+
+            $this->logChange([
+                'logType'      => 'Sitio',
+                'table'        => 'list_sites',
+                'primaryKey'   => (string)$decryptedId,
+                'secondaryKey' => (string)$old->address_id,
+                'changeType'   => 'destroy',
+                'oldValue'     => json_encode($old),
+                'newValue'     => json_encode($new),
+            ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Sitio eliminado correctamente',
-                'id' => $id,
+                'id'      => $id,
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Eliminar Sitio');
             Log::debug($e);
-            DB::rollBack();
             Log::error($e);
             return response()->json([
                 'success' => false,

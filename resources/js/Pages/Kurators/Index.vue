@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from "../../Layouts/sakai/AppLayout.vue";
-import { ref } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useToast } from "primevue/usetoast";
 import { FilterMatchMode } from "@primevue/core/api";
 import {
@@ -38,10 +38,25 @@ const sex = [
 ];
 
 const types = [
-    { label: "Médico", value: "Médico" },
-    { label: "Enfermero", value: "Enfermero" },
-    { label: "Otro", value: "Otro" },
+    { label: "Enfermería", value: "Enfermería" },
+    { label: "Medicina", value: "Medicina" },
 ];
+
+const specialtyDetailKeyOptions = ["Especialista", "Especialidad", "Subespecialidad", "Maestría", "Doctorado"];
+
+const specialtyMap = {
+    "Enfermería": ["Técnico", "Licenciatura", "Especialista", "Maestría", "Doctorado"],
+    "Medicina": ["Médico general", "Especialidad", "Subespecialidad", "Maestría", "Doctorado"],
+};
+
+const specialtyOptions = computed(() => {
+    const type = kurator.value.type_kurator || "";
+    return specialtyMap[type] || [];
+});
+
+const needsSpecialtyDetail = computed(() =>
+    specialtyDetailKeyOptions.includes(kurator.value.specialty || "")
+);
 
 const typeIdentificationOptions = ["INE", "CURP", "Cedula Profesional", "Pasaporte", "Visa", "Otro"];
 
@@ -57,8 +72,9 @@ function openNew() {
         mobile: "",
         site_id: null,
         specialty: "",
+        detail_specialty: "",
         type_kurator: "",
-        type_identification: "",
+        type_identification: "Cedula profesional",
         identification: "",
         email: "",
         password: "",
@@ -69,7 +85,8 @@ function openNew() {
 }
 
 function editKurator(data) {
-    kurator.value = {
+
+    const base = {
         kurator_id: data.kurator_id,
         name: data.name || "",
         fatherLastName: data.fatherLastName || "",
@@ -77,17 +94,39 @@ function editKurator(data) {
         sex: data.sex || "",
         mobile: data.mobile || "",
         site_id: data.site_id || null,
-        specialty: data.specialty || "",
         type_kurator: data.type_kurator || "",
-        type_identification: data.type_identification || "",
+        type_identification: data.type_identification,
         identification: data.identification || "",
         email: data.email || "",
         password: "",
     };
+
+    let sp = (data.specialty ?? "").trim();
+    let det = (data.detail_specialty ?? "").trim();
+    if (!det && (sp || "").includes(":")) {
+        const [k, d = ""] = sp.split(":", 2).map(s => s.trim());
+        sp = k;
+        det = d;
+    }
+
+    const normalizeKeyForType = (type, key) => {
+        if (type === "Medicina" && key === "Especialista") return "Especialidad";
+        if (type === "Enfermería" && key === "Especialidad") return "Especialista";
+        return key;
+    };
+
+    kurator.value = { ...base };
     submitted.value = false;
     isEditMode.value = true;
     kuratorDialog.value = true;
+
+    nextTick(() => {
+        const fixedKey = normalizeKeyForType(kurator.value.type_kurator, sp);
+        kurator.value.specialty = fixedKey;
+        kurator.value.detail_specialty = det;
+    });
 }
+
 
 function hideDialog() {
     kuratorDialog.value = false;
@@ -103,50 +142,80 @@ function confirmDeleteKurator(data) {
 async function deleteKurator() {
     try {
         const response = await axios.delete(route("kurators.destroy", kurator.value.kurator_id));
-        console.log("Respuesta exitosa eliminar kurador:", response);
-        toast.add({ severity: "success", summary: "Eliminado", detail: "Kurador eliminado", life: 3000 });
+        toast.add({ severity: "success", summary: "Eliminado", detail: response.data?.message || "Personal sanitario eliminado", life: 3000 });
         router.reload({ only: ["kurators"] });
         deleteKuratorDialog.value = false;
     } catch (error) {
-        console.error("Error al eliminar kurador:", error.response || error);
-        toast.add({ severity: "error", summary: "Error", detail: "No se pudo eliminar", life: 3000 });
+        const status = error?.response?.status;
+        const serverMessage =
+            error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            "No se pudo eliminar";
+
+        toast.add({
+            severity: status === 422 ? "warn" : "error",
+            summary: status === 422 ? "Acción no permitida" : "Error",
+            detail: serverMessage,
+            life: 4000,
+        });
+        console.error("Error al eliminar personal sanitario:", error.response || error);
     }
 }
+
 async function saveKurator() {
     submitted.value = true;
     isSaving.value = true;
 
-    const payload = { ...kurator.value };
+    // Validaciones básicas
+    const missingRequired =
+        !kurator.value.name ||
+        !kurator.value.fatherLastName ||
+        !kurator.value.sex ||
+        !kurator.value.mobile ||
+        !kurator.value.site_id ||
+        !kurator.value.email ||
+        !kurator.value.type_kurator ||
+        !kurator.value.specialty ||
+        !kurator.value.identification ||
+        (!isEditMode.value && !kurator.value.password);
 
-    if (
-        !payload.name || !payload.fatherLastName || !payload.sex ||
-        !payload.mobile || !payload.site_id || !payload.email ||
-        (!isEditMode.value && !payload.password) || !payload.type_kurator || !payload.specialty || !payload.type_identification ||
-        !payload.identification
-    ) {
+    const missingDetail = needsSpecialtyDetail.value && !kurator.value.detail_specialty;
+
+    if (missingRequired || missingDetail) {
         isSaving.value = false;
+        if (missingDetail) {
+            toast.add({
+                severity: "warn",
+                summary: "Falta información",
+                detail: "Indica el nombre de la especialidad/subespecialidad/posgrado.",
+                life: 4000,
+            });
+        }
         return;
     }
 
+    const payload = {
+        ...kurator.value,
+        specialty: kurator.value.specialty,
+        detail_specialty: kurator.value.detail_specialty,
+    };
     try {
         if (isEditMode.value) {
             if (!kurator.value.kurator_id) {
-                toast.add({ severity: "error", summary: "Error", detail: "ID del kurador no definido." });
+                toast.add({ severity: "error", summary: "Error", detail: "ID del personal sanitario no definido." });
                 isSaving.value = false;
                 return;
             }
 
-            console.log("RUTA PUT (simulada con POST):", route("kurators.update", kurator.value.kurator_id));
-
             await axios.post(route("kurators.update", kurator.value.kurator_id), {
                 ...payload,
-                _method: 'PUT'
+                _method: "PUT",
             });
 
-            toast.add({ severity: "success", summary: "Actualizado", detail: "Kurador actualizado", life: 3000 });
+            toast.add({ severity: "success", summary: "Actualizado", detail: "Personal sanitario actualizado", life: 3000 });
         } else {
             await axios.post(route("kurators.store"), payload);
-            toast.add({ severity: "success", summary: "Guardado", detail: "Kurador creado", life: 3000 });
+            toast.add({ severity: "success", summary: "Guardado", detail: "Personal sanitario creado", life: 3000 });
         }
         hideDialog();
         router.reload({ only: ["kurators"] });
@@ -169,6 +238,12 @@ async function saveKurator() {
     }
 }
 
+
+watch(() => kurator.value.type_kurator, () => {
+    kurator.value.specialty = "";
+    kurator.value.detail_specialty = "";
+});
+
 function goToAppointments(kurator) {
     router.visit(route('appointments.byKurator', kurator.crypt_kurator));
 }
@@ -176,7 +251,7 @@ function goToAppointments(kurator) {
 </script>
 
 <template>
-    <AppLayout title="Kuradores">
+    <AppLayout title="Personal sanitario">
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
@@ -192,13 +267,13 @@ function goToAppointments(kurator) {
                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
                 <template #header>
                     <div class="flex justify-between items-center">
-                        <h4 class="m-0">Kuradores</h4>
+                        <h4 class="m-0">Personal sanitario</h4>
                         <InputText v-model="filters.global.value" placeholder="Buscar..." />
                     </div>
                 </template>
 
                 <Column header="#" style="min-width: 6rem">
-                    <template #body="{ index }">{{ index + 1 }}</template>
+                    <template #body="{ index }">{{ index }}</template>
                 </Column>
                 <Column field="kurator_full_name" header="Nombre" />
                 <Column field="contactEmail" header="Correo contacto" />
@@ -219,7 +294,7 @@ function goToAppointments(kurator) {
 
         <!-- Dialogo Crear/Editar Kurador -->
         <Dialog v-model:visible="kuratorDialog" :modal="true" :style="{ width: '600px' }"
-            :header="isEditMode ? 'Editar Kurador' : 'Crear Kurador'">
+            :header="isEditMode ? 'Editar registro' : 'Crear registro'">
             <form @submit.prevent="saveKurator" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -277,7 +352,8 @@ function goToAppointments(kurator) {
                             obligatoria.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Tipo de Kurador<span class="text-red-600">*</span></label>
+                        <label class="block font-bold mb-1">Tipo de personal santario<span
+                                class="text-red-600">*</span></label>
                         <Select v-model="kurator.type_kurator" :options="types" optionLabel="value" optionValue="value"
                             filter class="w-full" placeholder="Seleccione un tipo"
                             :class="{ 'p-invalid': submitted && !kurator.type_kurator }" />
@@ -285,13 +361,38 @@ function goToAppointments(kurator) {
                             obligatorio.</small>
                     </div>
                     <div>
-                        <label class="block font-bold mb-1">Especialidad<span class="text-red-600">*</span></label>
-                        <InputText v-model="kurator.specialty" class="w-full"
+                        <label class="block font-bold mb-1">
+                            Especialidad<span class="text-red-600">*</span>
+                        </label>
+
+                        <Select v-model="kurator.specialty" :options="specialtyOptions"
+                            :disabled="!kurator.type_kurator" placeholder="Seleccione una opción" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.specialty }" />
-                        <small v-if="submitted && !kurator.specialty" class="text-red-500">La especialidad es
-                            obligatoria.</small>
+
+                        <small v-if="!kurator.type_kurator" class="text-gray-500">
+                            Primero selecciona el tipo de personal sanitario.
+                        </small>
+                        <small v-if="submitted && !kurator.specialty" class="text-red-500">
+                            La especialidad es obligatoria.
+                        </small>
                     </div>
-                    <div>
+                    <div v-if="needsSpecialtyDetail">
+                        <label class="block font-bold mb-1">
+                            {{ kurator.specialty === 'Subespecialidad' ? 'Nombre de la subespecialidad' :
+                                kurator.specialty ===
+                                    'Especialista' || kurator.specialty === 'Especialidad' ? 'Nombre de la especialidad' :
+                                    kurator.specialty === 'Maestría' ? 'Nombre de la maestría' :
+                                        kurator.specialty === 'Doctorado' ? 'Nombre del doctorado' : 'Detalle' }}
+                            <span class="text-red-600">*</span>
+                        </label>
+                        <InputText v-model="kurator.detail_specialty" class="w-full"
+                            :class="{ 'p-invalid': submitted && needsSpecialtyDetail && !kurator.detail_specialty }" />
+                        <small v-if="submitted && needsSpecialtyDetail && !kurator.detail_specialty"
+                            class="text-red-500">
+                            Este campo es obligatorio.
+                        </small>
+                    </div>
+                    <!-- <div>
                         <label class="block font-bold mb-1">Tipo de identificación<span
                                 class="text-red-600">*</span></label>
                         <Select v-model="kurator.type_identification" :options="typeIdentificationOptions"
@@ -300,9 +401,9 @@ function goToAppointments(kurator) {
                         <small v-if="submitted && !kurator.type_identification" class="text-red-500">El tipo de
                             identificación
                             es obligatorio.</small>
-                    </div>
+                    </div> -->
                     <div>
-                        <label class="block font-bold mb-1">Número de identificación<span
+                        <label class="block font-bold mb-1">Cédula profesional<span
                                 class="text-red-600">*</span></label>
                         <InputText v-model="kurator.identification" class="w-full"
                             :class="{ 'p-invalid': submitted && !kurator.identification }" />

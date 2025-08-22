@@ -8,9 +8,11 @@ use App\Models\Method;
 use App\Models\Treatment;
 use App\Models\TreatmentMethod;
 use App\Models\TreatmentSubmethod;
+use DragonCode\Support\Facades\Helpers\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class TreatmentController extends Controller
 {
@@ -349,43 +351,97 @@ class TreatmentController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'treatment_id'        => 'nullable|exists:treatments,id',
-            'appointment_id'      => 'required|exists:appointments,id',
-            'wound_id'            => 'required|exists:wounds,id',
-            'description'         => 'required|string',
-            'method_ids'          => 'required|array|min:1',
-            'method_ids.*'        => 'exists:list_treatment_methods,id',
-            'submethodsByMethod'  => 'required|array',
-            'submethodsByMethod.*' => 'array|min:1',
-        ], [
-            'appointment_id.required' => 'El ID de la consulta es obligatorio.',
-            'description.required'    => 'La descripción es obligatoria.',
-            'method_ids.required'     => 'Debe seleccionar al menos un método.',
-            'submethodsByMethod.*.array' => 'Debe seleccionar al menos un submétodo por método.',
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'treatment_id'          => 'nullable|exists:treatments,id',
+                'appointment_id'        => 'required|exists:appointments,id',
+                'wound_id'              => 'required|exists:wounds,id',
+                'description'           => 'required|string|min:1',
+                'method_ids'            => 'required|array|min:1',
+                'method_ids.*'          => 'exists:list_treatment_methods,id',
+                'submethodsByMethod'    => 'required|array',
+                'submethodsByMethod.*'  => 'array|min:1',
+            ],
+            [
+                'appointment_id.required'   => 'El ID de la consulta es obligatorio.',
+                'description.required'      => 'La descripción es obligatoria.',
+                'method_ids.required'       => 'Debe seleccionar al menos un método.',
+                'submethodsByMethod.*.array' => 'Debe seleccionar al menos un submétodo por método.',
+            ]
+        );
 
-        // Validar que cada método tenga al menos un submétodo asociado
-        foreach ($request->method_ids as $methodId) {
-            if (empty($request->submethodsByMethod[$methodId]) || !is_array($request->submethodsByMethod[$methodId])) {
-                return response()->json([
-                    'message' => 'Cada método debe tener al menos un submétodo.',
-                    'errors'  => [
-                        "submethodsByMethod.$methodId" => ['Debe seleccionar al menos un submétodo para este método.']
-                    ]
-                ], 422);
+        $plain = trim(preg_replace('/\xc2\xa0/', ' ', strip_tags($request->input('description'))));
+        $validator->after(function ($v) use ($plain) {
+            if ($plain === '') {
+                $v->errors()->add('description', 'La descripción no puede estar vacía.');
             }
+        });
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
             if ($request->filled('treatment_id')) {
-
                 $treatment = Treatment::with(['methods', 'submethods'])->findOrFail($request->treatment_id);
 
-                // Log de change en description (si cambió)
-                if ((string)$treatment->description !== (string)$request->description) {
+                $descChanged = (string)$treatment->description !== (string)$request->description;
+
+                $currentMethodIds = $treatment->methods
+                    ->pluck('treatment_method_id')
+                    ->map(fn($id) => (int)$id)
+                    ->sort()
+                    ->values()
+                    ->all();
+
+                $requestMethodIds = collect($request->method_ids ?? [])
+                    ->map(fn($id) => (int)$id)
+                    ->sort()
+                    ->values()
+                    ->all();
+
+                $methodsChanged = ($currentMethodIds !== $requestMethodIds);
+
+                $currentSubsByMethod = $treatment->submethods
+                    ->groupBy('treatment_method_id')
+                    ->map(function ($group) {
+                        return $group->pluck('treatment_submethod_id')
+                            ->map(fn($id) => (int)$id)
+                            ->sort()
+                            ->values()
+                            ->all();
+                    })
+                    ->toArray();
+
+                $requestSubsByMethod = [];
+                foreach ($requestMethodIds as $mId) {
+                    $subs = Arr::get($request->submethodsByMethod, $mId, []);
+                    $requestSubsByMethod[(int)$mId] = collect($subs)
+                        ->map(fn($id) => (int)$id)
+                        ->sort()
+                        ->values()
+                        ->all();
+                }
+
+                ksort($currentSubsByMethod);
+                ksort($requestSubsByMethod);
+
+                $submethodsChanged = ($currentSubsByMethod !== $requestSubsByMethod);
+
+                if (!$descChanged && !$methodsChanged && !$submethodsChanged) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'No hubo cambios por aplicar.',
+                        'treatment_id' => $treatment->id,
+                    ]);
+                }
+
+                if ($descChanged) {
                     $this->logChange([
                         'logType'    => 'Tratamiento',
                         'table'      => 'treatments',
@@ -395,60 +451,117 @@ class TreatmentController extends Controller
                         'oldValue'   => $treatment->description,
                         'newValue'   => $request->description,
                     ]);
+
+                    $treatment->update(['description' => $request->description]);
                 }
 
-                // Actualiza descripción
-                $treatment->update([
-                    'description' => $request->description,
+                if ($methodsChanged || $submethodsChanged) {
+                    $oldMethods = $treatment->methods->map(function ($m) {
+                        return [
+                            'id'                  => $m->id,
+                            'treatment_id'        => $m->treatment_id,
+                            'treatment_method_id' => $m->treatment_method_id,
+                        ];
+                    })->values()->all();
+
+                    $oldSubmethods = $treatment->submethods->map(function ($s) {
+                        return [
+                            'id'                       => $s->id,
+                            'treatment_id'             => $s->treatment_id,
+                            'treatment_method_id'      => $s->treatment_method_id,
+                            'treatment_submethod_id'   => $s->treatment_submethod_id,
+                        ];
+                    })->values()->all();
+
+                    if (!empty($oldMethods)) {
+                        $this->logChange([
+                            'logType'      => 'Tratamiento',
+                            'table'        => 'treatment_methods',
+                            'primaryKey'   => null,
+                            'secondaryKey' => $treatment->id,
+                            'changeType'   => 'bulk-destroy',
+                            'oldValue'     => json_encode($oldMethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                            'newValue'     => null,
+                        ]);
+                    }
+                    if (!empty($oldSubmethods)) {
+                        $this->logChange([
+                            'logType'      => 'Tratamiento',
+                            'table'        => 'treatment_submethods',
+                            'primaryKey'   => null,
+                            'secondaryKey' => $treatment->id,
+                            'changeType'   => 'bulk-destroy',
+                            'oldValue'     => json_encode($oldSubmethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                            'newValue'     => null,
+                        ]);
+                    }
+
+                    $treatment->methods()->delete();
+                    $treatment->submethods()->delete();
+
+                    $newMethods = [];
+                    $newSubmethods = [];
+
+                    foreach ($requestMethodIds as $methodId) {
+                        $tm = TreatmentMethod::create([
+                            'treatment_id'        => $treatment->id,
+                            'treatment_method_id' => $methodId,
+                        ]);
+
+                        $newMethods[] = [
+                            'id'                  => $tm->id,
+                            'treatment_id'        => $tm->treatment_id,
+                            'treatment_method_id' => $tm->treatment_method_id,
+                            'created_at'          => $tm->created_at?->toDateTimeString(),
+                        ];
+
+                        foreach ($requestSubsByMethod[$methodId] as $subId) {
+                            $ts = TreatmentSubmethod::create([
+                                'treatment_id'           => $treatment->id,
+                                'treatment_method_id'    => $methodId,
+                                'treatment_submethod_id' => $subId,
+                            ]);
+
+                            $newSubmethods[] = [
+                                'id'                     => $ts->id,
+                                'treatment_id'           => $ts->treatment_id,
+                                'treatment_method_id'    => $ts->treatment_method_id,
+                                'treatment_submethod_id' => $ts->treatment_submethod_id,
+                                'created_at'             => $ts->created_at?->toDateTimeString(),
+                            ];
+                        }
+                    }
+
+                    if (!empty($newMethods)) {
+                        $this->logChange([
+                            'logType'      => 'Tratamiento',
+                            'table'        => 'treatment_methods',
+                            'primaryKey'   => null,
+                            'secondaryKey' => $treatment->id,
+                            'changeType'   => 'bulk-create',
+                            'newValue'     => json_encode($newMethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        ]);
+                    }
+                    if (!empty($newSubmethods)) {
+                        $this->logChange([
+                            'logType'      => 'Tratamiento',
+                            'table'        => 'treatment_submethods',
+                            'primaryKey'   => null,
+                            'secondaryKey' => $treatment->id,
+                            'changeType'   => 'bulk-create',
+                            'newValue'     => json_encode($newSubmethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        ]);
+                    }
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'message' => 'Tratamiento actualizado correctamente.',
+                    'treatment_id' => $treatment->id,
                 ]);
-
-                // Capturamos métodos/submétodos ANTES de borrar para log
-                $oldMethods = $treatment->methods->map(function ($m) {
-                    return [
-                        'id'                  => $m->id,
-                        'treatment_id'        => $m->treatment_id,
-                        'treatment_method_id' => $m->treatment_method_id,
-                    ];
-                })->values()->all();
-
-                $oldSubmethods = $treatment->submethods->map(function ($s) {
-                    return [
-                        'id'                       => $s->id,
-                        'treatment_id'             => $s->treatment_id,
-                        'treatment_method_id'      => $s->treatment_method_id,
-                        'treatment_submethod_id'   => $s->treatment_submethod_id,
-                    ];
-                })->values()->all();
-
-                // Log bulk-destroy de relaciones previas
-                if (!empty($oldMethods)) {
-                    $this->logChange([
-                        'logType'    => 'Tratamiento',
-                        'table'      => 'treatment_methods',
-                        'primaryKey' => null,
-                        'secondaryKey' => $treatment->id,
-                        'changeType' => 'bulk-destroy',
-                        'oldValue'   => json_encode($oldMethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                        'newValue'   => null,
-                    ]);
-                }
-                if (!empty($oldSubmethods)) {
-                    $this->logChange([
-                        'logType'    => 'Tratamiento',
-                        'table'      => 'treatment_submethods',
-                        'primaryKey' => null,
-                        'secondaryKey' => $treatment->id,
-                        'changeType' => 'bulk-destroy',
-                        'oldValue'   => json_encode($oldSubmethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                        'newValue'   => null,
-                    ]);
-                }
-
-                // Eliminar relaciones viejas
-                $treatment->methods()->delete();
-                $treatment->submethods()->delete();
             } else {
-                // ===== Crear nuevo tratamiento =====
+                // ===== CREAR =====
                 $treatment = Treatment::create([
                     'wound_id'       => $request->wound_id,
                     'appointment_id' => $request->appointment_id,
@@ -457,7 +570,6 @@ class TreatmentController extends Controller
                     'state'          => 1,
                 ]);
 
-                // Log de creación de tratamiento
                 $this->logChange([
                     'logType'      => 'Tratamiento',
                     'table'        => 'treatments',
@@ -474,75 +586,77 @@ class TreatmentController extends Controller
                         'created_at'
                     ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ]);
-            }
 
-            // ===== Guardar nuevos métodos y submétodos =====
-            $newMethods = [];
-            $newSubmethods = [];
+                $newMethods = [];
+                $newSubmethods = [];
 
-            foreach ($request->method_ids as $methodId) {
-                $tm = TreatmentMethod::create([
-                    'treatment_id'        => $treatment->id,
-                    'treatment_method_id' => $methodId,
-                ]);
+                $requestMethodIds = collect($request->method_ids ?? [])
+                    ->map(fn($id) => (int)$id)
+                    ->sort()
+                    ->values()
+                    ->all();
 
-                $newMethods[] = [
-                    'id'                  => $tm->id,
-                    'treatment_id'        => $tm->treatment_id,
-                    'treatment_method_id' => $tm->treatment_method_id,
-                    'created_at'          => $tm->created_at?->toDateTimeString(),
-                ];
-
-                foreach ($request->submethodsByMethod[$methodId] as $subId) {
-                    $ts = TreatmentSubmethod::create([
-                        'treatment_id'           => $treatment->id,
-                        'treatment_method_id'    => $methodId,
-                        'treatment_submethod_id' => $subId,
+                foreach ($requestMethodIds as $methodId) {
+                    $tm = TreatmentMethod::create([
+                        'treatment_id'        => $treatment->id,
+                        'treatment_method_id' => $methodId,
                     ]);
-
-                    $newSubmethods[] = [
-                        'id'                       => $ts->id,
-                        'treatment_id'             => $ts->treatment_id,
-                        'treatment_method_id'      => $ts->treatment_method_id,
-                        'treatment_submethod_id'   => $ts->treatment_submethod_id,
-                        'created_at'               => $ts->created_at?->toDateTimeString(),
+                    $newMethods[] = [
+                        'id'                  => $tm->id,
+                        'treatment_id'        => $tm->treatment_id,
+                        'treatment_method_id' => $tm->treatment_method_id,
+                        'created_at'          => $tm->created_at?->toDateTimeString(),
                     ];
+
+                    $subs = Arr::get($request->submethodsByMethod, $methodId, []);
+                    foreach ($subs as $subId) {
+                        $ts = TreatmentSubmethod::create([
+                            'treatment_id'           => $treatment->id,
+                            'treatment_method_id'    => $methodId,
+                            'treatment_submethod_id' => (int)$subId,
+                        ]);
+                        $newSubmethods[] = [
+                            'id'                     => $ts->id,
+                            'treatment_id'           => $ts->treatment_id,
+                            'treatment_method_id'    => $ts->treatment_method_id,
+                            'treatment_submethod_id' => $ts->treatment_submethod_id,
+                            'created_at'             => $ts->created_at?->toDateTimeString(),
+                        ];
+                    }
                 }
+
+                if (!empty($newMethods)) {
+                    $this->logChange([
+                        'logType'      => 'Tratamiento',
+                        'table'        => 'treatment_methods',
+                        'primaryKey'   => null,
+                        'secondaryKey' => $treatment->id,
+                        'changeType'   => 'bulk-create',
+                        'newValue'     => json_encode($newMethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ]);
+                }
+                if (!empty($newSubmethods)) {
+                    $this->logChange([
+                        'logType'      => 'Tratamiento',
+                        'table'        => 'treatment_submethods',
+                        'primaryKey'   => null,
+                        'secondaryKey' => $treatment->id,
+                        'changeType'   => 'bulk-create',
+                        'newValue'     => json_encode($newSubmethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ]);
+                }
+
+                DB::commit();
+                return response()->json([
+                    'message' => 'Tratamiento registrado correctamente.',
+                    'treatment_id' => $treatment->id,
+                ]);
             }
-
-            // Logs bulk-create de nuevas relaciones
-            $this->logChange([
-                'logType'      => 'Tratamiento',
-                'table'        => 'treatment_methods',
-                'primaryKey'   => null,
-                'secondaryKey' => $treatment->id,
-                'changeType'   => 'bulk-create',
-                'newValue'     => json_encode($newMethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            ]);
-
-            $this->logChange([
-                'logType'      => 'Tratamiento',
-                'table'        => 'treatment_submethods',
-                'primaryKey'   => null,
-                'secondaryKey' => $treatment->id,
-                'changeType'   => 'bulk-create',
-                'newValue'     => json_encode($newSubmethods, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => $request->filled('treatment_id')
-                    ? 'Tratamiento actualizado correctamente.'
-                    : 'Tratamiento registrado correctamente.',
-                'treatment_id' => $treatment->id,
-            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al guardar tratamiento: ' . $e->getMessage(), [
                 'request' => $request->all(),
             ]);
-
             return response()->json([
                 'message' => 'Error al guardar el tratamiento.',
                 'error'   => $e->getMessage(),

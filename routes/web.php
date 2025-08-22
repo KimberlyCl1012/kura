@@ -2,7 +2,11 @@
 
 use App\Http\Controllers\Catalogues\AddressController;
 use App\Http\Controllers\Catalogues\BodyLocationController;
+use App\Http\Controllers\Catalogues\BodySublocationController;
+use App\Http\Controllers\Catalogues\MethodController;
 use App\Http\Controllers\Catalogues\SiteController;
+use App\Http\Controllers\Catalogues\SubmethodController;
+use App\Http\Controllers\Catalogues\WoundAssessmentController;
 use App\Http\Controllers\Catalogues\WoundPhaseController;
 use App\Http\Controllers\Catalogues\WoundSubtypeController;
 use App\Http\Controllers\Catalogues\WoundTypeController;
@@ -45,8 +49,12 @@ Route::middleware([
 
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
-    Route::post('/user_denied_permissions', [PermissionController::class, 'store'])->name('permissions.store');
-    Route::put('/user_denied_permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update');
+   Route::get('/teams/{team}/permissions', [PermissionController::class, 'show'])
+        ->name('permissions.show');
+
+    // Sincroniza permisos del team seleccionado
+    Route::post('/teams/{team}/permissions/sync', [PermissionController::class, 'sync'])
+        ->name('permissions.sync');
 
     //Users
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -82,6 +90,8 @@ Route::middleware([
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
     Route::put('/appointments/finish', [AppointmentController::class, 'finish'])->name('appointments.finish');
     Route::get('/appointments/{appointmentId}/wounds/count', [AppointmentController::class, 'countWounds'])->name('appointments.countWounds');
+    //Move Patient
+    Route::put('/appointments/{appointment}/reassign', [AppointmentController::class, 'reassign'])->name('appointments.reassign');
 
     //Wounds
     Route::get('/wounds/{appointmentId}/{healthrecordId}', [WoundController::class, 'index'])->name('wounds.index');
@@ -95,6 +105,7 @@ Route::middleware([
     //Media
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
     Route::post('/media/upload', [MediaController::class, 'upload'])->name('media.upload');
+    Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
 
     //Media History
     Route::get('/media_history', [MediaHistoryController::class, 'index'])->name('media_history.index');
@@ -121,6 +132,7 @@ Route::middleware([
     // Relations
     Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');
     Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
+    Route::get('/methods/{id}/submethods', [MethodController::class, 'submethods'])->name('methods.submethods');
 
 
     //Catalogues
@@ -135,6 +147,12 @@ Route::middleware([
     Route::post('/body_locations', [BodyLocationController::class, 'store'])->name('body_locations.store');
     Route::put('/body_locations/{id}', [BodyLocationController::class, 'update'])->name('body_locations.update');
     Route::delete('/body_locations/{id}', [BodyLocationController::class, 'destroy'])->name('body_locations.destroy');
+
+    //Body Sublocations
+    Route::get('/body_sublocations', [BodySublocationController::class, 'index'])->name('body_sublocations.index');
+    Route::post('/body_sublocations', [BodySublocationController::class, 'store'])->name('body_sublocations.store');
+    Route::put('/body_sublocations/{id}', [BodySublocationController::class, 'update'])->name('body_sublocations.update');
+    Route::delete('/body_sublocations/{id}', [BodySublocationController::class, 'destroy'])->name('body_sublocations.destroy');
 
     //Sites
     Route::get('/sites', [SiteController::class, 'index'])->name('sites.index');
@@ -159,4 +177,23 @@ Route::middleware([
     Route::post('/wound_subtypes', [WoundSubtypeController::class, 'store'])->name('wound_subtypes.store');
     Route::put('/wound_subtypes/{id}', [WoundSubtypeController::class, 'update'])->name('wound_subtypes.update');
     Route::delete('/wound_subtypes/{id}', [WoundSubtypeController::class, 'destroy'])->name('wound_subtypes.destroy');
+
+    //Methods Treatment
+    Route::get('/methods', [MethodController::class, 'index'])->name('methods.index');
+    Route::post('/methods', [MethodController::class, 'store'])->name('methods.store');
+    Route::put('/methods/{id}', [MethodController::class, 'update'])->name('methods.update');
+    Route::delete('/methods/{id}', [MethodController::class, 'destroy'])->name('methods.destroy');
+    Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
+
+    //Submethods Treatment
+    Route::get('/submethods', [SubmethodController::class, 'index'])->name('submethods.index');
+    Route::post('/submethods', [SubmethodController::class, 'store'])->name('submethods.store');
+    Route::put('/submethods/{id}', [SubmethodController::class, 'update'])->name('submethods.update');
+    Route::delete('/submethods/{id}', [SubmethodController::class, 'destroy'])->name('submethods.destroy');
+
+    //Wound Assessment
+    Route::get('/wound_assessment', [WoundAssessmentController::class, 'index'])->name('wound_assessment.index');
+    Route::post('/wound_assessment', [WoundAssessmentController::class, 'store'])->name('wound_assessment.store');
+    Route::put('/wound_assessment/{id}', [WoundAssessmentController::class, 'update'])->name('wound_assessment.update');
+    Route::delete('/wound_assessment/{id}', [WoundAssessmentController::class, 'destroy'])->name('wound_assessment.destroy');
 });

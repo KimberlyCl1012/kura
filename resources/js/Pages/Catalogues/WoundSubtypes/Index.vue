@@ -1,9 +1,11 @@
 <script setup>
 import AppLayout from '../../../Layouts/sakai/AppLayout.vue';
 import { FilterMatchMode } from '@primevue/core/api';
-import { InputText, Textarea } from 'primevue';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
-import { ref } from 'vue';
+import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -25,7 +27,35 @@ const filters = ref({
 
 const submitted = ref(false);
 const woundsSubtype = ref({});
-const woundsSubtypeList = ref([...props.woundsSubtypes]);
+const woundsSubtypeList = ref(
+    (props.woundsSubtypes ?? []).map(s => ({
+        ...s,
+        wound_type_id: toStr(s.wound_type_id),
+        wound_type_name: s.wound_type_name ?? getWoundTypeNameById(s.wound_type_id),
+    }))
+);
+
+watch(() => props.woundsSubtypes, (val) => {
+    woundsSubtypeList.value = (val ?? []).map(s => ({
+        ...s,
+        wound_type_id: toStr(s.wound_type_id),
+        wound_type_name: s.wound_type_name ?? getWoundTypeNameById(s.wound_type_id),
+    }));
+});
+
+const woundsTypesNormalized = computed(() =>
+    (props.woundsTypes ?? []).map(t => ({
+        ...t,
+        id: t?.id != null ? String(t.id) : t.id,
+    }))
+);
+
+function toStr(v) { return v != null ? String(v) : v; }
+
+function getWoundTypeNameById(encId) {
+    const type = (woundsTypesNormalized.value ?? []).find(t => t.id === toStr(encId));
+    return type?.name ?? null;
+}
 
 function openNew() {
     woundsSubtype.value = {};
@@ -35,7 +65,10 @@ function openNew() {
 }
 
 function editWoundsSubtype(data) {
-    woundsSubtype.value = { ...data };
+    woundsSubtype.value = {
+        ...data,
+        wound_type_id: toStr(data.wound_type_id)
+    };
     submitted.value = false;
     isEditMode.value = true;
     woundsSubtypeDialog.value = true;
@@ -47,66 +80,70 @@ function hideDialog() {
     woundsSubtype.value = {};
 }
 
-function saveWoundsSubtypes() {
+async function saveWoundsSubtypes() {
     submitted.value = true;
-
-    if (woundsSubtype.value.name?.trim()) {
+    if (woundsSubtype.value.name?.trim() && woundsSubtype.value.wound_type_id) {
         const payload = {
             name: woundsSubtype.value.name,
             description: woundsSubtype.value.description ?? null,
-            wound_type_id: woundsSubtype.value.wound_type_id,
+            wound_type_id: toStr(woundsSubtype.value.wound_type_id),
         };
-
         isSaving.value = true;
+        try {
+            if (isEditMode.value && woundsSubtype.value.id) {
+                const { data: res } = await axios.put(`/wound_subtypes/${woundsSubtype.value.id}`, payload);
+                if (res.success) {
+                    const idx = woundsSubtypeList.value.findIndex(i => i.id === woundsSubtype.value.id);
+                    if (idx !== -1) {
+                        const current = woundsSubtypeList.value[idx];
 
-        if (isEditMode.value && woundsSubtype.value.id) {
-            axios
-                .put(`/wound_subtypes/${woundsSubtype.value.id}`, payload)
-                .then((response) => {
-                    const res = response.data;
-                    if (res.success) {
-                        const index = woundsSubtypeList.value.findIndex(item => item.id === woundsSubtype.value.id);
-                        if (index !== -1) {
-                            woundsSubtypeList.value[index] = res.data;
-                        }
-                        toast.add({ severity: 'success', summary: 'Actualizado', detail: res.message, life: 3000 });
-                        woundsSubtypeDialog.value = false;
-                        woundsSubtype.value = {};
-                    } else {
-                        toast.add({ severity: 'error', summary: 'Error', detail: res.message, life: 3000 });
+                        const selectedId = toStr(
+                            res.data?.wound_type_id_encrypted ?? woundsSubtype.value.wound_type_id
+                        );
+                        const selectedName = getWoundTypeNameById(selectedId);
+
+                        woundsSubtypeList.value[idx] = {
+                            id: current.id,
+                            name: res.data?.name ?? woundsSubtype.value.name,
+                            description: res.data?.description ?? woundsSubtype.value.description,
+                            wound_type_id: selectedId,
+                            wound_type_name: selectedName,
+                        };
                     }
-                })
-                .catch((error) => {
-                    const msg = error.response?.data?.message || 'Error inesperado.';
-                    toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 });
-                })
-                .finally(() => {
-                    isSaving.value = false;
-                });
-        } else {
-            axios
-                .post('/wound_subtypes', payload)
-                .then((response) => {
-                    const res = response.data;
-                    if (res.success) {
-                        woundsSubtypeList.value.push(res.data);
-                        toast.add({ severity: 'success', summary: 'Creado', detail: res.message, life: 3000 });
-                        woundsSubtypeDialog.value = false;
-                        woundsSubtype.value = {};
-                    } else {
-                        toast.add({ severity: 'error', summary: 'Error', detail: res.message, life: 3000 });
-                    }
-                })
-                .catch((error) => {
-                    const msg = error.response?.data?.message || 'Error inesperado.';
-                    toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 });
-                })
-                .finally(() => {
-                    isSaving.value = false;
-                });
+                    toast.add({ severity: 'success', summary: 'Actualizado', detail: res.message, life: 3000 });
+                    woundsSubtypeDialog.value = false;
+                    woundsSubtype.value = {};
+                } else {
+                    toast.add({ severity: 'error', summary: 'Error', detail: res.message, life: 3000 });
+                }
+            } else {
+                const { data: res } = await axios.post('/wound_subtypes', payload);
+                if (res.success) {
+                    const newId = toStr(res.data?.wound_type_id_encrypted ?? woundsSubtype.value.wound_type_id);
+                    woundsSubtypeList.value.push({
+                        id: res.data?.id_encrypted ?? res.data?.id,
+                        name: res.data?.name ?? woundsSubtype.value.name,
+                        description: res.data?.description ?? woundsSubtype.value.description,
+                        wound_type_id: newId,
+                        wound_type_name: getWoundTypeNameById(newId),
+                    });
+
+                    toast.add({ severity: 'success', summary: 'Creado', detail: res.message, life: 3000 });
+                    woundsSubtypeDialog.value = false;
+                    woundsSubtype.value = {};
+                } else {
+                    toast.add({ severity: 'error', summary: 'Error', detail: res.message, life: 3000 });
+                }
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Error inesperado.';
+            toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 5000 });
+        } finally {
+            isSaving.value = false;
         }
     }
 }
+
 
 function confirmDeleteWoundsSubtype(data) {
     woundsSubtype.value = { ...data };
@@ -141,7 +178,7 @@ function exportCSV() {
 </script>
 
 <template>
-    <AppLayout title="Tipos de heridas">
+    <AppLayout title="Subtipos de heridas">
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
@@ -174,17 +211,19 @@ function exportCSV() {
                         {{ index + 1 }}
                     </template>
                 </Column>
-                <Column field="name" header="Nombre" style="min-width: 16rem">
+                <Column field="wound_type_name" header="Tipo de herida">
+                    <template #body="{ data }">
+                        {{ data.wound_type_name || getWoundTypeNameById(data.wound_type_id) }}
+                    </template>
+                </Column>
+
+                <Column field="name" header="Subtipo">
                     <template #body="{ data }">
                         {{ data.name }}
                     </template>
                 </Column>
-                <Column field="description" header="Descripción" style="min-width: 20rem">
-                    <template #body="{ data }">
-                        {{ data.description }}
-                    </template>
-                </Column>
-                <Column :exportable="false" style="min-width: 12rem">
+
+                <Column :exportable="false">
                     <template #body="{ data }">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editWoundsSubtype(data)" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger"
@@ -202,7 +241,8 @@ function exportCSV() {
                     <label class="block font-bold mb-2">
                         Tipo de herida <span class="text-red-600">*</span>
                     </label>
-                    <Select v-model="woundsSubtype.wound_type_id" :options="woundsTypes" optionLabel="name"
+                    <Select :key="isEditMode ? (woundsSubtype.id || 'edit') : 'new'"
+                        v-model="woundsSubtype.wound_type_id" :options="woundsTypesNormalized" optionLabel="name"
                         optionValue="id" filter placeholder="Seleccione un tipo" class="w-full"
                         :class="{ 'p-invalid': submitted && !woundsSubtype.wound_type_id }" />
                     <small v-if="submitted && !woundsSubtype.wound_type_id" class="text-red-500">

@@ -11,7 +11,9 @@ import Dialog from "primevue/dialog";
 import Editor from "primevue/editor";
 import { router } from "@inertiajs/vue3";
 import FileUpload from 'primevue/fileupload';
-import { Badge, ProgressBar, usePrimeVue } from "primevue";
+import Badge from "primevue/badge";
+import ProgressBar from "primevue/progressbar";
+import axios from "axios";
 
 const props = defineProps({
     follow: Object,
@@ -85,11 +87,9 @@ const isInitialLoadLocation = ref(true);
 
 onMounted(() => {
     if (props.wound) {
-        // Forzar tipo y ubicación para que los watchers se activen correctamente
         formWound.value.wound_type_id = null;
         formWound.value.body_location_id = null;
 
-        // Asignar valores completos
         Object.assign(formWound.value, {
             ...props.wound,
             id: props.wound.id || props.wound.wound_id,
@@ -98,7 +98,6 @@ onMounted(() => {
             grade_foot: props.wound.grade_foot ? parseInt(props.wound.grade_foot) : null,
         });
 
-        // Llamar explícitamente las cargas iniciales si los valores existen
         if (props.wound.wound_type_id) {
             formWound.value.wound_type_id = parseInt(props.wound.wound_type_id);
             loadSubtypes(formWound.value.wound_type_id);
@@ -372,7 +371,7 @@ const saveFollow = () => {
         'blood_glucose',
     ];
 
-    if (['MESI', 'Manual'].includes(formFollow.value.valoracion)) {
+    if (['Manual'].includes(formFollow.value.valoracion)) {
         requiredVascularFields.push('MESI');
     }
 
@@ -382,8 +381,9 @@ const saveFollow = () => {
 
     // Detectar campos vacíos
     const missingFields = requiredFields.filter(
-        (field) => !formFollow.value[field] && formFollow.value[field] !== 0
+        (field) => !isNonEmpty(formFollow.value[field])
     );
+
 
     if (missingFields.length > 0) {
         const firstField = missingFields[0];
@@ -427,9 +427,42 @@ const saveFollow = () => {
                 life: 4000,
             });
         },
-        onError: (err) => {
-            errors.value = err;
+        onError: (errBag) => {
+            errors.value = errBag;
             isSavingFollow.value = false;
+
+            const firstKey = Object.keys(errBag)[0];
+            const firstMsg = firstKey ? (Array.isArray(errBag[firstKey]) ? errBag[firstKey][0] : errBag[firstKey]) : 'Error de validación';
+
+            toast.add({
+                severity: 'error',
+                summary: 'Error de validación',
+                detail: firstMsg,
+                life: 5000,
+            });
+        },
+        onFinish: () => {
+            isSavingFollow.value = false;
+
+            const serverError = page.props?.errors?.error;
+            if (serverError) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error del servidor',
+                    detail: Array.isArray(serverError) ? serverError[0] : serverError,
+                    life: 6000,
+                });
+            }
+
+            const flash = page.props?.flash;
+            if (flash?.error) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: flash.error,
+                    life: 6000,
+                });
+            }
         },
     });
 
@@ -690,6 +723,59 @@ const confirmUploadFollow = async () => {
     }
 }
 
+
+//Eliminar imagenes
+// Confirmación para eliminar
+const showConfirmDeleteModalFollow = ref(false)
+const imageToDeleteFollow = ref(null)
+
+const openConfirmDeleteSelectedFollow = () => {
+    if (!selectedImage.value) return
+    // busca el objeto en existingImagesFollow que coincide con selectedImage
+    const img = existingImagesFollow.value.find(
+        i => `/storage/${i.content}` === selectedImage.value
+    )
+    if (!img) return
+    imageToDeleteFollow.value = img
+    showConfirmDeleteModalFollow.value = true
+}
+
+const openConfirmDeleteByThumbFollow = (img) => {
+    imageToDeleteFollow.value = img
+    showConfirmDeleteModalFollow.value = true
+}
+
+const deleteImageFollow = async () => {
+    if (!imageToDeleteFollow.value?.id) return
+
+    try {
+        await axios.delete(`/media/${imageToDeleteFollow.value.id}`)
+
+        // Quitarla del arreglo local sin recargar todo
+        existingImagesFollow.value = existingImagesFollow.value.filter(
+            i => i.id !== imageToDeleteFollow.value.id
+        )
+
+        // Si la imagen borrada era la seleccionada, seleccionar otra
+        if (selectedImage.value === `/storage/${imageToDeleteFollow.value.content}`) {
+            if (existingImagesFollow.value.length > 0) {
+                selectImage(existingImagesFollow.value[0])
+            } else {
+                selectedImage.value = ''
+                selectedImageRotation.value = 0
+            }
+        }
+
+        toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada correctamente.', life: 3000 })
+    } catch (err) {
+        console.error(err)
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 })
+    } finally {
+        showConfirmDeleteModalFollow.value = false
+        imageToDeleteFollow.value = null
+    }
+}
+
 //Tratamiento 
 const hasTreatment = ref(!!props.treatmentFollow);
 
@@ -759,10 +845,10 @@ const storeTreatment = async () => {
     isSavingTreatment.value = true;
 
     const payload = {
-        treatment_id: props.treatmentFollow?.id || null,
+        treatment_id: props.treatmentFollow?.id,
         appointment_id: props.appointmentId,
         wound_id: formWound.value.id,
-        description: formTreat.value.description || null,
+        description: formTreat.value.description,
         method_ids: formTreat.value.methods,
         submethodsByMethod: formTreat.value.submethodsByMethod,
     };
@@ -821,13 +907,90 @@ onMounted(() => {
 });
 
 //Terminal consulta 
+const isNonEmpty = (v) => {
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'string') return v.trim() !== '';
+    if (Array.isArray(v)) return v.length > 0;
+    return true;
+};
+
+const requiredFieldsForFollow = computed(() => {
+    const base = [
+        'wound_phase_id',
+        'edema',
+        'dolor',
+        'tipo_dolor',
+        'visual_scale',
+        'exudado_tipo',
+        'exudado_cantidad',
+        'infeccion',
+        'olor',
+        'borde',
+        'piel_perilesional',
+        'measurementDate',
+        'length',
+        'width',
+        'undermining',
+        'granulation_percent',
+        'slough_percent',
+        'necrosis_percent',
+        'epithelialization_percent',
+    ];
+
+    const vascularLocationIds = [
+        18, 19, 20, 21, 22, 23, 24, 25,
+        26, 27, 28, 29, 30, 31, 32, 33
+    ];
+
+    if (vascularLocationIds.includes(formFollow.value.body_location_id)) {
+        const vascular = [
+            'valoracion',
+            'ITB_izquierdo',
+            'ITB_derecho',
+            'pulse_dorsal_izquierdo',
+            'pulse_dorsal_derecho',
+            'pulse_popliteo_izquierdo',
+            'pulse_popliteo_derecho',
+            'pulse_tibial_izquierdo',
+            'pulse_tibial_derecho',
+            'monofilamento',
+            'blood_glucose',
+        ];
+        if (['Manual'].includes(formFollow.value.valoracion)) {
+            vascular.push('MESI');
+        }
+        base.push(...vascular);
+    }
+
+    return base;
+});
+
+const areFollowFieldsComplete = computed(() => {
+    const fields = requiredFieldsForFollow.value;
+    const allFilled = fields.every((f) => isNonEmpty(formFollow.value[f]));
+    const percentagesOk = totalPercentageFollow.value <= 100;
+    return allFilled && percentagesOk;
+});
+
+const canFinishConsultation = computed(() => {
+    return hasTreatment.value && hasFollow.value && areFollowFieldsComplete.value;
+});
+
 const woundsInAppointment = ref(0);
 const showConfirmFinishDialog = ref(false);
 
-// Función para confirmar y mostrar el modal
 const confirmFinishConsultation = async () => {
-    const appointmentId = props.wound.appointment_id;
+    if (!canFinishConsultation.value) {
+        toast.add({
+            severity: "warn",
+            summary: "Campos incompletos",
+            detail: "Aún faltan datos requeridos del seguimiento o no hay tratamiento guardado.",
+            life: 4000,
+        });
+        return;
+    }
 
+    const appointmentId = props.wound.appointment_id;
     if (!appointmentId) {
         toast.add({
             severity: "warn",
@@ -853,7 +1016,6 @@ const confirmFinishConsultation = async () => {
         }
 
         showConfirmFinishDialog.value = true;
-
     } catch (error) {
         toast.add({
             severity: "error",
@@ -863,6 +1025,7 @@ const confirmFinishConsultation = async () => {
         });
     }
 };
+
 
 const onConfirmFinishConsultation = () => {
     showConfirmFinishDialog.value = false;
@@ -1419,7 +1582,7 @@ const finishConsultation = async () => {
 
                                     </div>
 
-                                    <div v-if="['MESI', 'Manual'].includes(formFollow.valoracion)">
+                                    <div v-if="['Manual'].includes(formFollow.valoracion)">
                                         <label class="flex items-center gap-1 mb-1 font-medium">
                                             {{ formFollow.valoracion }} <span class="text-red-600">*</span>
                                         </label>
@@ -1945,23 +2108,47 @@ const finishConsultation = async () => {
                                         @click="openZoomModal(selectedImage, selectedImageRotation)" />
 
                                     <div
-                                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-10 gap-y-6 pl-6 pr-15">
+                                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-10 gap-y-6 pl-6 pr-15 mt-6">
+                                        <div v-for="img in existingImagesFollow" :key="img.id" class="relative group">
+                                            <img :src="`/storage/${img.content}`"
+                                                :style="{ transform: `rotate(${img.position || 0}deg)` }"
+                                                class="w-full h-auto min-h-20 rounded-lg object-cover cursor-pointer transition-all duration-150"
+                                                :class="{
+                                                    'shadow-[0_0_0_2px] shadow-surface-900 dark:shadow-surface-0':
+                                                        selectedImage === `/storage/${img.content}`,
+                                                }" @click="selectImage(img)" alt="Miniatura" />
 
-                                        <img v-for="img in existingImagesFollow" :key="img.id"
-                                            :src="`/storage/${img.content}`" :style="getImageStyle(img.position || 0)"
-                                            class="w-full h-auto min-h-20 rounded-lg object-cover cursor-pointer transition-all duration-150"
-                                            :class="{
-                                                'shadow-[0_0_0_2px] shadow-surface-900 dark:shadow-surface-0':
-                                                    selectedImage === `/storage/${img.content}`,
-                                            }" @click="selectImage(img)" alt="Miniatura" />
+                                            <!-- Botón borrar por miniatura -->
+                                            <button type="button" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
+               bg-red-600 text-white rounded-md px-2 py-1 text-xs shadow"
+                                                @click.stop="openConfirmDeleteByThumbFollow(img)">
+                                                Eliminar
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <Button label="Descargar"
                                         class="w-full !py-2 !px-3 !text-base !font-medium !rounded-md" rounded outlined
                                         @click="downloadSelectedImage" />
+
+                                    <Button label="Eliminar" severity="danger"
+                                        class="w-full !py-2 !px-3 !text-base !font-medium !rounded-md" rounded
+                                        :disabled="!selectedImage" @click="openConfirmDeleteSelectedFollow" />
                                 </div>
                             </div>
                         </div>
+
+                        <Dialog v-model:visible="showConfirmDeleteModalFollow" modal :draggable="false"
+                            header="Confirmar eliminación" :style="{ width: '28rem' }">
+                            <p class="mb-6">
+                                ¿Seguro que quieres eliminar esta imagen? Esta acción no se puede deshacer.
+                            </p>
+                            <div class="flex justify-end gap-3">
+                                <Button label="Cancelar" outlined @click="showConfirmDeleteModalFollow = false" />
+                                <Button label="Eliminar" severity="danger" @click="deleteImageFollow" />
+                            </div>
+                        </Dialog>
+
 
                         <!-- Sección: Establecer tratamiento -->
                         <form @submit.prevent="storeTreatment">
@@ -2013,9 +2200,9 @@ const finishConsultation = async () => {
 
                                 <!-- Botones -->
                                 <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2 px-4 py-6">
-                                    <Button :label="hasTreatment ? 'Actualizar' : 'Guardar'" icon="pi pi-check"
+                                    <Button :label="hasTreatment ? 'Actualizar' : 'Guardar'" icon="pi pi-check" text
                                         type="submit" :loading="isSavingTreatment" :disabled="isSavingTreatment" />
-                                    <Button v-if="hasTreatment" label="Terminar consulta" icon="pi pi-sign-out"
+                                    <Button v-if="canFinishConsultation" label="Terminar consulta" icon="pi pi-sign-out"
                                         severity="danger" @click="confirmFinishConsultation"
                                         :loading="isSavingTreatment" />
                                 </div>
@@ -2026,9 +2213,16 @@ const finishConsultation = async () => {
                         <Dialog v-model:visible="showConfirmFinishDialog" modal header="Confirmar acción"
                             :style="{ width: '400px' }">
                             <div class="text-center p-4">
-                                <p class="mb-4">¿Estás seguro de que deseas <strong>finalizar esta consulta</strong>?
-                                    Esta acción no se puede
-                                    deshacer.</p>
+                                <p class="mb-4 text-justify">
+                                    Esta consulta tiene <strong>{{ woundsInAppointment }}</strong> herida(s)
+                                    registrada(s).
+                                    &nbsp; ¿Estás seguro de que todas han sido correctamente configuradas y deseas
+                                    finalizar la
+                                    consulta?<br /><br />
+                                    <strong> Esta acción no se puede deshacer. Una vez finalizada, no podrás modificar
+                                        las heridas
+                                        asociadas.</strong>
+                                </p>
                                 <div class="flex justify-center gap-3">
                                     <Button label="Cancelar" icon="pi pi-times" text
                                         @click="showConfirmFinishDialog = false" />

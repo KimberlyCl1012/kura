@@ -128,4 +128,67 @@ class MediaController extends Controller
             ], 500);
         }
     }
+
+    public function destroy(Media $media)
+    {
+        try {
+            DB::beginTransaction();
+
+            $old = [
+                'id'             => $media->id,
+                'wound_id'       => $media->wound_id,
+                'appointment_id' => $media->appointment_id,
+                'content'        => $media->content,
+                'position'       => $media->position,
+                'type'           => $media->type,
+                'created_at'     => optional($media->created_at)->toDateTimeString(),
+            ];
+
+            // Borrar archivo físico si existe en storage/public
+            if (!empty($media->content)) {
+                try {
+                    Storage::disk('public')->delete($media->content);
+                } catch (\Throwable $e) {
+                    // No romper si el archivo ya no existe
+                    Log::warning('No se pudo eliminar el archivo físico de media', [
+                        'media_id' => $media->id,
+                        'path'     => $media->content,
+                        'error'    => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Borrar registro
+            $media->delete();
+
+            // Log de auditoría
+            AccessChangeLog::create([
+                'user_id'      => auth()->id(),
+                'logType'      => 'Media',
+                'table'        => 'media',
+                'primaryKey'   => $old['id'],
+                'secondaryKey' => $old['wound_id'],
+                'changeType'   => 'delete',
+                'fieldName'    => null,
+                'oldValue'     => json_encode($old, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'newValue'     => null,
+            ]);
+
+            DB::commit();
+
+            return response()->json(['message' => 'Imagen eliminada correctamente.'], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Error al eliminar media', [
+                'media_id' => $media->id ?? null,
+                'error'    => $e->getMessage(),
+                'trace'    => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Ocurrió un error al eliminar la imagen.',
+            ], 500);
+        }
+    }
 }

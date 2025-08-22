@@ -167,6 +167,67 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
   }
 });
 
+//Reasignar paciente
+const reassignDialog = ref(false);
+const reassignLoading = ref(false);
+const selectedAppointment = ref(null);
+const newKuratorId = ref(null);
+
+function openReassign(item) {
+  selectedAppointment.value = item;
+  newKuratorId.value = null;
+  reassignDialog.value = true;
+}
+
+async function submitReassign() {
+  if (!selectedAppointment.value?.id || !newKuratorId.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Validación",
+      detail: "El personal sanitario es requerido.",
+      life: 3000,
+    });
+    return;
+  }
+  reassignLoading.value = true;
+  try {
+    await axios.put(route('appointments.reassign', selectedAppointment.value.id), {
+      kurator_id: newKuratorId.value,
+    });
+    toast.add({
+      severity: "success",
+      summary: "Actualizado",
+      detail: "Paciente reasignado correctamente.",
+      life: 3000,
+    });
+    reassignDialog.value = false;
+    router.reload();
+  } catch (error) {
+    let detail = "No se pudo reasignar el paciente.";
+    if (error.response) {
+      if (error.response.data?.message) {
+        detail = error.response.data.message;
+      }
+      if (error.response.data?.error) {
+        detail += ` Detalle: ${error.response.data.error}`;
+      }
+    } else if (error.message) {
+      detail = error.message;
+    }
+
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail,
+      life: 4000,
+    });
+  }
+  finally {
+    reassignLoading.value = false;
+  }
+}
+
+
 </script>
 
 <template>
@@ -200,12 +261,15 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
         <Column field="dateStartVisit" header="Fecha" />
         <Column field="site_name" header="Sitio" />
         <Column field="health_record_uuid" header="Expediente" />
-        <Column field="kurator_full_name" header="Kurador" />
+        <Column field="kurator_full_name" header="Personal" />
         <Column field="typeVisit" header="Tipo" />
+        <Column field="appointment_status" header="Estatus" />
         <Column :exportable="false" header="Acciones" style="min-width: 8rem">
           <template #body="{ data }">
-            <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+            <Button class="mr-2" icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
               @click="confirmDelete(data)" />
+            <Button v-if="data.state === 1" icon="pi pi-users" outlined rounded severity="info"
+              v-tooltip.top="'Reasignar paciente'" @click="openReassign(data)" />
           </template>
         </Column>
       </DataTable>
@@ -220,8 +284,8 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
               Fecha de la consulta
               <span class="text-red-500">*</span>
             </label>
-            <DatePicker id="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full" variant="filled" placeholder="mm/dd/yyyy"
-              showIcon :minDate="today" />
+            <DatePicker id="dateStartVisit" v-model="appointment.dateStartVisit" class="w-full" variant="filled"
+              placeholder="mm/dd/yyyy" showIcon :minDate="today" />
             <small v-if="submitted && !appointment.dateStartVisit" class="text-red-500">Campo requerido</small>
           </div>
 
@@ -251,13 +315,15 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
 
           <!-- Kurador -->
           <div>
-            <label for="kurator_id" class="block font-bold mb-1">Kurador <span class="text-red-500">*</span></label>
+            <label for="kurator_id" class="block font-bold mb-1">Personal sanitario<span
+                class="text-red-500">*</span></label>
             <Select id="kurator_id" v-model="appointment.kurator_id" :options="props.kurators" optionLabel="full_name"
-              optionValue="kurator_id" filter class="w-full" placeholder="Seleccione un kurador" :class="{
+              optionValue="kurator_id" filter class="w-full" placeholder="Seleccione una opción" :class="{
                 'p-invalid':
                   submitted && !appointment.kurator_id,
               }" />
-            <small v-if="submitted && !appointment.kurator_id" class="text-red-500">El kurador es obligatorio.</small>
+            <small v-if="submitted && !appointment.kurator_id" class="text-red-500">El personal sanitario es
+              obligatorio.</small>
           </div>
 
           <!-- Tipo de Visita -->
@@ -304,5 +370,22 @@ watch([() => appointment.value.typeVisit, () => appointment.value.health_record_
         <Button label="Sí" text severity="danger" @click="destroy" />
       </template>
     </Dialog>
+
+    <!-- Reasignar un paciente -->
+    <Dialog v-model:visible="reassignDialog" modal :style="{ width: '500px' }" header="Reasignar paciente">
+      <div>
+        <label for="new_kurator" class="block font-bold mb-1">Personal sanitario<span
+            class="text-red-500">*</span></label>
+        <Select id="new_kurator" v-model="newKuratorId" :options="props.kurators" optionLabel="full_name"
+          optionValue="kurator_id" filter class="w-full" placeholder="Seleccione una opción" />
+        <small v-if="!newKuratorId" class="text-red-500">Selecciona una opción</small>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <Button label="Cancelar" icon="pi pi-times" text @click="reassignDialog = false" :disabled="reassignLoading" />
+        <Button label="Guardar" icon="pi pi-check" @click="submitReassign" :loading="reassignLoading"
+          :disabled="reassignLoading" />
+      </div>
+    </Dialog>
+
   </AppLayout>
 </template>

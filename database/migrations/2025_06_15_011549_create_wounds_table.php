@@ -24,8 +24,9 @@ return new class extends Migration
             $table->date('woundCreationDate')->nullable();
             $table->date('woundBeginDate')->nullable();
             $table->date('woundHealthDate')->nullable();
+            $table->string('type_bite')->nullable();
+            $table->string('other_type')->nullable();
             $table->string('grade_foot')->nullable();
-            $table->string('valoracion')->nullable();
             $table->string('MESI')->nullable();
             $table->string('borde')->nullable();
             $table->string('edema')->nullable();
@@ -36,6 +37,7 @@ return new class extends Migration
             $table->json('piel_perilesional')->nullable();
             $table->json('infeccion')->nullable();
             $table->string('tipo_dolor')->nullable();
+            $table->string('duracion_dolor')->nullable();
             $table->string('visual_scale')->nullable();
             $table->string('ITB_izquierdo')->nullable();
             $table->string('pulse_dorsal_izquierdo')->nullable();
@@ -48,7 +50,7 @@ return new class extends Migration
             $table->string('monofilamento')->nullable();
             $table->string('blood_glucose')->nullable();
             $table->longText('note', 999)->nullable();
-            $table->unsignedTinyInteger('state')->default(1);
+            $table->integer('state')->default(1);
             $table->timestamps();
         });
     }

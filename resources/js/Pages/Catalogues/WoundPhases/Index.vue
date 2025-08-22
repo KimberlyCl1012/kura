@@ -135,7 +135,7 @@ function exportCSV() {
 </script>
 
 <template>
-    <AppLayout title="Fases de las heridas">
+    <AppLayout title="Fases de la herida">
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
@@ -146,20 +146,13 @@ function exportCSV() {
                 </template>
             </Toolbar>
 
-            <DataTable
-                ref="dt"
-                :value="woundsPhaseList"
-                dataKey="id"
-                :paginator="true"
-                :rows="10"
-                :filters="filters"
+            <DataTable ref="dt" :value="woundsPhaseList" dataKey="id" :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
-            >
+                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
-                        <h4 class="m-0">Fase de las heridas</h4>
+                        <h4 class="m-0">Fases de la herida</h4>
                         <IconField>
                             <InputIcon>
                                 <i class="pi pi-search" />
@@ -175,22 +168,24 @@ function exportCSV() {
                     </template>
                 </Column>
                 <Column field="name" header="Nombre" style="min-width: 16rem" />
-                <Column field="description" header="Descripción" style="min-width: 20rem" />
                 <Column :exportable="false" style="min-width: 12rem">
                     <template #body="{ data }">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editWoundsPhase(data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWoundsPhase(data)" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger"
+                            @click="confirmDeleteWoundsPhase(data)" />
                     </template>
                 </Column>
             </DataTable>
         </div>
 
         <!-- Diálogo Crear/Editar -->
-        <Dialog v-model:visible="woundsPhaseDialog" :style="{ width: '450px' }" :header="isEditMode ? 'Editar' : 'Crear'" :modal="true">
+        <Dialog v-model:visible="woundsPhaseDialog" :style="{ width: '450px' }"
+            :header="isEditMode ? 'Editar registro' : 'Crear registro'" :modal="true">
             <div class="flex flex-col gap-6">
                 <div>
                     <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
-                    <InputText v-model="woundsPhase.name" required :invalid="submitted && !woundsPhase.name" class="w-full" />
+                    <InputText v-model="woundsPhase.name" required :invalid="submitted && !woundsPhase.name"
+                        class="w-full" />
                     <small v-if="submitted && !woundsPhase.name" class="text-red-500">El nombre es requerido.</small>
                 </div>
                 <div>
@@ -200,7 +195,8 @@ function exportCSV() {
             </div>
             <template #footer>
                 <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving" :disabled="isSaving" @click="saveWoundsPhase" />
+                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :loading="isSaving"
+                    :disabled="isSaving" @click="saveWoundsPhase" />
             </template>
         </Dialog>
 

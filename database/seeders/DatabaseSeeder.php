@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AddressSeeder::class);
         $this->call(CompanySeeder::class);
         $this->call(SiteSeeder::class);
+        $this->call(PermissionSeeder::class);
         $this->call(UserSeeder::class);
         $this->call(BodyLocationSeeder::class);
         $this->call(BodySublocationSeeder::class);
@@ -26,5 +27,6 @@ class DatabaseSeeder extends Seeder
         $this->call(WoundPhaseSeeder::class);
         $this->call(WoundTypeSeeder::class);
         $this->call(WoundSubtypeSeeder::class);
+        $this->call(WoundAssessmentSeeder::class);
     }
 }

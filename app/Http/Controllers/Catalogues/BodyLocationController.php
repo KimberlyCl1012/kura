@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Catalogues;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\BodyLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -13,9 +14,21 @@ use Inertia\Inertia;
 
 class BodyLocationController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected function logChange(array $data)
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
         $bodyLocations = DB::table('list_body_locations')
@@ -47,8 +60,26 @@ class BodyLocationController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        DB::beginTransaction();
+
         try {
-            $location = BodyLocation::create($request->only('name', 'description'));
+            $payload = [
+                'name'        => $request->name,
+                'description' => $request->description,
+                'state'       => 1,
+            ];
+
+            $location = BodyLocation::create($payload);
+
+            $this->logChange([
+                'logType'    => 'Ubicación corporal',
+                'table'      => 'list_body_locations',
+                'primaryKey' => (string)$location->id,
+                'changeType' => 'create',
+                'newValue'   => json_encode($payload),
+            ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -59,6 +90,7 @@ class BodyLocationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Crear ubicación corporal');
             Log::debug($e);
             Log::error($e);
@@ -70,9 +102,10 @@ class BodyLocationController extends Controller
         }
     }
 
-    // Actualizar registro
     public function update(Request $request, $encryptedId)
     {
+        DB::beginTransaction();
+
         try {
             $id = Crypt::decryptString($encryptedId);
 
@@ -86,7 +119,32 @@ class BodyLocationController extends Controller
             }
 
             $location = BodyLocation::findOrFail($id);
-            $location->update($request->only('name', 'description'));
+
+            $old = $location->only(['name', 'description']);
+
+            $updates = [
+                'name'        => $request->name,
+                'description' => $request->description,
+            ];
+
+            foreach ($updates as $campo => $nuevo) {
+                $viejo = $old[$campo];
+                if ((string)$viejo !== (string)$nuevo) {
+                    $this->logChange([
+                        'logType'    => 'Ubicación corporal',
+                        'table'      => 'list_body_locations',
+                        'primaryKey' => (string)$id,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $viejo,
+                        'newValue'   => $nuevo,
+                    ]);
+                }
+            }
+
+            $location->update($updates);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -97,6 +155,7 @@ class BodyLocationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Editar ubicación corporal');
             Log::debug($e);
             Log::error($e);
@@ -109,11 +168,29 @@ class BodyLocationController extends Controller
 
     public function destroy($encryptedId)
     {
+        DB::beginTransaction();
+
         try {
             $id = Crypt::decryptString($encryptedId);
 
             $location = BodyLocation::findOrFail($id);
+
+            $old = $location->toArray();
+
             $location->update(['state' => 0]);
+
+            $new = $location->fresh()->toArray();
+
+            $this->logChange([
+                'logType'    => 'Ubicación corporal',
+                'table'      => 'list_body_locations',
+                'primaryKey' => (string)$id,
+                'changeType' => 'destroy',
+                'oldValue'   => json_encode($old),
+                'newValue'   => json_encode($new),
+            ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -121,6 +198,7 @@ class BodyLocationController extends Controller
                 'id' => $encryptedId,
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::info('Eliminar ubicación corporal');
             Log::debug($e);
             Log::error($e);

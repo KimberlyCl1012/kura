@@ -9,7 +9,16 @@ class Kurator extends Model
 {
     use HasFactory;
     protected $guarded = [];
-    // protected $primaryKey = 'id_kurator';
+    protected $fillable = [
+        'user_uuid',
+        'user_detail_id',
+        'specialty',
+        'detail_specialty',
+        'type_kurator',
+        'type_identification',
+        'identification',
+        'state',
+    ];
 
     public function patient()
     {

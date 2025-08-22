@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Catalogues;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\Address;
 use App\Models\Site;
 use App\Models\State;
@@ -15,9 +16,21 @@ use Inertia\Inertia;
 
 class AddressController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected function logChange(array $data)
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'],
+            'table'        => $data['table'],
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
         //Catalogs
@@ -47,18 +60,6 @@ class AddressController extends Controller
         ]));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    // Ejemplo store()
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -67,8 +68,10 @@ class AddressController extends Controller
             'state_id'      => 'required|exists:list_states,id',
         ]);
 
+        DB::beginTransaction();
+
         try {
-            $addressId = DB::table('list_addresses')->insertGetId([
+            $payload = [
                 'type'           => 'Local',
                 'streetAddress'  => $request->streetAddress,
                 'addressLine2'   => $request->addressLine2,
@@ -77,6 +80,16 @@ class AddressController extends Controller
                 'state_id'       => $request->state_id,
                 'country'        => $request->country ?? 'MX',
                 'state'          => 1,
+            ];
+
+            $addressId = DB::table('list_addresses')->insertGetId($payload);
+
+            $this->logChange([
+                'logType'    => 'Dirección',
+                'table'      => 'list_addresses',
+                'primaryKey' => (string) $addressId,
+                'changeType' => 'create',
+                'newValue'   => json_encode($payload),
             ]);
 
             $address = DB::table('list_addresses')
@@ -94,6 +107,7 @@ class AddressController extends Controller
                 ->where('list_addresses.id', $addressId)
                 ->first();
 
+            DB::commit();
 
             $address->address_id = Crypt::encryptString($address->address_id);
 
@@ -103,8 +117,6 @@ class AddressController extends Controller
                 'data'    => $address,
             ]);
         } catch (\Throwable $e) {
-            Log::info('Crear dirección');
-            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return response()->json([
@@ -115,25 +127,7 @@ class AddressController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -142,21 +136,46 @@ class AddressController extends Controller
             'state_id'      => 'required|exists:list_states,id',
         ]);
 
+        DB::beginTransaction();
+
         try {
-            $addressId = Crypt::decryptString($id); // Desencripta el ID recibido
+            $addressId = Crypt::decryptString($id);
 
-            DB::table('list_addresses')
-                ->where('id', $addressId)
-                ->update([
-                    'streetAddress'  => $request->streetAddress,
-                    'addressLine2'   => $request->addressLine2,
-                    'postalCode'     => $request->postalCode,
-                    'city'           => $request->city ?? 'México',
-                    'state_id'       => $request->state_id,
-                    'country'        => $request->country ?? 'MX',
-                ]);
+            $old = DB::table('list_addresses')->where('id', $addressId)->first();
+            if (!$old) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dirección no encontrada',
+                ], 404);
+            }
 
-            // Recuperar registro actualizado
+            $updates = [
+                'streetAddress' => $request->streetAddress,
+                'addressLine2'  => $request->addressLine2,
+                'postalCode'    => $request->postalCode,
+                'city'          => $request->city ?? 'México',
+                'state_id'      => $request->state_id,
+                'country'       => $request->country ?? 'MX',
+            ];
+
+            foreach ($updates as $campo => $nuevo) {
+                $viejo = $old->$campo;
+                if ((string) $viejo !== (string) $nuevo) {
+                    $this->logChange([
+                        'logType'    => 'Dirección',
+                        'table'      => 'list_addresses',
+                        'primaryKey' => (string) $addressId,
+                        'changeType' => 'update',
+                        'fieldName'  => $campo,
+                        'oldValue'   => $viejo,
+                        'newValue'   => $nuevo,
+                    ]);
+                }
+            }
+
+            DB::table('list_addresses')->where('id', $addressId)->update($updates);
+
             $address = DB::table('list_addresses')
                 ->join('list_states', 'list_addresses.state_id', '=', 'list_states.id')
                 ->select(
@@ -172,6 +191,7 @@ class AddressController extends Controller
                 ->where('list_addresses.id', $addressId)
                 ->first();
 
+            DB::commit();
 
             $address->address_id = Crypt::encryptString($address->address_id);
 
@@ -181,14 +201,13 @@ class AddressController extends Controller
                 'data'    => $address,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            Log::info('Ediar dirección');
-            Log::debug($e);
             DB::rollBack();
             Log::error($e);
             return response()->json([
@@ -199,26 +218,43 @@ class AddressController extends Controller
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
-        try {
-            $id = Crypt::decryptString($id);
+        DB::beginTransaction();
 
-            DB::table('list_addresses')
-                ->where('id', $id)
-                ->update(['state' => 0]);
+        try {
+            $addressId = Crypt::decryptString($id);
+
+            $old = DB::table('list_addresses')->where('id', $addressId)->first();
+            if (!$old) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dirección no encontrada',
+                ], 404);
+            }
+
+            DB::table('list_addresses')->where('id', $addressId)->update(['state' => 0]);
+
+            $new = DB::table('list_addresses')->where('id', $addressId)->first();
+
+            $this->logChange([
+                'logType'    => 'Dirección',
+                'table'      => 'list_addresses',
+                'primaryKey' => (string) $addressId,
+                'changeType' => 'destroy',
+                'oldValue'   => json_encode($old),
+                'newValue'   => json_encode($new),
+            ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Dirección eliminada correctamente',
-                'id' => $id,
+                'id'      => $addressId,
             ]);
-        } catch (\Exception $e) {
-            Log::info('Eliminar dirección');
-            Log::debug($e);
+        } catch (\Throwable $e) {
             DB::rollBack();
             Log::error($e);
             return response()->json([

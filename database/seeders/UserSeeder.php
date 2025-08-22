@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -144,67 +145,60 @@ class UserSeeder extends Seeder
             'state' => 1,
         ]);
 
-        // Crear el equipo (si es el personal)
-        $teamOne = Team::create([
-            'user_id' => $userOne->id,
-            'name' => 'admin',
+        $teamAdmin = Team::create([
+            'user_id'       => $userOne->id,
+            'name'          => 'admin',
+            'description'   => 'Administrador',
             'personal_team' => true,
         ]);
 
-        $teamTwo = Team::create([
-            'user_id' => $userOne->id,
-            'name' => 'admin_clinico',
-            'personal_team' => true,
+        $teamKura = Team::create([
+            'user_id'       => $userOne->id,
+            'name'          => 'admin_kura',
+            'description'   => 'Administrador Kura+',
+            'personal_team' => false,
         ]);
 
-
-        $teamThree = Team::create([
-            'user_id' => $userOne->id,
-            'name' => 'sup_clinico',
-            'personal_team' => true,
+        $teamRespSitio = Team::create([
+            'user_id'       => $userOne->id,
+            'name'          => 'resp_sitio',
+            'description'   => 'Resposable del sitio',
+            'personal_team' => false,
         ]);
 
-
-        $teamFour = Team::create([
-            'user_id' => $userOne->id,
-            'name' => 'pro_clinico',
-            'personal_team' => true,
+        $teamOperativo = Team::create([
+            'user_id'       => $userOne->id,
+            'name'          => 'perfil_operativo',
+            'description'   => 'Perfil operativo',
+            'personal_team' => false,
         ]);
 
-        $teamFive = Team::create([
-            'user_id' => $userOne->id,
-            'name' => 'usuario',
-            'personal_team' => true,
-        ]);
+        $roles = config('roles', []);
+
+        foreach ($roles as $roleKey => $cfg) {
+            $team = Team::where('name', $roleKey)->first();
+
+            if (! $team) {
+                continue;
+            }
+
+            $permissions = Permission::whereIn('slug', $cfg['permissions'] ?? [])->get();
+
+            foreach ($permissions as $perm) {
+                DB::table('team_permissions')->insertOrIgnore([
+                    'team_id'       => $team->id,
+                    'permission_id' => $perm->id,
+                ]);
+            }
+        }
 
         // Asociar el equipo al usuario
-        $userOne->currentTeam()->associate($teamOne);
+        $userOne->currentTeam()->associate($teamAdmin);
         $userOne->save();
 
-        // $userTwo->currentTeam()->associate($team);
-        // $userTwo->save();
-
-        // $userThree->currentTeam()->associate($team);
-        // $userThree->save();
-
-        // $userFour->currentTeam()->associate($team);
-        // $userFour->save();
-
         // Asignar el rol al usuario en su equipo
-        $userOne->switchTeam($teamOne); // Cambiar al equipo adecuado
+        $userOne->switchTeam($teamAdmin); // Cambiar al equipo adecuado
         $userOne->currentTeam->users()->attach($userOne->id, ['role' => 'admin']); // Asignar el rol
-
-        // $userTwo->switchTeam($team); // Cambiar al equipo adecuado
-        // $userTwo->currentTeam->users()->attach($userTwo->id, ['role' => 'administrator']); // Asignar el rol
-
-        // $userThree->switchTeam($team); // Cambiar al equipo adecuado
-        // $userThree->currentTeam->users()->attach($userThree->id, ['role' => 'administrator']); // Asignar el rol
-
-        // $userFour->switchTeam($team); // Cambiar al equipo adecuado
-        // $userFour->currentTeam->users()->attach($userFour->id, ['role' => 'administrator']); // Asignar el rol
-
-        // Si deseas asignar otro rol, puedes hacerlo de la siguiente manera:
-        // $userThree->currentTeam->users()->attach($userThree->id, ['role' => 'editor']);
 
     }
 }

@@ -44,7 +44,7 @@ watch(() => form.health_institution_id, (val) => {
 });
 
 const editorRestrictDeletion = computed(() => {
-    return props.permissions?.editor_edit_all_denied === true;
+    return props.permissions?.can_full_edit !== true; 
 });
 
 function handleEditorInput(fieldName, newValue) {
@@ -53,25 +53,23 @@ function handleEditorInput(fieldName, newValue) {
     if (editorRestrictDeletion.value) {
         const cleanOld = normalizeText(stripHtml(oldValue));
         const cleanNew = normalizeText(stripHtml(newValue));
+        const isAppendOnly = cleanOld === '' || (cleanNew !== '' && cleanNew.startsWith(cleanOld));
 
-        const deletion = cleanNew.length < cleanOld.length;
-
-        if (deletion) {
+        if (!isAppendOnly) {
             toast.add({
                 severity: 'warn',
                 summary: 'Edición limitada',
-                detail: 'No tienes permiso para eliminar contenido de este campo.',
+                detail: 'Solo puedes agregar al final; no puedes reemplazar contenido existente.',
                 life: 3000,
             });
-
             form[fieldName] = oldValue;
             return;
         }
     }
 
-    form[fieldName] = newValue;
-    form[fieldName] = '' + form[fieldName];
+    form[fieldName] = '' + newValue;
 }
+
 
 function stripHtml(html) {
     const div = document.createElement("div");

@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('list_treatment_methods', function (Blueprint $table) {
-             $table->id(); 
-            $table->string('name');            
-            $table->longText('description',999)->nullable();              
-            $table->boolean('state')->default(1);            
+            $table->id();
+            $table->string('name');
+            $table->longText('description', 999)->nullable();
+            $table->boolean('state')->default(1);
             $table->timestamps();
         });
     }

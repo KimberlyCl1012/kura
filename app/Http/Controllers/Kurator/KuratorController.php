@@ -39,6 +39,36 @@ class KuratorController extends Controller
         ]);
     }
 
+    // Claves que requieren campo libre (detalle)
+    private array $needsDetailKeys = ['Especialista', 'Especialidad', 'Subespecialidad', 'Maestría', 'Doctorado'];
+
+    // Opciones permitidas por tipo
+    private array $specialtyMap = [
+        'Enfermería' => ['Técnico', 'Licenciatura', 'Especialista', 'Maestría', 'Doctorado'],
+        'Medicina'   => ['Médico general', 'Especialidad', 'Subespecialidad', 'Maestría', 'Doctorado'],
+    ];
+
+    private function requiresDetail(string $key): bool
+    {
+        return in_array($key, $this->needsDetailKeys, true);
+    }
+
+    private function parseSpecialty(string $value): array
+    {
+        $parts = array_map('trim', explode(':', $value, 2));
+        return [
+            'key'    => $parts[0] ?? '',
+            'detail' => $parts[1] ?? '',
+        ];
+    }
+
+    private function normalizeSpecialty(string $key, string $detail): string
+    {
+        $key = trim(preg_replace('/\s+/', ' ', $key));
+        $detail = trim(preg_replace('/\s+/', ' ', $detail));
+        return $detail !== '' ? "{$key}: {$detail}" : $key;
+    }
+
     public function index()
     {
         $kurators = DB::table('kurators')
@@ -50,6 +80,7 @@ class KuratorController extends Controller
                 'kurators.id as kurator_id',
                 'kurators.user_uuid',
                 'kurators.specialty',
+                'kurators.detail_specialty',
                 'kurators.type_kurator',
                 'kurators.type_identification',
                 'kurators.identification',
@@ -70,6 +101,14 @@ class KuratorController extends Controller
             ->get()
             ->map(function ($kurator) {
                 $kurator->crypt_kurator = Crypt::encryptString($kurator->kurator_id);
+
+                $kurator->specialty_key = $kurator->specialty;
+                $kurator->specialty_detail = $kurator->detail_specialty;
+                if (!$kurator->specialty_detail && strpos($kurator->specialty, ':') !== false) {
+                    [$k, $d] = array_map('trim', explode(':', $kurator->specialty, 2));
+                    $kurator->specialty_key = $k;
+                    $kurator->specialty_detail = $d;
+                }
                 return $kurator;
             });
 
@@ -85,7 +124,7 @@ class KuratorController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'fatherLastName' => 'required|string|max:255',
             'motherLastName' => 'nullable|string|max:255',
@@ -95,10 +134,30 @@ class KuratorController extends Controller
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
             'specialty' => 'required|string|max:255',
-            'type_kurator' => 'required|string|max:50',
+            'detail_specialty' => 'nullable|string|max:255',
+            'type_kurator'        => ['required', 'string', 'max:50', Rule::in(['Enfermería', 'Medicina'])],
             'type_identification' => 'required|string|max:50',
             'identification' => 'required|string|max:50',
         ]);
+
+        $validator->after(function ($v) use ($request) {
+            $type = $request->input('type_kurator');
+            $key = trim($request->input('specialty', ''));
+            $detail = trim($request->input('detail_specialty', ''));
+
+            $allowed = $this->specialtyMap[$type] ?? [];
+            if (!in_array($key, $allowed, true)) {
+                $v->errors()->add('specialty', 'La especialidad seleccionada no es válida para el tipo de personal.');
+            }
+
+            if ($this->requiresDetail($key) && $detail === '') {
+                $v->errors()->add('detail_specialty', 'Debes indicar el nombre de la especialidad/subespecialidad/posgrado.');
+            }
+        });
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
 
         DB::beginTransaction();
 
@@ -157,12 +216,13 @@ class KuratorController extends Controller
             $random = strtoupper(Str::random(3));
 
             $kurator = Kurator::create([
-                'user_uuid' => 'KU' . $anio . '-' . $site . $random,
-                'user_detail_id' => $userDetail->id,
-                'specialty' => $request->specialty,
-                'type_kurator' => $request->type_kurator,
+                'user_uuid'          => 'KU' . $anio . '-' . $site . $random,
+                'user_detail_id'     => $userDetail->id,
+                'specialty'        => $request->input('specialty'),
+                'detail_specialty' => $request->input('detail_specialty'),
+                'type_kurator'       => $request->type_kurator,
                 'type_identification' => $request->type_identification,
-                'identification' => $request->identification,
+                'identification'     => $request->identification,
             ]);
 
             $this->logChange([
@@ -174,6 +234,7 @@ class KuratorController extends Controller
                 'newValue'   => json_encode($kurator->only([
                     'user_uuid',
                     'specialty',
+                    'detail_specialty',
                     'type_kurator',
                     'type_identification',
                     'identification'
@@ -182,11 +243,11 @@ class KuratorController extends Controller
 
             DB::commit();
 
-            return redirect()->route('kurators.index')->with('success', 'Kurador creado correctamente.');
+            return redirect()->route('kurators.index')->with('success', 'Personal santitario creado correctamente.');
         } catch (\Throwable $e) {
             Log::error($e);
             DB::rollBack();
-            return back()->withErrors(['error' => 'Error al crear el kurador.'])->withInput();
+            return back()->withErrors(['error' => 'Error al crear el personal sanitario.'])->withInput();
         }
     }
 
@@ -196,24 +257,38 @@ class KuratorController extends Controller
         $userDetail = $kurator->userDetail;
         $user = User::find($userDetail->user_id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'fatherLastName' => 'required|string|max:255',
-            'motherLastName' => 'nullable|string|max:255',
-            'sex' => 'required|string|in:Hombre,Mujer',
-            'mobile' => 'nullable|string|max:20',
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->ignore($user->id),
-            ],
-            'site_id' => 'required|exists:list_sites,id',
-            'specialty' => 'required|string|max:255',
-            'type_kurator' => 'required|string|max:50',
+        $validator = Validator::make($request->all(), [
+            'name'                => 'required|string|max:255',
+            'fatherLastName'      => 'required|string|max:255',
+            'motherLastName'      => 'nullable|string|max:255',
+            'sex'                 => ['required', Rule::in(['Hombre', 'Mujer'])],
+            'mobile'              => 'nullable|string|max:20',
+            'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'site_id'             => 'required|exists:list_sites,id',
+            'specialty'           => 'required|string|max:255',
+            'detail_specialty'  => 'nullable|string|max:255',
+            'type_kurator'        => ['required', 'string', 'max:50', Rule::in(['Enfermería', 'Medicina'])],
             'type_identification' => 'required|string|max:50',
-            'identification' => 'required|string|max:50',
+            'identification'      => 'required|string|max:50',
         ]);
+
+        $validator->after(function ($v) use ($request) {
+            $type = $request->input('type_kurator');
+            $key = trim($request->input('specialty', ''));
+            $detail = trim($request->input('detail_specialty', ''));
+
+            $allowed = $this->specialtyMap[$type] ?? [];
+            if (!in_array($key, $allowed, true)) {
+                $v->errors()->add('specialty', 'La especialidad seleccionada no es válida para el tipo de personal.');
+            }
+            if ($this->requiresDetail($key) && $detail === '') {
+                $v->errors()->add('specialty', 'Debes indicar el nombre de la especialidad/subespecialidad/posgrado.');
+            }
+        });
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
 
         DB::beginTransaction();
 
@@ -256,8 +331,8 @@ class KuratorController extends Controller
                 }
             }
 
-            // LOG CAMBIOS EN KURATORS
-            $kuratorCampos = ['specialty', 'type_kurator', 'type_identification', 'identification'];
+            $kuratorCampos = ['specialty', 'detail_specialty', 'type_kurator', 'type_identification', 'identification'];
+
             foreach ($kuratorCampos as $campo) {
                 $valorAnterior = $kurator->$campo;
                 $valorNuevo = $request->$campo;
@@ -275,7 +350,6 @@ class KuratorController extends Controller
                 }
             }
 
-            // ACTUALIZAR EN BASE DE DATOS
             $user->update([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -292,25 +366,37 @@ class KuratorController extends Controller
             ]);
 
             $kurator->update([
-                'specialty' => $request->specialty,
-                'type_kurator' => $request->type_kurator,
+                'specialty'        => $request->input('specialty'),
+                'detail_specialty' => $request->input('detail_specialty'),
+                'type_kurator'       => $request->type_kurator,
                 'type_identification' => $request->type_identification,
-                'identification' => $request->identification,
+                'identification'     => $request->identification,
             ]);
 
             DB::commit();
 
-            return redirect()->route('kurators.index')->with('success', 'Kurador actualizado correctamente.');
+            return redirect()->route('kurators.index')->with('success', 'Personal sanitario actualizado correctamente.');
         } catch (\Throwable $e) {
             Log::error($e);
             DB::rollBack();
-            return back()->withErrors(['error' => 'Error al actualizar el kurador.'])->withInput();
+            return back()->withErrors(['error' => 'Error al actualizar el personal sanitario.'])->withInput();
         }
     }
 
     public function destroy($id)
     {
         try {
+            $openAppointment = DB::table('appointments')
+                ->where('kurator_id', $id)
+                ->whereIn('state', [1, 2])
+                ->exists();
+
+            if ($openAppointment) {
+                return response()->json([
+                    'message' => 'No se puede eliminar el personal sanitario: primero tiene que reasignar la consulta en curso.'
+                ], 422);
+            }
+
             $kurator = Kurator::findOrFail($id);
             $userDetail = $kurator->userDetail;
             $userId = $userDetail->user_id;
@@ -333,7 +419,7 @@ class KuratorController extends Controller
 
             $userDetail->update(['state' => 0]);
             $this->logChange([
-                'logType'    => 'Paciente',
+                'logType'    => 'Kurators',
                 'table'      => 'user_details',
                 'primaryKey' => $userDetail->id,
                 'changeType' => 'destroy',
@@ -346,13 +432,13 @@ class KuratorController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Paciente desactivado correctamente.',
+                'message' => 'Personal sanitario desactivado correctamente.',
                 'deleted_kurator_id' => $kurator->id,
             ]);
         } catch (\Throwable $e) {
             Log::error($e);
             DB::rollBack();
-            return response()->json(['error' => 'Error al desactivar el kurador.'], 500);
+            return response()->json(['error' => 'Error al desactivar el personal snaitario.'], 500);
         }
     }
 

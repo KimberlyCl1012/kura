@@ -35,11 +35,22 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-    public function share(Request $request)
+    public function share(Request $request): array
     {
-        return array_merge(parent::share($request), [
-            'userRole' => fn() => $request->user()?->teamRole($request->user()->currentTeam)?->key,
-            'userPermissions' => fn() => $request->user()?->teamPermissions($request->user()->currentTeam),
+        $base = (array) parent::share($request);
+
+        $user = $request->user();
+
+        $roleName = $user?->current_team_role_name ?? 'guest';
+        $perms    = $user?->current_team_role_permissions ?? [];
+
+        $team     = $user?->currentTeam;
+        $roleKey  = $team ? optional($user->teamRole($team))->key : 'guest';
+
+        return array_merge($base, [
+            'userRole'        => fn() => $roleKey,
+            'userRoleName'    => fn() => $roleName,
+            'userPermissions' => fn() => (array) $perms
         ]);
     }
 }

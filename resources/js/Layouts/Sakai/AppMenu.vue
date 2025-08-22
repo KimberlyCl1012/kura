@@ -9,12 +9,12 @@ const model = ref([
         items: [{ label: 'Inicio', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
     },
     {
-        items: [{ label: 'Kuradores', icon: 'pi pi-circle', to: '/kurators' }]
+        items: [{ label: 'Personal sanitario', icon: 'pi pi-circle', to: '/kurators' }]
     },
     {
         items: [{ label: 'Pacientes', icon: 'pi pi-circle', to: '/patients' }]
     },
-     {
+    {
         items: [{ label: 'Consultas', icon: 'pi pi-circle', to: '/appointments' }]
     },
     // {

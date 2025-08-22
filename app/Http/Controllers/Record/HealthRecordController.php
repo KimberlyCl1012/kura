@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
-use Str;
+use Illuminate\Support\Str;
 
 class HealthRecordController extends Controller
 {
@@ -32,6 +33,51 @@ class HealthRecordController extends Controller
         ]);
     }
 
+    protected function normalizeForAppendRule(?string $html): string
+    {
+        $txt = trim(strip_tags((string) $html));
+        $txt = preg_replace('/\s+/u', ' ', $txt ?? '');
+        return mb_strtolower(trim($txt));
+    }
+    private function userCan(string $ability): bool
+    {
+        $user = Auth::user();
+        if (!$user) return false;
+
+        $teamId = $user->current_team_id
+            ?? optional($user->currentTeam)->id
+            ?? DB::table('team_user')->where('user_id', $user->id)->value('team_id');
+
+        if (!$teamId) return false;
+
+        return DB::table('team_permissions as tp')
+            ->join('permissions as p', 'p.id', '=', 'tp.permission_id')
+            ->where('tp.team_id', $teamId)
+            ->where('p.slug', $ability)
+            ->exists();
+    }
+
+
+    private function resolveRoleKey(?string $raw): ?string
+    {
+        if (!$raw) return null;
+        $rawTrim = trim($raw);
+        $roles = (array) config('roles', []);
+
+        if (array_key_exists($rawTrim, $roles)) {
+            return $rawTrim;
+        }
+
+        foreach ($roles as $key => $cfg) {
+            $name = (string) ($cfg['name'] ?? '');
+            if (mb_strtolower($name) === mb_strtolower($rawTrim)) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
     public function create($patientId)
     {
         try {
@@ -42,35 +88,35 @@ class HealthRecordController extends Controller
 
         $healthInstitutions = HealthInstitution::select('id', 'name')->get();
         $healthRecord = HealthRecord::where('patient_id', $decryptpatientId)->first();
+
         $patient = Patient::with('userDetail')
             ->where('id', $decryptpatientId)
             ->firstOrFail();
 
-
+        $canFullEdit = $this->userCan('edit_medical_record');
 
         return Inertia::render('HealthRecords/Create', [
             'patient' => [
-                'id' => $patient->id,
+                'id'   => $patient->id,
                 'uuid' => $patient->user_uuid,
                 'name' => $patient->userDetail->name . ' ' . $patient->userDetail->fatherLastName . ' ' . $patient->userDetail->motherLastName,
             ],
             'healthInstitutions' => $healthInstitutions,
             'healthRecord' => $healthRecord ? [
-                'healthRecordId' => $healthRecord->id,
-                'cryptHealthRecordId' => Crypt::encryptString($healthRecord->id),
-                'health_institution_id' => $healthRecord->health_institution_id,
-                'medicines' => $healthRecord->medicines,
-                'allergies' => $healthRecord->allergies,
+                'healthRecordId'         => $healthRecord->id,
+                'cryptHealthRecordId'    => Crypt::encryptString($healthRecord->id),
+                'health_institution_id'  => $healthRecord->health_institution_id,
+                'medicines'              => $healthRecord->medicines,
+                'allergies'              => $healthRecord->allergies,
                 'pathologicalBackground' => $healthRecord->pathologicalBackground,
-                'laboratoryBackground' => $healthRecord->laboratoryBackground,
-                'nourishmentBackground' => $healthRecord->nourishmentBackground,
-                'medicalInsurance' => $healthRecord->medicalInsurance,
-                'health_institution' => $healthRecord->health_institution,
-                'religion' => $healthRecord->religion,
+                'laboratoryBackground'   => $healthRecord->laboratoryBackground,
+                'nourishmentBackground'  => $healthRecord->nourishmentBackground,
+                'medicalInsurance'       => $healthRecord->medicalInsurance,
+                'health_institution'     => $healthRecord->health_institution,
+                'religion'               => $healthRecord->religion,
             ] : null,
             'permissions' => [
-                'editor_edit_all_denied' => Auth::user()->hasExplicitlyDenied('editor:edit-all'),
-                'editor_edit_all_allowed' => Auth::user()->can('editor:edit-all'),
+                'can_full_edit' => $this->userCan('edit_medical_record'),
             ],
         ]);
     }
@@ -78,27 +124,31 @@ class HealthRecordController extends Controller
     public function store(Request $request)
     {
         try {
+            DB::beginTransaction();
+
             $data = $request->validate([
-                'health_institution_id' => 'required|exists:list_health_institutions,id',
-                'patient_id' => 'required|exists:patients,id',
-                'medicines' => 'required|string',
-                'allergies' => 'required|string',
+                'health_institution_id'  => 'required|exists:list_health_institutions,id',
+                'patient_id'             => 'required|exists:patients,id',
+                'medicines'              => 'required|string',
+                'allergies'              => 'required|string',
                 'pathologicalBackground' => 'required|string',
-                'laboratoryBackground' => 'required|string',
-                'nourishmentBackground' => 'required|string',
-                'medicalInsurance' => 'nullable|string',
-                'medical_info' => 'nullable|string',
-                'health_institution' => 'nullable|string',
-                'religion' => 'nullable|string',
+                'laboratoryBackground'   => 'required|string',
+                'nourishmentBackground'  => 'required|string',
+                'medicalInsurance'       => 'nullable|string',
+                'medical_info'           => 'nullable|string',
+                'health_institution'     => 'nullable|string',
+                'religion'               => 'nullable|string',
             ]);
 
-            if ($data['medicalInsurance'] === 'Sí') {
+            // Seguro
+            if (($data['medicalInsurance'] ?? null) === 'Sí') {
                 $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
             } else {
                 $data['medicalInsurance'] = 'No';
             }
 
-            if ($data['health_institution_id'] == 5) {
+            // Institución "Otro" (id=5)
+            if ((int) $data['health_institution_id'] === 5) {
                 $data['health_institution'] = $data['health_institution'] ?? null;
             } else {
                 $data['health_institution'] = null;
@@ -112,14 +162,13 @@ class HealthRecordController extends Controller
 
             $record = HealthRecord::create($data);
 
-            // Log de creación
             $this->logChange([
-                'logType'    => 'Expediente',
-                'table'      => 'health_records',
-                'primaryKey' => $record->id,
+                'logType'      => 'Expediente',
+                'table'        => 'health_records',
+                'primaryKey'   => $record->id,
                 'secondaryKey' => $data['patient_id'] ?? null,
-                'changeType' => 'create',
-                'newValue'   => json_encode($record->only([
+                'changeType'   => 'create',
+                'newValue'     => json_encode($record->only([
                     'id',
                     'record_uuid',
                     'patient_id',
@@ -140,13 +189,17 @@ class HealthRecordController extends Controller
 
             return redirect()->back()->with('success', 'Expediente guardado correctamente.');
         } catch (\Throwable $e) {
-            Log::info('Crear expediente');
-            Log::debug($e);
             DB::rollBack();
             Log::error('Error al crear expediente clínico', [
                 'request' => $request->all(),
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ]);
+
+            Log::debug('render permissions', [
+                'user_id' => Auth::id(),
+                'can_full_edit' => $this->userCan('edit_medical_record'),
+            ]);
+
 
             return redirect()->back()
                 ->withErrors(['error' => 'Ocurrió un error al guardar el expediente.'])
@@ -158,25 +211,27 @@ class HealthRecordController extends Controller
     {
         try {
             $data = $request->validate([
-                'health_institution_id' => 'required|exists:list_health_institutions,id',
-                'medicines' => 'required|string',
-                'allergies' => 'required|string',
+                'health_institution_id'  => 'required|exists:list_health_institutions,id',
+                'medicines'              => 'required|string',
+                'allergies'              => 'required|string',
                 'pathologicalBackground' => 'required|string',
-                'laboratoryBackground' => 'required|string',
-                'nourishmentBackground' => 'required|string',
-                'medicalInsurance' => 'nullable|string',
-                'medical_info' => 'nullable|string',
-                'health_institution' => 'nullable|string',
-                'religion' => 'nullable|string',
+                'laboratoryBackground'   => 'required|string',
+                'nourishmentBackground'  => 'required|string',
+                'medicalInsurance'       => 'nullable|string',
+                'medical_info'           => 'nullable|string',
+                'health_institution'     => 'nullable|string',
+                'religion'               => 'nullable|string',
             ]);
 
-            if ($data['medicalInsurance'] === 'Sí') {
+            // Seguro
+            if (($data['medicalInsurance'] ?? null) === 'Sí') {
                 $data['medicalInsurance'] = $data['medical_info'] ?? 'Sí';
             } else {
                 $data['medicalInsurance'] = 'No';
             }
 
-            if ($data['health_institution_id'] == 5) {
+            // Institución "Otro" (id=5)
+            if ((int) $data['health_institution_id'] === 5) {
                 $data['health_institution'] = $data['health_institution'] ?? null;
             } else {
                 $data['health_institution'] = null;
@@ -184,13 +239,13 @@ class HealthRecordController extends Controller
 
             unset($data['medical_info']);
 
-            $user = auth()->user();
-            $isDenied = method_exists($user, 'hasExplicitlyDenied') && $user->hasExplicitlyDenied('editor:edit-all');
-            $fullEdit = !$isDenied;
+            // Permiso inverso
+            $canFullEdit = $this->userCan('edit_medical_record');
 
-            Log::debug('Permiso explícitamente denegado:', [
-                'denegado' => $isDenied,
-                'permite_edicion_total' => $fullEdit,
+            Log::debug('edit_medical_record', [
+                'user_id'       => Auth::id(),
+                'team_id'       => Auth::user()?->currentTeam?->id,
+                'can_full_edit' => $canFullEdit,
             ]);
 
             $protectedFields = [
@@ -198,30 +253,35 @@ class HealthRecordController extends Controller
                 'allergies',
                 'pathologicalBackground',
                 'laboratoryBackground',
-                'nourishmentBackground'
+                'nourishmentBackground',
             ];
 
-            // Guardamos antes para comparar y loguear
             $before = $healthRecord->replicate();
 
-            foreach ($protectedFields as $field) {
-                $newClean = strlen(strip_tags($data[$field] ?? ''));
-                $oldClean = strlen(strip_tags($healthRecord->$field ?? ''));
+            if (!$canFullEdit) {
+                foreach ($protectedFields as $field) {
+                    $incoming = (string) ($data[$field] ?? '');
+                    $current  = (string) ($healthRecord->$field ?? '');
 
-                if (!$fullEdit && $newClean < $oldClean) {
-                    // Log del bloqueo de recorte
-                    $this->logChange([
-                        'logType'    => 'Expediente',
-                        'table'      => 'health_records',
-                        'primaryKey' => $healthRecord->id,
-                        'changeType' => 'permission-override',
-                        'fieldName'  => $field,
-                        'oldValue'   => $healthRecord->$field,
-                        'newValue'   => $data[$field],
-                    ]);
+                    $incomingClean = $this->normalizeForAppendRule($incoming);
+                    $currentClean  = $this->normalizeForAppendRule($current);
 
-                    // Revertimos al valor anterior
-                    $data[$field] = $healthRecord->$field;
+                    $isAppendOnly = $currentClean === '' ||
+                        ($incomingClean !== '' && Str::startsWith($incomingClean, $currentClean));
+
+                    if (!$isAppendOnly) {
+                        $this->logChange([
+                            'logType'    => 'Expediente',
+                            'table'      => 'health_records',
+                            'primaryKey' => $healthRecord->id,
+                            'changeType' => 'permission-append-only-block',
+                            'fieldName'  => $field,
+                            'oldValue'   => $healthRecord->$field,
+                            'newValue'   => $data[$field],
+                        ]);
+
+                        $data[$field] = $healthRecord->$field;
+                    }
                 }
             }
 
@@ -229,7 +289,6 @@ class HealthRecordController extends Controller
 
             $healthRecord->update($data);
 
-            // Log campo por campo solo si cambió
             $campos = [
                 'health_institution_id',
                 'health_institution',
@@ -243,8 +302,8 @@ class HealthRecordController extends Controller
             ];
 
             foreach ($campos as $campo) {
-                $old = (string)($before->$campo ?? '');
-                $new = (string)($healthRecord->$campo ?? '');
+                $old = (string) ($before->$campo ?? '');
+                $new = (string) ($healthRecord->$campo ?? '');
                 if ($old !== $new) {
                     $this->logChange([
                         'logType'    => 'Expediente',
@@ -265,8 +324,8 @@ class HealthRecordController extends Controller
             Log::info('Editar expediente clínico');
             Log::debug($e);
             Log::error('Error al actualizar expediente clínico', [
-                'record_id' => $healthRecord->id,
-                'error' => $e->getMessage(),
+                'record_id' => $healthRecord->id ?? null,
+                'error'     => $e->getMessage(),
             ]);
 
             return redirect()->back()

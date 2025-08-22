@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('motherLastName')->nullable();
             $table->string('mobile')->nullable();
             $table->string('contactEmail')->unique();
-            $table->unsignedTinyInteger('state')->default(1);
+            $table->boolean('state')->default(1);
             $table->timestamps();
         });
     }

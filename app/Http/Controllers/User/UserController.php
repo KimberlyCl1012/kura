@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessChangeLog;
 use App\Models\User;
 use App\Models\UserDetail;
 use Illuminate\Http\Request;
@@ -15,24 +16,24 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected function logChange(array $data): void
+    {
+        AccessChangeLog::create([
+            'user_id'      => auth()->id(),
+            'logType'      => $data['logType'] ?? 'Users',
+            'table'        => $data['table'] ?? 'users',
+            'primaryKey'   => $data['primaryKey'] ?? null,
+            'secondaryKey' => $data['secondaryKey'] ?? null,
+            'changeType'   => $data['changeType'],
+            'fieldName'    => $data['fieldName'] ?? null,
+            'oldValue'     => $data['oldValue'] ?? null,
+            'newValue'     => $data['newValue'] ?? null,
+        ]);
+    }
+
     public function index()
     {
-        // $users = DB::table('users')
-        //     ->selectRaw("DATE_FORMAT(created_at, '%d-%m-%Y %H:%i:%s') as format_create, id, name, email")
-        //     ->get();
-
-        // $user = auth()->user();
-        // // El equipo actual del usuario
-        // $team = $user->currentTeam;
-        // // Obtener permisos del equipo
-        // $permissions = $user->teamPermissions($team);
-        // // Comprobar si el usuario tiene un permiso específico
-        // $canView = $user->hasTeamPermission($team, 'server:view');
-
-        $users = User::select('id', 'name', 'email')->where('state',1)->get();
+        $users = User::select('id', 'name', 'email')->where('state', 1)->get();
 
         return Inertia::render('Users/Index', [
             'users' => $users,
@@ -54,6 +55,7 @@ class UserController extends Controller
             ], 422);
         }
 
+        DB::beginTransaction();
         try {
             $user = User::create([
                 'name'     => $request->name,
@@ -61,14 +63,40 @@ class UserController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
+            $this->logChange([
+                'changeType' => 'create',
+                'primaryKey' => $user->id,
+                'newValue'   => json_encode($user->only(['name', 'email']), JSON_UNESCAPED_UNICODE),
+            ]);
+
+            $this->logChange([
+                'changeType' => 'create',
+                'primaryKey' => $user->id,
+                'fieldName'  => 'name',
+                'newValue'   => (string) $user->name,
+            ]);
+            $this->logChange([
+                'changeType' => 'create',
+                'primaryKey' => $user->id,
+                'fieldName'  => 'email',
+                'newValue'   => (string) $user->email,
+            ]);
+            $this->logChange([
+                'changeType' => 'create',
+                'primaryKey' => $user->id,
+                'fieldName'  => 'password',
+                'newValue'   => '[HASHED]',
+            ]);
+
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Usuario creado exitosamente.',
                 'data'    => $user,
             ]);
-        } catch (\Exception $e) {
-            Log::info('Crear Usuario');
-            Log::debug($e);
+        } catch (\Throwable $e) {
+            DB::rollBack();
             Log::error($e);
             return response()->json([
                 'success' => false,
@@ -80,6 +108,7 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
+        DB::beginTransaction();
         try {
             $user = User::findOrFail($id);
 
@@ -96,23 +125,49 @@ class UserController extends Controller
                 ], 422);
             }
 
-            $user->name  = $request->name;
-            $user->email = $request->email;
-
-            if ($request->filled('password')) {
-                $user->password = Hash::make($request->password);
+            $camposSimples = ['name', 'email'];
+            foreach ($camposSimples as $campo) {
+                $old = (string) $user->$campo;
+                $new = (string) $request->$campo;
+                if ($old !== $new) {
+                    $this->logChange([
+                        'changeType' => 'update',
+                        'primaryKey' => $user->id,
+                        'fieldName'  => $campo,
+                        'oldValue'   => $old,
+                        'newValue'   => $new,
+                    ]);
+                }
             }
 
+            $passwordChanged = false;
+            if ($request->filled('password')) {
+                $passwordChanged = true;
+                $this->logChange([
+                    'changeType' => 'update',
+                    'primaryKey' => $user->id,
+                    'fieldName'  => 'password',
+                    'oldValue'   => '[HASHED]',
+                    'newValue'   => '[HASHED]',
+                ]);
+            }
+
+            $user->name  = $request->name;
+            $user->email = $request->email;
+            if ($passwordChanged) {
+                $user->password = Hash::make($request->password);
+            }
             $user->save();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Usuario actualizado correctamente.',
                 'data'    => $user,
             ]);
-        } catch (\Exception $e) {
-            Log::info('Editar Usuario');
-            Log::debug($e);
+        } catch (\Throwable $e) {
+            DB::rollBack();
             Log::error($e);
             return response()->json([
                 'success' => false,

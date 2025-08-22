@@ -66,10 +66,14 @@ class AppointmentController extends Controller
                 'appointments.*',
                 'list_sites.siteName as site_name',
                 DB::raw("CONCAT(kurators.user_uuid, '-', user_details.name) as kurator_full_name"),
-                'health_records.record_uuid as health_record_uuid'
+                'health_records.record_uuid as health_record_uuid',
+                DB::raw("CASE 
+                    WHEN appointments.state = 1 THEN 'Abierta'
+                    WHEN appointments.state = 3 THEN 'Cerrada'
+                    ELSE 'Otro'
+                 END as appointment_status")
             )
             ->orderBy('appointments.created_at', 'desc')
-
             ->get();
 
         $finalizedWounds = Wound::with([
@@ -201,7 +205,6 @@ class AppointmentController extends Controller
             return redirect()->route('appointments.index')
                 ->with('success', 'Consulta creada correctamente.');
         } catch (\Exception $e) {
-            dd($e);
             DB::rollBack();
             return back()->withErrors(['error' => 'Ocurrió un error al guardar la consulta: ' . $e->getMessage()])
                 ->withInput();
@@ -342,6 +345,101 @@ class AppointmentController extends Controller
             return response()->json([
                 'message' => 'Error al finalizar la consulta.',
                 'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function reassign(Request $request, Appointment $appointment)
+    {
+        $request->validate([
+            'kurator_id' => 'required|exists:kurators,id',
+        ]);
+
+        if ((int) $appointment->state !== 1) {
+            return response()->json([
+                'message' => 'Solo se puede reasignar una consulta abierta.'
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $oldKuratorId = (int) $appointment->kurator_id;
+            $newKuratorId = (int) $request->kurator_id;
+
+            if ($oldKuratorId === $newKuratorId) {
+                return response()->json([
+                    'message' => 'El personal sanitario seleccionado es el mismo que el actual.'
+                ], 422);
+            }
+
+            $appointment->kurator_id = $newKuratorId;
+            $appointment->save();
+
+            $this->logChange([
+                'logType'    => 'Cita',
+                'table'      => 'appointments',
+                'primaryKey' => $appointment->id,
+                'changeType' => 'update',
+                'fieldName'  => 'kurator_id',
+                'oldValue'   => $oldKuratorId,
+                'newValue'   => $newKuratorId,
+            ]);
+
+            $healthRecord = HealthRecord::findOrFail($appointment->health_record_id);
+            $patientId = (int) $healthRecord->patient_id;
+
+            $kpNew = KuratorPatient::updateOrCreate(
+                ['kurator_id' => $newKuratorId, 'patient_id' => $patientId],
+                ['state' => 1]
+            );
+
+            $this->logChange([
+                'logType'      => 'Cita',
+                'table'        => 'kurator_patients',
+                'primaryKey'   => $kpNew->id,
+                'secondaryKey' => $patientId,
+                'changeType'   => $kpNew->wasRecentlyCreated ? 'create' : 'update',
+                'newValue'     => json_encode(['kurator_id' => $newKuratorId, 'patient_id' => $patientId, 'state' => 1]),
+            ]);
+
+            // (Opcional) Desactivar vínculo previo si existe
+            if ($oldKuratorId) {
+                $kpOld = KuratorPatient::where('kurator_id', $oldKuratorId)
+                    ->where('patient_id', $patientId)
+                    ->first();
+
+                if ($kpOld && (int)$kpOld->state !== 0) {
+                    $old = (int) $kpOld->state;
+                    $kpOld->update(['state' => 0]);
+
+                    $this->logChange([
+                        'logType'      => 'Cita',
+                        'table'        => 'kurator_patients',
+                        'primaryKey'   => $kpOld->id,
+                        'secondaryKey' => $patientId,
+                        'changeType'   => 'update',
+                        'fieldName'    => 'state',
+                        'oldValue'     => $old,
+                        'newValue'     => 0,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Paciente reasignado correctamente.'
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Error al reasignar paciente', [
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Ocurrió un error al reasignar el paciente.',
             ], 500);
         }
     }

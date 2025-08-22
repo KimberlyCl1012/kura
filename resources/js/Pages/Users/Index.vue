@@ -22,6 +22,7 @@ const submitted = ref(false);
 const isSaving = ref(false);
 const user = ref({});
 const userList = ref([...props.users]);
+const validationErrors = ref({});
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -31,6 +32,7 @@ function openNew() {
     user.value = {};
     submitted.value = false;
     isEditMode.value = false;
+    validationErrors.value = {};
     userDialog.value = true;
 }
 
@@ -38,12 +40,14 @@ function editUser(data) {
     user.value = { ...data };
     submitted.value = false;
     isEditMode.value = true;
+    validationErrors.value = {};
     userDialog.value = true;
 }
 
 function hideDialog() {
     userDialog.value = false;
     submitted.value = false;
+    validationErrors.value = {};
     user.value = {};
 }
 
@@ -94,12 +98,22 @@ function saveUser() {
                 }
             })
             .catch((error) => {
-                const msg = error.response?.data?.message || "Error al crear.";
-                toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
+                if (error.response?.status === 422 && error.response.data?.errors) {
+                    validationErrors.value = error.response.data.errors || {};
+                    const first = Object.values(validationErrors.value)[0]?.[0];
+                    toast.add({
+                        severity: "warn",
+                        summary: "Revisa los campos",
+                        detail: first || "Hay errores de validación.",
+                        life: 5000,
+                    });
+                } else {
+                    const msg = error.response?.data?.message || "Ocurrió un error.";
+                    toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
+                }
             })
             .finally(() => {
                 isSaving.value = false;
-                user.value = {};
             });
     }
 }
@@ -154,20 +168,31 @@ function exportCSV() {
             <div class="flex flex-col gap-6">
                 <div>
                     <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
-                    <InputText v-model="user.name" required :invalid="submitted && !user.name" class="w-full" />
+                    <InputText v-model="user.name" required
+                        :invalid="(submitted && !user.name) || !!validationErrors.name" class="w-full" />
                     <small v-if="submitted && !user.name" class="text-red-500">El nombre es requerido.</small>
+                    <small v-else-if="validationErrors.name" class="text-red-500">{{ validationErrors.name[0] }}</small>
+
                 </div>
                 <div>
                     <label class="block font-bold mb-2">Correo<span class="text-red-600">*</span></label>
-                    <InputText v-model="user.email" required :invalid="submitted && !user.email" class="w-full" />
+                    <InputText v-model="user.email" required
+                        :invalid="(submitted && !user.email) || !!validationErrors.email" class="w-full" />
                     <small v-if="submitted && !user.email" class="text-red-500">El correo es requerido.</small>
+                    <small v-else-if="validationErrors.email" class="text-red-500">{{ validationErrors.email[0]
+                    }}</small>
+
                 </div>
                 <div>
                     <label class="block font-bold mb-2">Contraseña <span class="text-red-600">*</span><span
                             v-if="isEditMode">(opcional)</span></label>
-                    <Password v-model="user.password" toggleMask :feedback="false" class="w-full" inputClass="w-full" />
-                    <small v-if="submitted && !isEditMode && !user.password" class="text-red-500">
+                    <Password v-model="user.password" toggleMask :feedback="false" class="w-full" inputClass="w-full"
+                        :invalid="!!validationErrors.password || (!isEditMode && submitted && !user.password)" />
+                    <small v-if="!isEditMode && submitted && !user.password" class="text-red-500">
                         La contraseña es requerida.
+                    </small>
+                    <small v-else-if="validationErrors.password" class="text-red-500">
+                        {{ validationErrors.password[0] }}
                     </small>
                 </div>
             </div>

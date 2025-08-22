@@ -351,6 +351,19 @@ class PatientController extends Controller
     public function destroy($id)
     {
         try {
+
+            $openAppointment = DB::table('appointments')
+                ->join('health_records', 'appointments.health_record_id', '=', 'health_records.id')
+                ->where('health_records.patient_id', $id)
+                ->whereIn('appointments.state', [1, 2])
+                ->exists();
+
+            if ($openAppointment) {
+                return response()->json([
+                    'message' => 'No se puede eliminar el paciente: existe una consulta en curso.'
+                ], 422);
+            }
+
             $patient = Patient::findOrFail($id);
             $userDetail = $patient->userDetail;
             $userId = $userDetail->user_id;

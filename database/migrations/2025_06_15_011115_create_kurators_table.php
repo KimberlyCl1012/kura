@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('user_uuid')->unique();
             $table->foreignId('user_detail_id')->constrained('user_details');
             $table->string('specialty');
+            $table->string('detail_specialty')->nullable();
             $table->string('type_kurator');
             $table->string('type_identification');
             $table->string('identification');

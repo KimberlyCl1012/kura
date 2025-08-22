@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('dateStartVisit')->nullable();
             $table->date('dateEndVisit')->nullable();
             $table->enum('typeVisit', ['Valoración', 'Urgencia', 'Seguimiento']);
-            $table->unsignedTinyInteger('state')->default(1);
+            $table->integer('state')->default(1);
             $table->timestamps();
         });
     }

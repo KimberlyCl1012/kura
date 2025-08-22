@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_denied_permissions', function (Blueprint $table) {
+        Schema::create('team_permissions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('permission');  // el permiso a denegar, ejemplo: 'health_record:edit-all'
+            $table->foreignId('team_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('permission_id')->constrained('permissions')->cascadeOnDelete();
             $table->timestamps();
-            $table->unique(['user_id', 'permission']); // evitar duplicados
         });
     }
 
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('user_denied_permissions');
+        Schema::dropIfExists('team_permissions');
     }
 };

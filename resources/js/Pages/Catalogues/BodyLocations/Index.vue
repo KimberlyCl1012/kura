@@ -184,9 +184,6 @@ function exportCSV() {
         <Column field="name" header="Nombre" style="min-width: 16rem">
           <template #body="{ data }">{{ data.name }}</template>
         </Column>
-        <Column field="description" header="Descripción" style="min-width: 20rem">
-          <template #body="{ data }">{{ data.description }}</template>
-        </Column>
         <Column :exportable="false" style="min-width: 12rem">
           <template #body="{ data }">
             <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editBodyLocation(data)" />

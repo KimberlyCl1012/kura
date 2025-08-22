@@ -45,4 +45,14 @@ class Team extends JetstreamTeam
             'personal_team' => 'boolean',
         ];
     }
+
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'team_permissions')->withTimestamps();
+    }
+
+    public function hasPermission(string $slug): bool
+    {
+        return $this->permissions()->where('slug', $slug)->exists();
+    }
 }

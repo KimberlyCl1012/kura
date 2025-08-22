@@ -155,17 +155,10 @@ function exportCSV() {
                 </template>
             </Toolbar>
 
-            <DataTable
-                ref="dt"
-                :value="woundsTypeList"
-                dataKey="id"
-                :paginator="true"
-                :rows="10"
-                :filters="filters"
+            <DataTable ref="dt" :value="woundsTypeList" dataKey="id" :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
-            >
+                currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0">Tipos de heridas</h4>
@@ -188,15 +181,11 @@ function exportCSV() {
                         {{ data.name }}
                     </template>
                 </Column>
-                <Column field="description" header="Descripción" style="min-width: 20rem">
-                    <template #body="{ data }">
-                        {{ data.description }}
-                    </template>
-                </Column>
                 <Column :exportable="false" style="min-width: 12rem">
                     <template #body="{ data }">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editWoundsType(data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWoundsType(data)" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger"
+                            @click="confirmDeleteWoundsType(data)" />
                     </template>
                 </Column>
             </DataTable>
@@ -208,7 +197,8 @@ function exportCSV() {
             <div class="flex flex-col gap-6">
                 <div>
                     <label class="block font-bold mb-2">Nombre<span class="text-red-600">*</span></label>
-                    <InputText v-model="woundsType.name" required :invalid="submitted && !woundsType.name" class="w-full" />
+                    <InputText v-model="woundsType.name" required :invalid="submitted && !woundsType.name"
+                        class="w-full" />
                     <small v-if="submitted && !woundsType.name" class="text-red-500">El nombre es requerido.</small>
                 </div>
                 <div>
@@ -218,7 +208,8 @@ function exportCSV() {
             </div>
             <template #footer>
                 <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :disabled="isSaving" :loading="isSaving" @click="saveWoundsTypes" />
+                <Button :label="isEditMode ? 'Actualizar' : 'Guardar'" icon="pi pi-check" :disabled="isSaving"
+                    :loading="isSaving" @click="saveWoundsTypes" />
             </template>
         </Dialog>
 

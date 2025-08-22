@@ -20,6 +20,8 @@ return new class extends Migration
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
             $table->foreignId('body_location_id')->constrained('list_body_locations');
             $table->foreignId('body_sublocation_id')->constrained('list_body_sublocations');
+              $table->string('type_bite')->nullable();
+            $table->string('other_type')->nullable();
             $table->string('grade_foot')->nullable();
             $table->string('valoracion')->nullable();
             $table->string('MESI')->nullable();
@@ -56,7 +58,7 @@ return new class extends Migration
             $table->decimal('necrosis_percent', 5, 2);
             $table->decimal('epithelialization_percent', 5, 2);
             $table->longText('note', 999)->nullable();
-            $table->unsignedTinyInteger('state')->default(1);
+            $table->boolean('state')->default(1);
             $table->timestamps();
         });
     }

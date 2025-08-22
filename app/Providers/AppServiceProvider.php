@@ -22,20 +22,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Inertia::share([]);
+
         Inertia::share([
             'userRole' => function () {
                 $user = Auth::user();
-                return $user ? $user->current_team_role_name ?? 'guest' : 'guest';
+                return $user ? ($user->current_team_role_name ?? 'guest') : 'guest';
             },
             'userPermissions' => function () {
                 $user = Auth::user();
-                return $user ? $user->current_team_role_permissions ?? [] : [];
-            },
-            'deniedPermissions' => function () {
-                $user = Auth::user();
-                if (!$user) return [];
-
-                return $user->deniedPermissions()->pluck('permission')->toArray(); // trae todos los denegados
+                return $user ? ($user->current_team_role_permissions ?? []) : [];
             },
         ]);
     }

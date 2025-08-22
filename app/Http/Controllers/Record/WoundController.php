@@ -16,6 +16,7 @@ use App\Models\State;
 use App\Models\Submethod;
 use App\Models\Treatment;
 use App\Models\Wound;
+use App\Models\WoundAssessment;
 use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
 use App\Models\WoundType;
@@ -153,6 +154,13 @@ class WoundController extends Controller
                 'id' => $patient->id,
                 'full_name' => $fullName,
             ],
+            'assessments' => WoundAssessment::where('state', 1)
+                ->select('type', 'name')
+                ->orderBy('type')->orderBy('name')
+                ->get()
+                ->groupBy('type')
+                ->map(fn($g) => $g->pluck('name'))
+                ->toArray(),
         ]);
     }
 
@@ -287,6 +295,13 @@ class WoundController extends Controller
 
             'treatmentSubmethods' => Submethod::where('state', 1)->get(),
             'treatment' => $treatment,
+            'assessments' => WoundAssessment::where('state', 1)
+                ->select('type', 'name')
+                ->orderBy('type')->orderBy('name')
+                ->get()
+                ->groupBy('type')
+                ->map(fn($g) => $g->pluck('name'))
+                ->toArray(),
         ]);
     }
 
@@ -304,7 +319,6 @@ class WoundController extends Controller
                 'woundBeginDate' => 'nullable|date',
                 'woundHealthDate' => 'nullable|date',
                 'grade_foot' => 'nullable',
-                'valoracion' => 'nullable|string|max:255',
                 'MESI' => 'nullable|string|max:255',
                 'woundBackground' => 'nullable|string|max:255',
                 'borde' => 'nullable|string|max:255',
@@ -327,7 +341,6 @@ class WoundController extends Controller
 
             if ($vascularRequired) {
                 $rules = array_merge($rules, [
-                    'valoracion' => 'required|string|max:255',
                     'ITB_derecho' => 'required|string|max:255',
                     'pulse_dorsal_derecho' => 'required|string|max:255',
                     'pulse_tibial_derecho' => 'required|string|max:255',
@@ -365,7 +378,6 @@ class WoundController extends Controller
                 'woundBeginDate',
                 'woundHealthDate',
                 'grade_foot',
-                'valoracion',
                 'MESI',
                 'woundBackground',
                 'borde',

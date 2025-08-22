@@ -233,7 +233,6 @@ function healthRecord(data) {
                 <Column field="name" header="Nombre" />
                 <Column field="email" header="Correo" />
                 <Column field="siteName" header="Sitio" />
-
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
                         <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined

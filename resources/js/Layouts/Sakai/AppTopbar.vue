@@ -5,9 +5,7 @@ import { useLayout } from "./composables/layout";
 import AppConfigurator from "./AppConfigurator.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
-import { usePermissions } from "../../Composables/usePermissions";
 
-const { can } = usePermissions();
 const page = usePage();
 const userRole = computed(() => page.props.userRole);
 const userPermissions = computed(() => page.props.userPermissions);
@@ -59,7 +57,7 @@ const logout = () => {
               </button>
             </template>
             <template #content>
-              <div style="width: 150px">
+              <div style="width: 195px">
                 <div class="block px-4 py-2 text-xs text-gray-400">Catálogos</div>
                 <DropdownLink :href="route('users.index')">
                   • Usuarios
@@ -73,20 +71,32 @@ const logout = () => {
                 <DropdownLink :href="route('body_locations.index')">
                   • Ubicaciones corporales
                 </DropdownLink>
+                <DropdownLink :href="route('body_sublocations.index')">
+                  • Ubicaciones corporales (Secundarias)
+                </DropdownLink>
                 <DropdownLink :href="route('wound_types.index')">
-                  • Tipo de heridas
+                  • Tipos de herida
                 </DropdownLink>
                 <DropdownLink :href="route('wound_subtypes.index')">
-                  • Subtipos de heridas
+                  • Subtipos de herida
+                </DropdownLink>
+                <DropdownLink :href="route('methods.index')">
+                  • Métodos del tratamiento
+                </DropdownLink>
+                <DropdownLink :href="route('submethods.index')">
+                  • Submetodos del tratamiento
+                </DropdownLink>
+                <DropdownLink :href="route('wound_assessment.index')">
+                  • Evaluaciones de la herida
                 </DropdownLink>
                 <DropdownLink :href="route('wound_phases.index')">
-                  • Fase de heridas
+                  • Fases de la herida
                 </DropdownLink>
               </div>
             </template>
           </Dropdown>
         </li>
-        <li class="border-surface lg:border-t-0 list-none" v-if="userRole == 'owner'">
+        <li class="border-surface lg:border-t-0 list-none">
           <Dropdown align="right" width="64">
             <template #trigger>
               <button type="button" class="layout-topbar-action mt-2">

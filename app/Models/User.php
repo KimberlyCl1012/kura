@@ -68,32 +68,26 @@ class User extends Authenticatable
         ];
     }
 
-    public function deniedPermissions()
-    {
-        return $this->hasMany(UserDeniedPermission::class);
-    }
-
-    public function hasExplicitlyDenied(string $permission): bool
-    {
-        return $this->deniedPermissions()->where('permission', $permission)->exists();
-    }
-
-    public function currentTeamRolePermissions()
+    public function getCurrentTeamRoleNameAttribute(): ?string
     {
         $team = $this->currentTeam;
+        if (!$team) {
+            return null;
+        }
 
+        $role = $this->teamRole($team);
+        return $role?->name;
+    }
+
+    public function getCurrentTeamRolePermissionsAttribute(): array
+    {
+        $team = $this->currentTeam;
         if (!$team) {
             return [];
         }
 
-        $role = $this->roles()
-            ->wherePivot('team_id', $team->id)
-            ->first();
-
-        if (!$role) {
-            return [];
-        }
-
-        return $role->permissions->pluck('name')->toArray();
+        $byRole = collect($this->teamPermissions($team));
+        $enabledInTeam = $team->permissions()->pluck('slug');
+        return $byRole->intersect($enabledInTeam)->values()->all();
     }
 }
