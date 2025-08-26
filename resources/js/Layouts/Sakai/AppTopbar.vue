@@ -9,7 +9,6 @@ import DropdownLink from "@/Components/DropdownLink.vue";
 const page = usePage();
 const userRole = computed(() => page.props.userRole);
 const userPermissions = computed(() => page.props.userPermissions);
-// const canEditWound = computed(() => userPermissions.value.includes('wound:edit'));
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
 
@@ -28,6 +27,8 @@ const switchToTeam = (team) => {
 const logout = () => {
   router.post(route("logout"));
 };
+
+console.log(userRole.value, userPermissions.value)
 
 </script>
 
@@ -91,10 +92,6 @@ const logout = () => {
                 </DropdownLink>
                 <DropdownLink :href="route('wound_phases.index')">
                   • Fases de la herida
-                </DropdownLink>
-
-                <DropdownLink :href="route('members.index')">
-                  • Team
                 </DropdownLink>
               </div>
             </template>

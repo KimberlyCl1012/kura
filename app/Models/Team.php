@@ -48,11 +48,22 @@ class Team extends JetstreamTeam
 
     public function permissions()
     {
-        return $this->belongsToMany(Permission::class, 'team_permissions')->withTimestamps();
+        return $this->belongsToMany(Permission::class, 'team_permissions')
+            ->withTimestamps();
     }
 
-    public function hasPermission(string $slug): bool
+    public function enabledPermissionSlugs()
+    {
+        return $this->permissions()->pluck('slug')->all();
+    }
+
+    public function hasPermissionSlug($slug)
     {
         return $this->permissions()->where('slug', $slug)->exists();
+    }
+
+    public function userHasPermission($user, $permission)
+    {
+        return $this->hasUser($user) && $this->hasPermissionSlug($permission);
     }
 }

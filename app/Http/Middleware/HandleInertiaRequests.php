@@ -40,17 +40,37 @@ class HandleInertiaRequests extends Middleware
         $base = (array) parent::share($request);
 
         $user = $request->user();
+        $team = $user?->currentTeam;
 
-        $roleName = $user?->current_team_role_name ?? 'guest';
-        $perms    = $user?->current_team_role_permissions ?? [];
+        $pivotRole = null;
+        if ($user && $team) {
+            $pivot = $team->users()->where('user_id', $user->id)->first();
+            $pivotRole = $pivot?->pivot?->role; 
+        }
 
-        $team     = $user?->currentTeam;
-        $roleKey  = $team ? optional($user->teamRole($team))->key : 'guest';
+        $roleKey  = $pivotRole ?: ($team?->name ?: 'guest');
+
+        $roleName = $team?->description
+            ?: ($roleKey ? ucwords(str_replace(['-', '_'], ' ', $roleKey)) : 'Guest');
+
+        $permissions = $team ? $team->permissions()->pluck('slug')->values()->all() : [];
 
         return array_merge($base, [
-            'userRole'        => fn() => $roleKey,
-            'userRoleName'    => fn() => $roleName,
-            'userPermissions' => fn() => (array) $perms
+            'userRole'        => $roleKey,
+            'userRoleName'    => $roleName,
+            'userPermissions' => $permissions,
+
+            'auth' => [
+                'user' => $user ? [
+                    'id'               => $user->id,
+                    'name'             => $user->name,
+                    'email'            => $user->email,
+                    'current_team_id'  => $user->current_team_id,
+                    'current_team'     => $team?->only(['id', 'name', 'description']),
+                    'all_teams'        => $user->allTeams()->map->only(['id', 'name', 'description'])->values()->all(),
+                    'profile_photo_url' => $user->profile_photo_url ?? null,
+                ] : null,
+            ],
         ]);
     }
 }

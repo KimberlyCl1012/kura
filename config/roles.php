@@ -33,10 +33,6 @@ return [
             'show_patient',
             'show_medical_record',
             'show_photographic_evidence',
-            'show_clinical_staff',
-            'show_notes',
-            'edit_notes',
-            'delete_photographic_evidence',
         ],
     ],
     'resp_sitio' => [

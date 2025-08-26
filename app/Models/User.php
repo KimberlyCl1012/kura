@@ -71,23 +71,32 @@ class User extends Authenticatable
     public function getCurrentTeamRoleNameAttribute(): ?string
     {
         $team = $this->currentTeam;
-        if (!$team) {
-            return null;
-        }
+        if (!$team) return null;
 
-        $role = $this->teamRole($team);
-        return $role?->name;
+        $pivotRole = $team->users()->where('user_id', $this->id)->first()?->pivot?->role;
+
+        return $team->description ?: $pivotRole ?: null;
+    }
+
+    public function getCurrentTeamRoleKeyAttribute(): ?string
+    {
+        $team = $this->currentTeam;
+        if (!$team) return null;
+
+        return $team->users()->where('user_id', $this->id)->first()?->pivot?->role; 
     }
 
     public function getCurrentTeamRolePermissionsAttribute(): array
     {
         $team = $this->currentTeam;
-        if (!$team) {
-            return [];
-        }
+        if (!$team) return [];
 
-        $byRole = collect($this->teamPermissions($team));
-        $enabledInTeam = $team->permissions()->pluck('slug');
-        return $byRole->intersect($enabledInTeam)->values()->all();
+        return $team->permissions()->pluck('slug')->values()->all();
+    }
+
+    public function hasCurrentTeamPermission(string $slug): bool
+    {
+        $team = $this->currentTeam;
+        return $team ? $team->userHasPermission($this, $slug) : false;
     }
 }

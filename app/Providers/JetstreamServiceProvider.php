@@ -28,8 +28,6 @@ class JetstreamServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->configurePermissions();
-
         Jetstream::createTeamsUsing(CreateTeam::class);
         Jetstream::updateTeamNamesUsing(UpdateTeamName::class);
         Jetstream::addTeamMembersUsing(AddTeamMember::class);
@@ -37,20 +35,5 @@ class JetstreamServiceProvider extends ServiceProvider
         Jetstream::removeTeamMembersUsing(RemoveTeamMember::class);
         Jetstream::deleteTeamsUsing(DeleteTeam::class);
         Jetstream::deleteUsersUsing(DeleteUser::class);
-    }
-
-    protected function configurePermissions(): void
-    {
-        Jetstream::defaultApiTokenPermissions(['read']);
-
-        $roles = (array) config('roles', []);
-
-        foreach ($roles as $key => $cfg) {
-            Jetstream::role(
-                $key,
-                $cfg['name'] ?? $key,
-                (array) ($cfg['permissions'] ?? [])
-            )->description($cfg['description'] ?? null);
-        }
     }
 }

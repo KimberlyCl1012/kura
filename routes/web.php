@@ -47,15 +47,6 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-  Route::get('/teams/{team}/members', [TeamController::class, 'index'])
-        ->name('members.index');
-    Route::post('/teams/{team}/members', [TeamController::class, 'store'])
-        ->name('members.store');
-    Route::patch('/teams/{team}/members/{user}', [TeamController::class, 'updateRole'])
-        ->name('members.updateRole');
-    Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'destroy'])
-        ->name('members.destroy');
-
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::get('/teams/{team}/permissions', [PermissionController::class, 'show'])
