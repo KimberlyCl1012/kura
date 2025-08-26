@@ -44,8 +44,10 @@ watch(() => form.health_institution_id, (val) => {
 });
 
 const editorRestrictDeletion = computed(() => {
-    return props.permissions?.can_full_edit !== true; 
+    return props.permissions?.can_full_edit !== true;
 });
+
+const deletionWarningShown = ref(false);
 
 function handleEditorInput(fieldName, newValue) {
     const oldValue = form[fieldName];
@@ -53,15 +55,19 @@ function handleEditorInput(fieldName, newValue) {
     if (editorRestrictDeletion.value) {
         const cleanOld = normalizeText(stripHtml(oldValue));
         const cleanNew = normalizeText(stripHtml(newValue));
-        const isAppendOnly = cleanOld === '' || (cleanNew !== '' && cleanNew.startsWith(cleanOld));
+        const isAppendOnly =
+            cleanOld === '' || (cleanNew !== '' && cleanNew.startsWith(cleanOld));
 
         if (!isAppendOnly) {
-            toast.add({
-                severity: 'warn',
-                summary: 'Edición limitada',
-                detail: 'Solo puedes agregar al final; no puedes reemplazar contenido existente.',
-                life: 3000,
-            });
+            if (!deletionWarningShown.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Edición limitada',
+                    detail: 'No puedes eliminar información existente.',
+                    life: 3000,
+                });
+                deletionWarningShown.value = true;
+            }
             form[fieldName] = oldValue;
             return;
         }
@@ -69,7 +75,6 @@ function handleEditorInput(fieldName, newValue) {
 
     form[fieldName] = '' + newValue;
 }
-
 
 function stripHtml(html) {
     const div = document.createElement("div");

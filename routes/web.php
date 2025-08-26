@@ -49,7 +49,7 @@ Route::middleware([
 
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
-   Route::get('/teams/{team}/permissions', [PermissionController::class, 'show'])
+    Route::get('/teams/{team}/permissions', [PermissionController::class, 'show'])
         ->name('permissions.show');
 
     // Sincroniza permisos del team seleccionado
