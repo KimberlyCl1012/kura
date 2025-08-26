@@ -16,6 +16,7 @@ import Checkbox from "primevue/checkbox";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { Select } from "primevue";
+import Tooltip from 'primevue/tooltip';
 
 const props = defineProps({
   teams: Array,
@@ -91,6 +92,18 @@ function exportCSV() {
 onMounted(() => {
   if (selectedTeamId.value) onChangeTeam();
 });
+
+function selectAll() {
+  if (!canEditLocal.value) return;
+  rows.value = rows.value.map(r => ({ ...r, enabled_in_team: true }));
+  currentEnabled.value = new Set(rows.value.map(r => r.id));
+}
+
+function deselectAll() {
+  if (!canEditLocal.value) return;
+  rows.value = rows.value.map(r => ({ ...r, enabled_in_team: false }));
+  currentEnabled.value.clear();
+}
 </script>
 
 <template>
@@ -104,8 +117,14 @@ onMounted(() => {
             <h4 class="m-0">Rol:</h4>
             <Select v-model="selectedTeamId" :options="teams" optionLabel="description" optionValue="id"
               placeholder="Selecciona un equipo" class="min-w-64" @change="onChangeTeam" />
-            <Button label="Actualizar" icon="pi pi-check" :disabled="!isDirty || !canEditLocal"
+            <Button text label="Actualizar" icon="pi pi-check" :disabled="!isDirty || !canEditLocal"
               :severity="isDirty ? 'success' : 'secondary'" @click="save" />
+            <Button t v-tooltip.top="'Seleccionar todos'" icon="pi pi-check-square" severity="success"
+              :disabled="!canEditLocal" @click="selectAll" text
+              class="p-button p-component p-button-icon-only p-button-secondary p-button-rounded" />
+            <Button t v-tooltip.top="'Ninguno'" icon="pi pi-times" severity="danger" :disabled="!canEditLocal"
+              @click="deselectAll" text
+              class="p-button p-component p-button-icon-only p-button-danger p-button-rounded" />
           </div>
         </template>
         <template #end>
@@ -114,6 +133,7 @@ onMounted(() => {
           </div>
         </template>
       </Toolbar>
+
 
       <DataTable ref="dt" :key="selectedTeamId" :value="rows" dataKey="id" :paginator="false" :rows="20"
         :filters="filters"

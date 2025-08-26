@@ -28,6 +28,7 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Laravel\Jetstream\Http\Controllers\Inertia\TeamMemberController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -46,6 +47,10 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    // Team
+    Route::post('/team-members', [TeamMemberController::class, 'store'])
+        ->name('team-members.store');
 
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');

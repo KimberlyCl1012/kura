@@ -68,6 +68,13 @@ class User extends Authenticatable
         ];
     }
 
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
     public function getCurrentTeamRoleNameAttribute(): ?string
     {
         $team = $this->currentTeam;
@@ -83,7 +90,7 @@ class User extends Authenticatable
         $team = $this->currentTeam;
         if (!$team) return null;
 
-        return $team->users()->where('user_id', $this->id)->first()?->pivot?->role; 
+        return $team->users()->where('user_id', $this->id)->first()?->pivot?->role;
     }
 
     public function getCurrentTeamRolePermissionsAttribute(): array

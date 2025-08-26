@@ -200,7 +200,7 @@ class UserSeeder extends Seeder
         $userOne->switchTeam($teamAdmin); // Cambiar al equipo adecuado
         $userOne->currentTeam->users()->attach($userOne->id, ['role' => 'admin']); // Asignar el rol
 
-         // Asociar el equipo al usuario
+        // Asociar el equipo al usuario
         $userTwo->currentTeam()->associate($teamKura);
         $userTwo->save();
 

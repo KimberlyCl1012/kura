@@ -46,6 +46,13 @@ class Team extends JetstreamTeam
         ];
     }
 
+    public function users()
+    {
+        return $this->belongsToMany(User::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
     public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'team_permissions')
