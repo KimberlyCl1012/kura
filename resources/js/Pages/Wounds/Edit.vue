@@ -1147,7 +1147,7 @@ const finishConsultation = async () => {
                       optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción" />
                     <small v-if="errors.MESI" class="text-red-500">{{
                       errors.MESI
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1157,7 +1157,7 @@ const finishConsultation = async () => {
                     <InputText id="ITB_izquierdo" v-model="formWound.ITB_izquierdo" class="w-full min-w-0" />
                     <small v-if="errors.ITB_izquierdo" class="text-red-500">{{
                       errors.ITB_izquierdo
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1167,7 +1167,7 @@ const finishConsultation = async () => {
                     <InputText id="ITB_derecho" v-model="formWound.ITB_derecho" class="w-full min-w-0" />
                     <small v-if="errors.ITB_derecho" class="text-red-500">{{
                       errors.ITB_derecho
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1179,7 +1179,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_dorsal_izquierdo" class="text-red-500">{{
                       errors.pulse_dorsal_izquierdo
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1191,7 +1191,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_popliteo_izquierdo" class="text-red-500">{{
                       errors.pulse_popliteo_izquierdo
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1203,7 +1203,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_tibial_izquierdo" class="text-red-500">{{
                       errors.pulse_tibial_izquierdo
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1215,7 +1215,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_dorsal_derecho" class="text-red-500">{{
                       errors.pulse_dorsal_derecho
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1226,7 +1226,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_popliteo_derecho" class="text-red-500">{{
                       errors.pulse_popliteo_derecho
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1238,7 +1238,7 @@ const finishConsultation = async () => {
                       class="w-full min-w-0" />
                     <small v-if="errors.pulse_tibial_derecho" class="text-red-500">{{
                       errors.pulse_tibial_derecho
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1248,7 +1248,7 @@ const finishConsultation = async () => {
                     <InputText id="monofilamento" v-model="formWound.monofilamento" class="w-full min-w-0" />
                     <small v-if="errors.monofilamento" class="text-red-500">{{
                       errors.monofilamento
-                      }}</small>
+                    }}</small>
                   </div>
 
                   <div>
@@ -1259,7 +1259,7 @@ const finishConsultation = async () => {
                     <InputText id="blood_glucose" v-model="formWound.blood_glucose" class="w-full min-w-0" />
                     <small v-if="errors.blood_glucose" class="text-red-500">{{
                       errors.blood_glucose
-                      }}</small>
+                    }}</small>
                   </div>
                 </template>
 
@@ -1278,7 +1278,7 @@ const finishConsultation = async () => {
                     placeholder="mm/dd/yyyy" showIcon />
                   <small v-if="errors.woundHealthDate" class="text-red-500">{{
                     errors.woundHealthDate
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1290,7 +1290,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.edema" class="text-red-500">{{
                     errors.edema
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1302,7 +1302,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.dolor" class="text-red-500">{{
                     errors.dolor
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1314,7 +1314,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.tipo_dolor" class="text-red-500">{{
                     errors.tipo_dolor
-                    }}</small>
+                  }}</small>
                 </div>
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
@@ -1325,7 +1325,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.duracion_dolor" class="text-red-500">{{
                     errors.duracion_dolor
-                    }}</small>
+                  }}</small>
                 </div>
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
@@ -1337,7 +1337,7 @@ const finishConsultation = async () => {
                   }" placeholder="Ej: 3/10" @input="onVisualScaleInput" />
                   <small v-if="errors.visual_scale" class="text-red-500">{{
                     errors.visual_scale
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1349,7 +1349,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.exudado_tipo" class="text-red-500">{{
                     errors.exudado_tipo
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1361,7 +1361,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.exudado_cantidad" class="text-red-500">{{
                     errors.exudado_cantidad
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1372,7 +1372,7 @@ const finishConsultation = async () => {
                     optionValue="value" class="w-full min-w-0" filter placeholder="Selecciona una o más opciones" />
                   <small v-if="errors.infeccion" class="text-red-500">{{
                     errors.infeccion
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1394,7 +1394,7 @@ const finishConsultation = async () => {
                   </Select>
                   <small v-if="errors.borde" class="text-red-500">{{
                     errors.borde
-                    }}</small>
+                  }}</small>
                 </div>
 
                 <div>
@@ -1406,7 +1406,7 @@ const finishConsultation = async () => {
                     placeholder="Selecciona una o más opciones" />
                   <small v-if="errors.piel_perilesional" class="text-red-500">{{
                     errors.piel_perilesional
-                    }}</small>
+                  }}</small>
                 </div>
               </div>
 
@@ -1435,7 +1435,7 @@ const finishConsultation = async () => {
                   placeholder="mm/dd/yyyy" showIcon />
                 <small v-if="errors.measurementDate" class="text-red-500">{{
                   errors.measurementDate
-                  }}</small>
+                }}</small>
               </div>
 
               <div>
@@ -1444,7 +1444,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.length" class="w-full min-w-0" />
                 <small v-if="errors.length" class="text-red-500">{{
                   errors.length
-                  }}</small>
+                }}</small>
               </div>
               <div>
                 <label class="flex items-center gap-1 mb-1 font-medium">Anchura (cm)<span
@@ -1452,7 +1452,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.width" class="w-full min-w-0" />
                 <small v-if="errors.width" class="text-red-500">{{
                   errors.width
-                  }}</small>
+                }}</small>
               </div>
               <div>
                 <label class="flex items-center gap-1 mb-1 font-medium">Área (cm²)</label>
@@ -1463,7 +1463,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.depth" class="w-full min-w-0" />
                 <small v-if="errors.depth" class="text-red-500">{{
                   errors.depth
-                  }}</small>
+                }}</small>
               </div>
               <!-- Mostrar campo volumen solo si profundidad tiene valor numérico válido -->
               <div v-if="parseFloat(formWound.depth)">
@@ -1476,7 +1476,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.tunneling" class="w-full min-w-0" />
                 <small v-if="errors.tunneling" class="text-red-500">{{
                   errors.tunneling
-                  }}</small>
+                }}</small>
               </div>
               <div>
                 <label class="flex items-center gap-1 mb-1 font-medium">Socavamiento<span
@@ -1484,7 +1484,7 @@ const finishConsultation = async () => {
                 <InputText v-model="formWound.undermining" class="w-full min-w-0" />
                 <small v-if="errors.undermining" class="text-red-500">{{
                   errors.undermining
-                  }}</small>
+                }}</small>
               </div>
 
               <!-- Granulación -->
@@ -1517,7 +1517,7 @@ const finishConsultation = async () => {
                 <InputText id="epithelialization" v-model="formWound.epithelialization_percent" type="number" min="0"
                   max="100" step="1" @input="adjustProgress" class="w-full" />
                 <small v-if="errors.epithelialization_percent" class="text-red-500">{{ errors.epithelialization_percent
-                  }}</small>
+                }}</small>
               </div>
             </div>
 

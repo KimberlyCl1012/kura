@@ -4,55 +4,78 @@ namespace App\Http\Controllers\Permission;
 
 use App\Actions\Jetstream\AddTeamMember;
 use App\Http\Controllers\Controller;
+use App\Models\Team;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Laravel\Jetstream\Contracts\RemovesTeamMembers;
 use Laravel\Jetstream\Jetstream;
+use Illuminate\Validation\Rule;
+use App\Actions\Jetstream\UpdateTeamMemberRole;
+use App\Actions\Jetstream\RemoveTeamMember;
 
 class TeamController extends Controller
 {
-    public function store(Request $request, $teamId)
+    public function index(Request $request, Team $team)
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
-            'role'  => ['required', 'string'],
+        $this->authorize('view', $team);
+
+        $members = $team->allUsers()->map(function ($u) use ($team) {
+            $role = $u->teamRole($team);
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role' => $role?->key,
+                'role_name' => $role?->name,
+            ];
+        });
+
+        $roles = collect(Jetstream::$roles)->values()->map(fn($r) => [
+            'key' => $r->key,
+            'name' => $r->name,
+            'permissions' => $r->permissions
         ]);
 
-        $team = Jetstream::newTeamModel()->findOrFail($teamId);
-
-        app(AddTeamMember::class)->add(
-            $request->user(),  // quien agrega (debe tener permiso)
-            $team,
-            $validated['email'],
-            $validated['role'] // <-- rol directo
-        );
-
-        return back(303);
+        return inertia('Permissions/Team', [
+            'team' => $team,
+            'members' => $members,
+            'roles' => $roles,
+        ]);
     }
 
-    public function update(Request $request, $teamId, $userId)
+    public function store(Request $request, Team $team, AddTeamMember $adder)
     {
-        // (opcional) si quieres cambiar el rol de un miembro
-        app(\Laravel\Jetstream\Actions\UpdateTeamMemberRole::class)->update(
-            $request->user(),
-            Jetstream::newTeamModel()->findOrFail($teamId),
-            $userId,
-            $request->validate(['role' => ['required', 'string']])['role']
-        );
+        $this->authorize('addTeamMember', $team);
 
-        return back(303);
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'role'  => ['nullable', Rule::in(array_keys(config('roles', [])))],
+        ]);
+
+        // Importante: AddTeamMember solo admite usuarios existentes.
+        // Si no existe, devuelve error de validación.
+        $adder->add($request->user(), $team, $data['email'], $data['role'] ?? null);
+
+        return back()->with('flash.banner', 'Usuario agregado al equipo.');
     }
 
-    public function destroy(Request $request, $teamId, $userId)
+    public function updateRole(Request $request, Team $team, User $user, UpdateTeamMemberRole $upd)
     {
-        $team = Jetstream::newTeamModel()->findOrFail($teamId);
+        $this->authorize('updateTeamMember', $team);
 
-        app(RemovesTeamMembers::class)->remove(
-            $request->user(),
-            $team,
-            Jetstream::findUserByIdOrFail($userId)
-        );
+        $data = $request->validate([
+            'role' => ['required', Rule::in(array_keys(config('roles', [])))],
+        ]);
 
-        return back(303);
+        $upd->update($request->user(), $team, $user->id, $data['role']);
+
+        return back()->with('flash.banner', 'Rol actualizado.');
+    }
+
+    public function destroy(Request $request, Team $team, User $user, RemoveTeamMember $rm)
+    {
+        $this->authorize('removeTeamMember', $team);
+        $rm->remove($request->user(), $team, $user);
+        return back()->with('flash.banner', 'Miembro eliminado.');
     }
 }

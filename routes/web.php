@@ -13,6 +13,7 @@ use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Permission\PermissionController;
+use App\Http\Controllers\Permission\TeamController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
@@ -46,6 +47,14 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+  Route::get('/teams/{team}/members', [TeamController::class, 'index'])
+        ->name('members.index');
+    Route::post('/teams/{team}/members', [TeamController::class, 'store'])
+        ->name('members.store');
+    Route::patch('/teams/{team}/members/{user}', [TeamController::class, 'updateRole'])
+        ->name('members.updateRole');
+    Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'destroy'])
+        ->name('members.destroy');
 
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');

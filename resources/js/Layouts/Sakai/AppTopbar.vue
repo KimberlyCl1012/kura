@@ -92,6 +92,10 @@ const logout = () => {
                 <DropdownLink :href="route('wound_phases.index')">
                   • Fases de la herida
                 </DropdownLink>
+
+                <DropdownLink :href="route('members.index')">
+                  • Team
+                </DropdownLink>
               </div>
             </template>
           </Dropdown>
