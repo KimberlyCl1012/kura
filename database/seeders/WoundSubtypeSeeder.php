@@ -56,13 +56,6 @@ class WoundSubtypeSeeder extends Seeder
         ]);
 
         WoundSubtype::create([
-            'wound_type_id'  => 1,
-            'name'   =>  'Otro',
-            'description'   => '',
-            'state'   => 1
-        ]);
-
-        WoundSubtype::create([
             'wound_type_id'  => 2,
             'name'   =>  'Laceración',
             'description'   => '',
@@ -182,13 +175,6 @@ class WoundSubtypeSeeder extends Seeder
         ]);
 
         WoundSubtype::create([
-            'wound_type_id'  => 4,
-            'name'   =>  'Otro',
-            'description'   => '',
-            'state'   => 1
-        ]);
-
-        WoundSubtype::create([
             'wound_type_id'  => 5,
             'name'   =>  'Térmica',
             'description'   => '',
@@ -233,13 +219,6 @@ class WoundSubtypeSeeder extends Seeder
         WoundSubtype::create([
             'wound_type_id'  => 5,
             'name'   =>  'Frio',
-            'description'   => '',
-            'state'   => 1
-        ]);
-
-        WoundSubtype::create([
-            'wound_type_id'  => 5,
-            'name'   =>  'Otro',
             'description'   => '',
             'state'   => 1
         ]);
@@ -324,13 +303,6 @@ class WoundSubtypeSeeder extends Seeder
         WoundSubtype::create([
             'wound_type_id'  => 7,
             'name'   =>  'Psoriasis',
-            'description'   => '',
-            'state'   => 1
-        ]);
-
-        WoundSubtype::create([
-            'wound_type_id'  => 7,
-            'name'   =>  'Otro',
             'description'   => '',
             'state'   => 1
         ]);

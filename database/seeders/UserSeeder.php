@@ -102,6 +102,7 @@ class UserSeeder extends Seeder
             'type_kurator' => 'Médico',
             'type_identification' => 'INE',
             'identification' => '54875454',
+            'created_by' => 2,
             'state' => 1
         ]);
 
@@ -113,6 +114,7 @@ class UserSeeder extends Seeder
             'type_kurator' => 'Médico',
             'type_identification' => 'INE',
             'identification' => '54875454',
+            'created_by' => 3,
             'state' => 1
         ]);
 
@@ -124,6 +126,7 @@ class UserSeeder extends Seeder
             'type_kurator' => 'Médico',
             'type_identification' => 'INE',
             'identification' => '54875454',
+            'created_by' => 4,
             'state' => 1
         ]);
 
@@ -142,6 +145,7 @@ class UserSeeder extends Seeder
             'kinship' => null,
             'relativeMobile' => null,
             'consent' => 1,
+            'created_by' => 2,
             'state' => 1,
         ]);
 
@@ -177,19 +181,14 @@ class UserSeeder extends Seeder
 
         foreach ($roles as $roleKey => $cfg) {
             $team = Team::where('name', $roleKey)->first();
-
             if (! $team) {
                 continue;
             }
 
-            $permissions = Permission::whereIn('slug', $cfg['permissions'] ?? [])->get();
+            $slugs = $cfg['permissions'] ?? [];
+            $permissionIds = Permission::whereIn('slug', $slugs)->pluck('id')->all();
 
-            foreach ($permissions as $perm) {
-                DB::table('team_permissions')->insertOrIgnore([
-                    'team_id'       => $team->id,
-                    'permission_id' => $perm->id,
-                ]);
-            }
+            $this->syncTeamPermissions($team, $permissionIds);
         }
 
         // Asociar el equipo al usuario
@@ -200,13 +199,44 @@ class UserSeeder extends Seeder
         $userOne->switchTeam($teamAdmin); // Cambiar al equipo adecuado
         $userOne->currentTeam->users()->attach($userOne->id, ['role' => 'admin']); // Asignar el rol
 
-        // Asociar el equipo al usuario
         $userTwo->currentTeam()->associate($teamKura);
         $userTwo->save();
 
-        // Asignar el rol al usuario en su equipo
-        $userTwo->switchTeam($teamKura); // Cambiar al equipo adecuado
-        $userTwo->currentTeam->users()->attach($userTwo->id, ['role' => 'admin_kura']); // Asignar el rol
+        $userTwo->switchTeam($teamKura);
+        $userTwo->currentTeam->users()->attach($userTwo->id, ['role' => 'admin_kura']);
 
+        $userThree->currentTeam()->associate($teamOperativo);
+        $userThree->save();
+
+        $userThree->switchTeam($teamOperativo);
+        $userThree->currentTeam->users()->attach($userThree->id, ['role' => 'perfil_operativo']);
+
+        $userFour->currentTeam()->associate($teamRespSitio);
+        $userFour->save();
+
+        $userFour->switchTeam($teamRespSitio);
+        $userFour->currentTeam->users()->attach($userFour->id, ['role' => 'resp_sitio']);
+    }
+
+    protected function syncTeamPermissions(\App\Models\Team $team, array $permissionIds): void
+    {
+        if (method_exists($team, 'permissions')) {
+            $team->permissions()->sync($permissionIds);
+            return;
+        }
+
+        DB::table('team_permissions')->where('team_id', $team->id)->delete();
+
+        if (!empty($permissionIds)) {
+            $now = now();
+            $rows = array_map(fn($pid) => [
+                'team_id'       => $team->id,
+                'permission_id' => $pid,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ], $permissionIds);
+
+            DB::table('team_permissions')->insert($rows);
+        }
     }
 }

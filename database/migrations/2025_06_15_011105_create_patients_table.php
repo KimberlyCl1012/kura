@@ -29,6 +29,7 @@ return new class extends Migration
             $table->string('relativeMobile')->nullable();
             $table->boolean('consent')->default(0);
             $table->boolean('state')->default(1);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();  
             $table->timestamps();
         });
     }

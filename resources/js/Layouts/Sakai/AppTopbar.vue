@@ -9,6 +9,8 @@ import DropdownLink from "@/Components/DropdownLink.vue";
 const page = usePage();
 const userRole = computed(() => page.props.userRole);
 const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
 
@@ -27,8 +29,6 @@ const switchToTeam = (team) => {
 const logout = () => {
   router.post(route("logout"));
 };
-
-console.log(userRole.value, userPermissions.value)
 
 </script>
 
@@ -97,7 +97,7 @@ console.log(userRole.value, userPermissions.value)
             </template>
           </Dropdown>
         </li>
-        <li class="border-surface lg:border-t-0 list-none">
+        <li class="border-surface lg:border-t-0 list-none" v-if="userRole == 'admin'">
           <Dropdown align="right" width="64">
             <template #trigger>
               <button type="button" class="layout-topbar-action mt-2">
@@ -112,9 +112,7 @@ console.log(userRole.value, userPermissions.value)
                 </DropdownLink>
                 <!-- <DropdownLink :href="route('teams.create')"> • Crear Rol </DropdownLink> -->
                 <DropdownLink :href="route('permissions.index')"> • Permisos </DropdownLink>
-
                 <div class="border-t border-gray-200" v-if="$page.props.auth.user.all_teams.length > 1" />
-
                 <div class="block px-4 py-2 text-xs text-gray-400">Cambiar rol</div>
                 <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
                   <form @submit.prevent="switchToTeam(team)">

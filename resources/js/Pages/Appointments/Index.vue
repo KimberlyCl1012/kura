@@ -1,10 +1,10 @@
 <script setup>
 import AppLayout from "@/Layouts/sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import {
   InputText, Toolbar, DataTable, Column,
   Dialog, Button, IconField, InputIcon,
@@ -18,6 +18,12 @@ const props = defineProps({
   appointments: Array,
   finalizedWounds: Array,
 });
+
+const page = usePage();
+const userRole = computed(() => page.props.userRole);
+const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const dt = ref();
 const toast = useToast();
@@ -235,7 +241,7 @@ async function submitReassign() {
     <div class="card">
       <Toolbar class="mb-6">
         <template #start>
-          <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNew" />
+          <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNew" v-if="userRole === 'admin' || (userPermissions.includes('create_appointment'))" />
         </template>
         <template #end>
           <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="dt.exportCSV()" />
@@ -266,9 +272,9 @@ async function submitReassign() {
         <Column field="appointment_status" header="Estatus" />
         <Column :exportable="false" header="Acciones" style="min-width: 8rem">
           <template #body="{ data }">
-            <Button class="mr-2" icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+            <Button class="mr-2" icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'" v-if="userRole === 'admin' || (userPermissions.includes('delete_appointment'))"
               @click="confirmDelete(data)" />
-            <Button v-if="data.state === 1" icon="pi pi-users" outlined rounded severity="info"
+            <Button  v-if="data.state === 1 && (userRole === 'admin' || userPermissions.includes('reassign_patient'))" icon="pi pi-users" outlined rounded severity="info"
               v-tooltip.top="'Reasignar paciente'" @click="openReassign(data)" />
           </template>
         </Column>

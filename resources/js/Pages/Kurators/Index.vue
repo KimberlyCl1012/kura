@@ -14,12 +14,18 @@ import {
     Select
 } from "primevue";
 import axios from "axios";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
     kurators: Array,
     sites: Array,
 });
+
+const page = usePage();
+const userRole = computed(() => page.props.userRole);
+const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const toast = useToast();
 const dt = ref(null);
@@ -255,7 +261,8 @@ function goToAppointments(kurator) {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew" />
+                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew"
+                        v-if="userRole === 'admin' || (userPermissions.includes('create_clinical_staff'))" />
                 </template>
                 <template #end>
                     <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="dt?.exportCSV()" />
@@ -273,19 +280,22 @@ function goToAppointments(kurator) {
                 </template>
 
                 <Column header="#" style="min-width: 6rem">
-                    <template #body="{ index }">{{ index }}</template>
+                    <template #body="{ index }">{{ index + 1 }}</template>
                 </Column>
                 <Column field="kurator_full_name" header="Nombre" />
                 <Column field="contactEmail" header="Correo contacto" />
-                <Column field="specialty" header="Especialidad" />
+                <Column field="type_kurator" header="Especialidad" />
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
                         <Button icon="pi pi-calendar-clock" severity="info" outlined rounded class="mr-2"
+                            v-if="userRole === 'admin' || (userPermissions.includes('show_appointments'))"
                             @click="goToAppointments(data)" v-tooltip.top="'Ver consultas'" />
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editKurator(data)"
+                            v-if="userRole === 'admin' || (userPermissions.includes('edit_clinical_staff'))"
                             v-tooltip.top="'Editar'" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+                            v-if="userRole === 'admin' || (userPermissions.includes('delete_clinical_staff'))"
                             @click="confirmDeleteKurator(data)" />
                     </template>
                 </Column>

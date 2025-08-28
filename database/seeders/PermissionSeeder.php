@@ -109,7 +109,7 @@ class PermissionSeeder extends Seeder
             'description'  => '',
         ]);
 
-         Permission::create([
+        Permission::create([
             'name' => 'Crear notas',
             'slug' => 'create_notes',
             'description'  => '',
@@ -130,6 +130,30 @@ class PermissionSeeder extends Seeder
         Permission::create([
             'name' => 'Eliminar notas',
             'slug' => 'delete_notes',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Crear consulta',
+            'slug' => 'create_appointment',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Ver consultas',
+            'slug' => 'show_appointments',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Eliminar consulta',
+            'slug' => 'delete_appointment',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Reasignar paciente',
+            'slug' => 'reassign_patient',
             'description'  => '',
         ]);
     }

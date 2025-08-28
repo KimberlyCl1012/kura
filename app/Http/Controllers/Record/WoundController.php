@@ -156,7 +156,7 @@ class WoundController extends Controller
             ],
             'assessments' => WoundAssessment::where('state', 1)
                 ->select('type', 'name')
-                ->orderBy('type')->orderBy('name')
+                ->orderBy('type')->orderBy('name', 'ASC')
                 ->get()
                 ->groupBy('type')
                 ->map(fn($g) => $g->pluck('name'))
@@ -184,6 +184,10 @@ class WoundController extends Controller
                 return $input->wound_type_id == 8;
             });
 
+            $validator->sometimes('type_bite', 'required', function ($input) {
+                return $input->wound_subtype_id == 11;
+            });
+
             if ($validator->fails()) {
                 return response()->json([
                     'errors' => $validator->errors()
@@ -195,6 +199,7 @@ class WoundController extends Controller
                 'health_record_id'    => $request->health_record_id,
                 'wound_type_id'       => $request->wound_type_id,
                 'grade_foot'          => $request->grade_foot,
+                'type_bite'          => $request->type_bite,
                 'wound_subtype_id'    => $request->wound_subtype_id,
                 'body_location_id'    => $request->body_location_id,
                 'body_sublocation_id' => $request->body_sublocation_id,
@@ -214,6 +219,7 @@ class WoundController extends Controller
                     'health_record_id',
                     'wound_type_id',
                     'grade_foot',
+                    'type_bite',
                     'wound_subtype_id',
                     'body_location_id',
                     'body_sublocation_id',
@@ -319,6 +325,7 @@ class WoundController extends Controller
                 'woundBeginDate' => 'nullable|date',
                 'woundHealthDate' => 'nullable|date',
                 'grade_foot' => 'nullable',
+                'type_bite' => 'nullable',
                 'MESI' => 'nullable|string|max:255',
                 'woundBackground' => 'nullable|string|max:255',
                 'borde' => 'nullable|string|max:255',
@@ -330,6 +337,7 @@ class WoundController extends Controller
                 'piel_perilesional' => 'nullable|array',
                 'infeccion' => 'nullable|array',
                 'tipo_dolor' => 'nullable|string|max:255',
+                'duracion_dolor' => 'nullable|string|max:255',
                 'visual_scale' => 'nullable|string|max:255',
                 'monofilamento' => 'nullable|string|max:255',
                 'blood_glucose' => 'nullable|string|max:255',
@@ -337,6 +345,10 @@ class WoundController extends Controller
 
             if ($request->wound_type_id == 8) {
                 $rules['grade_foot'] = 'required';
+            }
+
+            if ($request->wound_subtype_id == 11) {
+                $rules['type_bite'] = 'required';
             }
 
             if ($vascularRequired) {
@@ -378,6 +390,7 @@ class WoundController extends Controller
                 'woundBeginDate',
                 'woundHealthDate',
                 'grade_foot',
+                'type_bite',
                 'MESI',
                 'woundBackground',
                 'borde',
@@ -389,6 +402,7 @@ class WoundController extends Controller
                 'piel_perilesional',
                 'infeccion',
                 'tipo_dolor',
+                'duracion_dolor',
                 'visual_scale',
                 'monofilamento',
                 'blood_glucose',

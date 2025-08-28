@@ -68,6 +68,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function detail()
+    {
+        return $this->hasOne(UserDetail::class);
+    }
+
     public function teams()
     {
         return $this->belongsToMany(Team::class)

@@ -36,9 +36,23 @@ class PatientController extends Controller
         ]);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $patients = DB::table('patients')
+        $user = $request->user();
+        $team = $user?->currentTeam;
+
+        $pivotRole = null;
+        if ($user && $team) {
+            $pivot = $team->users()->where('user_id', $user->id)->first();
+            $pivotRole = $pivot?->pivot?->role;
+        }
+        $roleKey = $pivotRole ?: ($team?->name ?: 'guest');
+
+        $canSeeAllPatients = $team
+            ? $team->permissions()->where('slug', 'show_patient')->exists()
+            : false;
+
+        $query = DB::table('patients')
             ->join('user_details', 'user_details.id', '=', 'patients.user_detail_id')
             ->join('users', 'user_details.user_id', '=', 'users.id')
             ->join('list_sites', 'user_details.site_id', '=', 'list_sites.id')
@@ -70,23 +84,29 @@ class PatientController extends Controller
                 'user_details.site_id',
                 'patients.consent'
             )
-            // 🔹 Filtra por activos
+            // Solo activos
             ->where('patients.state', 1)
             ->where('user_details.state', 1)
-            ->where('users.state', 1)
-            ->get()
-            ->map(function ($patient) {
-                $patient->crypt_patient = Crypt::encryptString($patient->patient_id);
-                return $patient;
-            });
+            ->where('users.state', 1);
+
+        if (!$canSeeAllPatients) {
+            $query->where('patients.created_by', $user->id);
+            // Restringir por sitio del usuario
+            // $query->where('user_details.site_id', $user->detail?->site_id ?? $user->site_id);
+        }
+
+        $patients = $query->get()->map(function ($patient) {
+            $patient->crypt_patient = Crypt::encryptString($patient->patient_id);
+            return $patient;
+        });
 
         $states = DB::table('list_states')->select('id', 'name')->get();
         $sites = DB::table('list_sites')->select('id', 'siteName')->get();
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
-            'states' => $states,
-            'sites' => $sites,
+            'states'   => $states,
+            'sites'    => $sites,
         ]);
     }
 
@@ -185,6 +205,7 @@ class PatientController extends Controller
                 'identification_kinship' => $request->identification_kinship,
                 'relativeMobile' => $request->relativeMobile,
                 'consent' => $request->has('consent') ? (bool) $request->consent : false,
+                'created_by' => $request->user()->id,
             ]);
 
             $this->logChange([
@@ -207,7 +228,8 @@ class PatientController extends Controller
                     'type_identification_kinship',
                     'identification_kinship',
                     'relativeMobile',
-                    'consent'
+                    'consent',
+                    'created_by',
                 ])),
             ]);
 

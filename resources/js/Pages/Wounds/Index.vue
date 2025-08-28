@@ -53,6 +53,7 @@ const formWound = ref({
     health_record_id: props.healthRecordId,
     wound_type_id: null,
     grade_foot: null,
+    type_bite: null,
     wound_subtype_id: null,
     body_location_id: null,
     body_sublocation_id: null,
@@ -130,6 +131,7 @@ function resetForm() {
         health_record_id: props.healthRecordId,
         wound_type_id: null,
         grade_foot: null,
+        type_bite: null,
         wound_subtype_id: null,
         body_location_id: null,
         body_sublocation_id: null,
@@ -154,6 +156,7 @@ async function saveUser() {
     const requiredFields = [
         { key: "wound_type_id", label: "Tipo de herida" },
         { key: "grade_foot", label: "Grado", condition: () => formWound.value.wound_type_id === 8 },
+        { key: "type_bite", label: "Tipo de picadura/mordedura", condition: () => formWound.value.wound_subtype_id === 10 },
         { key: "wound_subtype_id", label: "Tipo de herida (Localización secundaria)" },
         { key: "body_location_id", label: "Ubicación corporal" },
         { key: "body_sublocation_id", label: "Ubicación corporal (Localización secundaria)" },
@@ -229,9 +232,9 @@ function goToWoundHis(wound) {
 
 //Seguimiento
 function goToFollow(wound) {
-    router.visit(route('wounds_follow.edit', { 
-        appointmentId: props.appointmentId, 
-        woundId: wound.wound_id 
+    router.visit(route('wounds_follow.edit', {
+        appointmentId: props.appointmentId,
+        woundId: wound.wound_id
     }));
 }
 
@@ -254,8 +257,8 @@ function goToFollow(wound) {
                 </template>
             </Toolbar>
 
-            <DataTable v-if="wounds.length > 0" ref="dt" :value="wounds" dataKey="id" :paginator="true" :rows="10" :filters="filters"
-                :rowsPerPageOptions="[5, 10, 25]"
+            <DataTable v-if="wounds.length > 0" ref="dt" :value="wounds" dataKey="id" :paginator="true" :rows="10"
+                :filters="filters" :rowsPerPageOptions="[5, 10, 25]"
                 currentPageReportTemplate="Ver {first} al {last} de {totalRecords} registros"
                 v-model:expandedRows="expandedRows" @rowExpand="onRowExpand" @rowCollapse="onRowCollapse"
                 responsiveLayout="scroll">
@@ -378,6 +381,17 @@ function goToFollow(wound) {
                         </small>
                     </div>
 
+                    <!-- Picadura -->
+                    <div v-if="formWound.wound_subtype_id === 10">
+                        <label class="block font-bold mb-1">
+                            Tipo de picadura/mordedura <span class="text-red-600">*</span>
+                        </label>
+                        <InputText id="type_bite" v-model="formWound.type_bite" class="w-full min-w-0" />
+                      <small v-if="submitted && !formWound.type_bite" class="text-red-500">
+                            Debe escribir el tipo de picadura/mordedura.
+                        </small>
+                    </div>
+
                     <!-- Ubicación corporal -->
                     <div>
                         <label class="block font-bold mb-1">
@@ -422,9 +436,9 @@ function goToFollow(wound) {
                         <label class="block font-bold mb-1">
                             Fecha que inició la herida <span class="text-red-600">*</span>
                         </label>
-                        <DatePicker v-model="formWound.woundBeginDate" class="w-full" inputId="woundBeginDate" placeholder="mm/dd/yyyy"
-                            :class="{ 'p-invalid': submitted && !formWound.woundBeginDate }" variant="filled" showIcon
-                            iconDisplay="input" />
+                        <DatePicker v-model="formWound.woundBeginDate" class="w-full" inputId="woundBeginDate"
+                            placeholder="mm/dd/yyyy" :class="{ 'p-invalid': submitted && !formWound.woundBeginDate }"
+                            variant="filled" showIcon iconDisplay="input" />
                         <small v-if="submitted && !formWound.woundBeginDate" class="text-red-500">
                             Debe seleccionar la fecha de inicio.
                         </small>

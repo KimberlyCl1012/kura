@@ -69,9 +69,23 @@ class KuratorController extends Controller
         return $detail !== '' ? "{$key}: {$detail}" : $key;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $kurators = DB::table('kurators')
+        $user = $request->user();
+        $team = $user?->currentTeam;
+
+        $pivotRole = null;
+        if ($user && $team) {
+            $pivot = $team->users()->where('user_id', $user->id)->first();
+            $pivotRole = $pivot?->pivot?->role;
+        }
+        $roleKey = $pivotRole ?: ($team?->name ?: 'guest');
+
+        $canSeeAllKurators = $team
+            ? $team->permissions()->where('slug', 'show_clinical_staff')->exists()
+            : false;
+
+        $query = DB::table('kurators')
             ->join('user_details', 'user_details.id', '=', 'kurators.user_detail_id')
             ->join('users', 'user_details.user_id', '=', 'users.id')
             ->join('list_sites', 'user_details.site_id', '=', 'list_sites.id')
@@ -97,30 +111,34 @@ class KuratorController extends Controller
             )
             ->where('kurators.state', 1)
             ->where('user_details.state', 1)
-            ->where('users.state', 1)
-            ->get()
-            ->map(function ($kurator) {
-                $kurator->crypt_kurator = Crypt::encryptString($kurator->kurator_id);
+            ->where('users.state', 1);
 
-                $kurator->specialty_key = $kurator->specialty;
-                $kurator->specialty_detail = $kurator->detail_specialty;
-                if (!$kurator->specialty_detail && strpos($kurator->specialty, ':') !== false) {
-                    [$k, $d] = array_map('trim', explode(':', $kurator->specialty, 2));
-                    $kurator->specialty_key = $k;
-                    $kurator->specialty_detail = $d;
-                }
-                return $kurator;
-            });
+        if (!$canSeeAllKurators) {
+            $query->where('kurators.created_by', $user->id);
+            // Rstringir por sitio del usuario:
+            // $query->where('user_details.site_id', $user->detail?->site_id ?? $user->site_id);
+        }
+
+        $kurators = $query->get()->map(function ($kurator) {
+            $kurator->crypt_kurator = Crypt::encryptString($kurator->kurator_id);
+
+            $kurator->specialty_key = $kurator->specialty;
+            $kurator->specialty_detail = $kurator->detail_specialty;
+            if (!$kurator->specialty_detail && strpos($kurator->specialty, ':') !== false) {
+                [$k, $d] = array_map('trim', explode(':', $kurator->specialty, 2));
+                $kurator->specialty_key = $k;
+                $kurator->specialty_detail = $d;
+            }
+            return $kurator;
+        });
 
         $sites = DB::table('list_sites')->select('id', 'siteName')->get();
 
         return Inertia::render('Kurators/Index', [
             'kurators' => $kurators,
-            'sites' => $sites,
+            'sites'    => $sites,
         ]);
     }
-
-
 
     public function store(Request $request)
     {
@@ -223,6 +241,7 @@ class KuratorController extends Controller
                 'type_kurator'       => $request->type_kurator,
                 'type_identification' => $request->type_identification,
                 'identification'     => $request->identification,
+                'created_by' => $request->user()->id,
             ]);
 
             $this->logChange([

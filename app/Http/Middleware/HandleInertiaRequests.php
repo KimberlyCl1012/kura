@@ -42,32 +42,39 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $team = $user?->currentTeam;
 
+        if ($user) {
+            $user->loadMissing('detail.site');
+        }
+
         $pivotRole = null;
         if ($user && $team) {
             $pivot = $team->users()->where('user_id', $user->id)->first();
-            $pivotRole = $pivot?->pivot?->role; 
+            $pivotRole = $pivot?->pivot?->role;
         }
 
         $roleKey  = $pivotRole ?: ($team?->name ?: 'guest');
-
         $roleName = $team?->description
             ?: ($roleKey ? ucwords(str_replace(['-', '_'], ' ', $roleKey)) : 'Guest');
 
         $permissions = $team ? $team->permissions()->pluck('slug')->values()->all() : [];
 
+        $userSiteId = $user?->site_id ?? $user?->detail?->site_id;
+        $userSiteName = $user?->detail?->site?->siteName;
+
         return array_merge($base, [
             'userRole'        => $roleKey,
             'userRoleName'    => $roleName,
             'userPermissions' => $permissions,
-
+            'userSiteId'      => $userSiteId,
+            'userSiteName'    => $userSiteName,
             'auth' => [
                 'user' => $user ? [
-                    'id'               => $user->id,
-                    'name'             => $user->name,
-                    'email'            => $user->email,
-                    'current_team_id'  => $user->current_team_id,
-                    'current_team'     => $team?->only(['id', 'name', 'description']),
-                    'all_teams'        => $user->allTeams()->map->only(['id', 'name', 'description'])->values()->all(),
+                    'id'                => $user->id,
+                    'name'              => $user->name,
+                    'email'             => $user->email,
+                    'current_team_id'   => $user->current_team_id,
+                    'current_team'      => $team?->only(['id', 'name', 'description']),
+                    'all_teams'         => $user->allTeams()->map->only(['id', 'name', 'description'])->values()->all(),
                     'profile_photo_url' => $user->profile_photo_url ?? null,
                 ] : null,
             ],

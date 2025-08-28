@@ -20,7 +20,8 @@ return new class extends Migration
             $table->string('type_kurator');
             $table->string('type_identification');
             $table->string('identification');
-            $table->boolean('state')->default(1);            
+            $table->boolean('state')->default(1);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }
@@ -33,5 +34,3 @@ return new class extends Migration
         Schema::dropIfExists('kurators');
     }
 };
-
-

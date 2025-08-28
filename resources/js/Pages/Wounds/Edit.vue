@@ -10,6 +10,7 @@ import { Badge, DatePicker, ProgressBar, usePrimeVue } from "primevue";
 import Editor from "primevue/editor";
 import FileUpload from 'primevue/fileupload';
 import Dialog from 'primevue/dialog';
+import { usePage } from "@inertiajs/vue3";
 
 // Props
 const props = defineProps({
@@ -27,6 +28,11 @@ const props = defineProps({
   assessments: Object,
 });
 
+const page = usePage();
+const userRole = computed(() => page.props.userRole);
+const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const requiresVascular = computed(() =>
   [
@@ -561,71 +567,87 @@ function percentOffset(...fields) {
   return sum + '%';
 }
 
-
-
 //Evidencia de la herida
 const MAX_FILES = 4
+const MAX_FILE_SIZE = 9 * 1024 * 1024; // 9 MB
 
-const showLimitModal = ref(false)
-const existingImages = ref([])
-const uploadFiles = ref([])
-const totalSize = ref(0)
-const totalSizePercent = ref(0)
+const fileUploadRef = ref(null);
 
-const zoomImageUrl = ref('')
-const zoomRotation = ref(0)
-const showZoomModal = ref(false)
-const selectedImage = ref('')
-const selectedImageRotation = ref(0)
-// funciones auxiliares
-const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` })
+const showLimitModal = ref(false);
+const showConfirmUploadModal = ref(false);
+const showConfirmDeleteModal = ref(false);
+const showZoomModal = ref(false);
 
+const uploadFiles = ref([]);      // archivos locales (pendientes)
+const existingImages = ref([]);   // imágenes ya en servidor
+const selectedImage = ref("");    // url seleccionada para galería
+const selectedImageRotation = ref(0);
 
-const openZoomModal = (src, rotation) => {
-  zoomImageUrl.value = src
-  zoomRotation.value = rotation
-  showZoomModal.value = true
-}
+const zoomImageUrl = ref("");
+const zoomRotation = ref(0);
 
-const selectImage = (img) => {
-  selectedImage.value = `/storage/${img.content}`
-  selectedImageRotation.value = img.position || 0
-}
+const totalSize = ref(0);
+const totalSizePercent = ref(0);
 
-const downloadSelectedImage = () => {
-  const link = document.createElement('a')
-  link.href = selectedImage.value
-  link.download = selectedImage.value.split('/').pop()
-  link.click()
-}
+const imageToDelete = ref(null);
+
+//
+// -------------------------
+// Utils
+// -------------------------
+const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` });
 
 const updateTotalSize = () => {
-  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0)
-  totalSizePercent.value = totalSize.value / 10
-}
+  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0);
+  totalSizePercent.value = Math.min(100, Math.round((totalSize.value / MAX_FILE_SIZE) * 100));
+};
+
+const revokeAllObjectURLs = () => {
+  uploadFiles.value.forEach((f) => f?.objectURL && URL.revokeObjectURL(f.objectURL));
+};
 
 const resetUploads = () => {
-  uploadFiles.value = []
-  totalSize.value = 0
-  totalSizePercent.value = 0
-}
+  revokeAllObjectURLs();
+  uploadFiles.value = [];
+  totalSize.value = 0;
+  totalSizePercent.value = 0;
+};
 
 const isLimitReached = (incomingCount) =>
-  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES
+  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES;
 
+const openZoomModal = (src, rotation) => {
+  zoomImageUrl.value = src;
+  zoomRotation.value = rotation || 0;
+  showZoomModal.value = true;
+};
 
-const closeLimitModal = () => {
-  showLimitModal.value = false
-}
+const closeLimitModal = () => (showLimitModal.value = false);
 
+//
+// -------------------------
+// Selección/rotación/elim local
+// -------------------------
 const onSelectedFiles = (event) => {
-  const incoming = event.files
+  const incoming = event.files || [];
+  if (!incoming.length) return;
+
   if (isLimitReached(incoming.length)) {
-    showLimitModal.value = true
-    return
+    showLimitModal.value = true;
+    return;
   }
 
-  incoming.forEach(file => {
+  for (const file of incoming) {
+    // Validaciones defensivas
+    if (!file.type?.startsWith("image/")) {
+      toast.add({ severity: "warn", summary: "Archivo omitido", detail: `${file.name} no es una imagen.`, life: 3000 });
+      continue;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.add({ severity: "warn", summary: "Muy grande", detail: `${file.name} excede 9MB.`, life: 3000 });
+      continue;
+    }
+
     uploadFiles.value.push({
       raw: file,
       name: file.name,
@@ -633,115 +655,204 @@ const onSelectedFiles = (event) => {
       type: file.type,
       objectURL: URL.createObjectURL(file),
       rotation: 0,
-    })
-  })
+    });
+  }
 
-  updateTotalSize()
-}
+  updateTotalSize();
+};
 
 const rotateImage = (index, direction) => {
-  const file = uploadFiles.value[index]
-  file.rotation = direction === 'left'
+  const file = uploadFiles.value[index];
+  if (!file) return;
+  file.rotation = direction === "left"
     ? (file.rotation - 5 + 360) % 360
-    : (file.rotation + 5) % 360
-}
+    : (file.rotation + 5) % 360;
+};
 
 const removeFile = (index) => {
-  uploadFiles.value.splice(index, 1)
-  updateTotalSize()
-}
+  const f = uploadFiles.value[index];
+  if (f?.objectURL) URL.revokeObjectURL(f.objectURL);
+  uploadFiles.value.splice(index, 1);
+  updateTotalSize();
+};
 
 const clearTemplatedUpload = (clear) => {
-  clear()
-  resetUploads()
-}
+  clear();
+  resetUploads();
+};
 
+//
+// -------------------------
+// Galería (servidor)
+// -------------------------
+const selectImage = (img) => {
+  selectedImage.value = `/storage/${img.content}`;
+  selectedImageRotation.value = img.position || 0;
+};
+
+const downloadSelectedImage = () => {
+  if (!selectedImage.value) return;
+  const link = document.createElement("a");
+  link.href = selectedImage.value;
+  link.download = selectedImage.value.split("/").pop();
+  link.click();
+};
+
+// Carga: usa woundHistory.id o wound.id según tu flujo
+const loadExistingImages = async () => {
+  const woundHistoryId = props.woundHistory?.id;
+  const woundId = props.wound?.id;
+
+  // adapta a uno u otro endpoint que uses:
+  try {
+    if (woundHistoryId) {
+      const { data } = await axios.get("/media_history", {
+        params: { wound_history_id: woundHistoryId },
+      });
+      existingImages.value = data || [];
+    } else if (woundId) {
+      const { data } = await axios.get("/media", {
+        params: {
+          wound_id: woundId,
+          appointment_id: props.wound?.appointment_id,
+          type: "Herida",
+        },
+      });
+      existingImages.value = data || [];
+    }
+  } catch (error) {
+    // 404 sin imágenes es válido
+    if (error.response?.status !== 404) {
+      console.error("Error al cargar imágenes:", error);
+    }
+  }
+};
+
+// Selección inicial cuando llegan del servidor
+watch(existingImages, (imgs) => {
+  if (imgs.length > 0 && !selectedImage.value) {
+    selectImage(imgs[0]);
+  }
+  if (imgs.length === 0) {
+    selectedImage.value = "";
+    selectedImageRotation.value = 0;
+  }
+});
+
+//
+// -------------------------
+// Subir a servidor
+// -------------------------
 const uploadEvent = async () => {
-  if (!props.wound.id) {
-    toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 })
-    return
+  // Asegúrate de que exista el id correspondiente
+  const hasContext = !!(props.woundHistory?.id || props.wound?.id);
+  if (!hasContext) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "Debe guardar la herida/antecedente antes de subir imágenes.",
+      life: 4000,
+    });
+    return;
   }
 
   if (!uploadFiles.value.length) {
-    toast.add({ severity: 'warn', summary: 'Sin archivos', detail: 'Debes seleccionar imágenes para subir.', life: 3000 })
-    return
+    toast.add({ severity: "warn", summary: "Sin archivos", detail: "Debes seleccionar imágenes para subir.", life: 3000 });
+    return;
   }
 
-  const formData = new FormData()
+  const formData = new FormData();
   uploadFiles.value.forEach((file, index) => {
-    formData.append('images[]', file.raw, file.name)
-    formData.append(`rotations[${index}]`, file.rotation || 0)
-  })
-
-  formData.append('type', 'Herida')
-  formData.append('wound_id', props.wound.id)
-  formData.append('appointment_id', props.wound.appointment_id)
+    formData.append("images[]", file.raw, file.name);
+    formData.append(`rotations[${index}]`, file.rotation || 0);
+  });
 
   try {
-    await axios.post('/media/upload', formData)
-    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 })
-    resetUploads()
-    await loadExistingImages()
-  } catch (err) {
-    console.error(err)
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 })
-  }
-}
-
-watch(existingImages, (imgs) => {
-  if (imgs.length > 0 && !selectedImage.value) {
-    selectImage(imgs[0])
-  }
-})
-
-const loadExistingImages = async () => {
-  const woundId = props.wound?.id
-  const appointmentId = props.wound.appointment_id
-
-  if (!woundId || !appointmentId) return
-
-  try {
-    const { data } = await axios.get('/media', {
-      params: {
-        wound_id: woundId,
-        appointment_id: appointmentId,
-        type: 'Herida',
-      }
-    })
-    existingImages.value = data
-  } catch (error) {
-    console.error('Error al cargar imágenes:', error)
-  }
-}
-
-watch(
-  () => props.wound.appointment_id,
-  (newVal) => {
-    if (newVal && props.wound?.id) {
-      loadExistingImages()
+    if (props.woundHistory?.id) {
+      formData.append("wound_history_id", props.woundHistory.id);
+      await axios.post("/media_history/upload", formData);
+    } else {
+      formData.append("type", "Herida");
+      formData.append("wound_id", props.wound.id);
+      formData.append("appointment_id", props.wound.appointment_id);
+      await axios.post("/media/upload", formData);
     }
-  },
-  { immediate: true }
-)
 
-
-const fileUploadClearCallback = ref(null)
-
-const fileUploadRef = ref(null)
-
-//Confirmación de carga de imagenes
-const showConfirmUploadModal = ref(false)
+    toast.add({ severity: "success", summary: "Éxito", detail: "Imágenes subidas.", life: 3000 });
+    resetUploads();
+    await loadExistingImages();
+  } catch (err) {
+    console.error(err);
+    toast.add({ severity: "error", summary: "Error", detail: "Fallo al subir.", life: 4000 });
+  }
+};
 
 const confirmUpload = async () => {
-  showConfirmUploadModal.value = false
-  await uploadEvent()
+  showConfirmUploadModal.value = false;
+  await uploadEvent();
+  // limpiar input de FileUpload
+  if (fileUploadRef.value) fileUploadRef.value.clear();
+};
 
-  // Limpiar componente y estado después de subida exitosa
-  resetUploads()
-  if (fileUploadRef.value) {
-    fileUploadRef.value.clear()
+//
+// -------------------------
+// Eliminar en servidor
+// -------------------------
+const openConfirmDeleteSelected = () => {
+  if (!selectedImage.value) return;
+  const img = existingImages.value.find((i) => `/storage/${i.content}` === selectedImage.value);
+  if (!img) return;
+  imageToDelete.value = img;
+  showConfirmDeleteModal.value = true;
+};
+
+const openConfirmDeleteByThumb = (img) => {
+  imageToDelete.value = img;
+  showConfirmDeleteModal.value = true;
+};
+
+const deleteImage = async () => {
+  if (!imageToDelete.value?.id) return;
+
+  try {
+    // Si usas historial:
+    if (props.woundHistory?.id) {
+      await axios.delete(`/media_history/${imageToDelete.value.id}`);
+    } else {
+      // Si usas herida "normal" (Laravel puede requerir _method)
+      await axios.post(`/media/${imageToDelete.value.id}`, {
+        _method: "DELETE",
+        wound_id: props.wound?.id,
+        appointment_id: props.wound?.appointment_id,
+        type: "Herida",
+      });
+    }
+
+    // Actualiza estado local
+    existingImages.value = existingImages.value.filter((i) => i.id !== imageToDelete.value.id);
+
+    // Si eliminaste la seleccionada, elige otra o limpia
+    if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
+      if (existingImages.value.length) {
+        selectImage(existingImages.value[0]);
+      } else {
+        selectedImage.value = "";
+        selectedImageRotation.value = 0;
+      }
+    }
+
+    toast.add({ severity: "success", summary: "Eliminada", detail: "Imagen eliminada correctamente.", life: 3000 });
+  } catch (err) {
+    console.error(err);
+    toast.add({ severity: "error", summary: "Error", detail: "No se pudo eliminar la imagen.", life: 4000 });
+  } finally {
+    showConfirmDeleteModal.value = false;
+    imageToDelete.value = null;
   }
-}
+};
+
+// Carga inicial
+loadExistingImages();
 
 // // Tratamiento
 const treatmentId = ref(props.treatment?.id || null);
@@ -761,6 +872,19 @@ const formTreat = ref({
     })()
     : {},
   description: props.treatment?.description || "",
+  mmhg: props.treatment?.mmhg || ""
+});
+
+const requiresMMHG = computed(() => {
+  const TRIGGER_IDS = [1, 2, 3];
+  const allSelectedSubs = Object.values(formTreat.value.submethodsByMethod || {}).flat();
+  return allSelectedSubs.some(id => TRIGGER_IDS.includes(Number(id)));
+});
+
+watch(requiresMMHG, (req) => {
+  if (!req) {
+    formTreat.value.mmhg = "";
+  }
 });
 
 const isSavingTreatment = ref(false);
@@ -808,6 +932,23 @@ const storeTreatment = async () => {
     return;
   }
 
+  // Requerir mmHg si aplica (submétodos 1,2,3)
+  if (requiresMMHG.value) {
+    const val = String(formTreat.value.mmhg || "").trim();
+    const isNumber = /^(\d+(\.\d+)?)$/.test(val);
+    if (!val || !isNumber) {
+      errors.value = { ...(errors.value || {}), mmhg: "Campo requerido. Ingresa un valor numérico válido." };
+      toast.add({
+        severity: "error",
+        summary: "Validación",
+        detail: "El campo mmHg es obligatorio y debe ser numérico.",
+        life: 4000,
+      });
+      return;
+    }
+  }
+
+
   isSavingTreatment.value = true;
 
   const payload = {
@@ -817,6 +958,7 @@ const storeTreatment = async () => {
     description: formTreat.value.description || null,
     method_ids: formTreat.value.methods,
     submethodsByMethod: formTreat.value.submethodsByMethod,
+    mmhg: requiresMMHG.value ? formTreat.value.mmhg : null,
   };
 
   try {
@@ -1034,7 +1176,6 @@ const finishConsultation = async () => {
                 </div>
 
                 <!-- Grado (condicional) -->
-                <!-- Subtipo o Grado (según tipo de herida) -->
                 <div v-if="formWound.wound_type_id === 8">
                   <label class="flex items-center gap-1 mb-1 font-medium">
                     Grado <span class="text-red-600">*</span>
@@ -1058,6 +1199,17 @@ const finishConsultation = async () => {
                     }" />
                   <small v-if="submittedUser && !formWound.wound_subtype_id" class="text-red-500">
                     Debe seleccionar el subtipo.
+                  </small>
+                </div>
+
+                <!-- Picadura -->
+                <div v-if="formWound.wound_subtype_id === 10">
+                  <label class="block font-bold mb-1">
+                    Tipo de picadura/mordedura <span class="text-red-600">*</span>
+                  </label>
+                  <InputText id="type_bite" v-model="formWound.type_bite" class="w-full min-w-0" />
+                  <small v-if="submittedUser && !formWound.type_bite" class="text-red-500">
+                    Debe escribir el tipo de picadura/mordedura.
                   </small>
                 </div>
 
@@ -1573,7 +1725,6 @@ const finishConsultation = async () => {
               <Toast />
               <FileUpload ref="fileUploadRef" name="images[]" :customUpload="true" :multiple="true"
                 :maxFileSize="9000000" accept="image/*" @select="onSelectedFiles" @uploader="uploadEvent">
-
                 <template #header="{ chooseCallback, clearCallback }">
                   <div class="flex flex-wrap justify-between items-center flex-1 gap-4">
                     <div class="flex gap-2">
@@ -1590,7 +1741,6 @@ const finishConsultation = async () => {
                     </ProgressBar>
                   </div>
                 </template>
-
 
                 <template #content>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
@@ -1612,28 +1762,23 @@ const finishConsultation = async () => {
               </FileUpload>
             </div>
 
+            <!-- Confirmación de subida -->
             <Dialog v-model:visible="showConfirmUploadModal" modal header="Evidencia de la herida"
               :style="{ width: '400px' }">
               <div class="text-center p-4">
                 <p class="mb-4">¿Desea subir las imágenes seleccionadas?</p>
                 <div class="flex justify-center gap-3">
-                  <Button label="Cancelar" icon="pi pi-check" text @click="showConfirmUploadModal = false" />
+                  <Button label="Cancelar" icon="pi pi-times" severity="secondary"
+                    @click="showConfirmUploadModal = false" />
                   <Button label="Confirmar" icon="pi pi-check" severity="success" @click="confirmUpload" autofocus />
                 </div>
               </div>
             </Dialog>
 
-
             <!-- Modal de Zoom -->
             <Dialog v-model:visible="showZoomModal" modal header="Evidencia de la herida"
-              :style="{ width: '90vw', height: '90vh' }" :contentStyle="{
-                padding: 0,
-                margin: 0,
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }">
+              :style="{ width: '90vw', height: '90vh' }"
+              :contentStyle="{ padding: 0, margin: 0, height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }">
               <img :src="zoomImageUrl" class="zoom-img" :style="{
                 ...getImageStyle(zoomRotation),
                 width: '65%',
@@ -1644,10 +1789,13 @@ const finishConsultation = async () => {
                 marginTop: '2rem'
               }" />
             </Dialog>
+
             <!-- Modal de Límite -->
             <Dialog v-model:visible="showLimitModal" modal header="Límite de imágenes" :style="{ width: '400px' }">
               <div class="text-center p-4">
-                <p class="mb-4">Solo puedes subir un máximo de <strong>4 imágenes</strong>.</p>
+                <p class="mb-4">
+                  Solo puedes subir un máximo de <strong>{{ MAX_FILES }}</strong> imágenes.
+                </p>
                 <Button label="Entendido" icon="pi pi-check" @click="closeLimitModal" autofocus />
               </div>
             </Dialog>
@@ -1662,21 +1810,42 @@ const finishConsultation = async () => {
 
                   <div
                     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-10 gap-y-6 pl-6 pr-15">
+                    <div v-for="img in existingImages" :key="img.id" class="relative group">
+                      <img :src="`/storage/${img.content}`" :style="getImageStyle(img.position || 0)"
+                        class="w-full h-auto min-h-20 rounded-lg object-cover cursor-pointer transition-all duration-150"
+                        :class="{
+                          'shadow-[0_0_0_2px] shadow-surface-900 dark:shadow-surface-0': selectedImage === `/storage/${img.content}`,
+                        }" @click="selectImage(img)" alt="Miniatura" />
 
-                    <img v-for="img in existingImages" :key="img.id" :src="`/storage/${img.content}`"
-                      :style="getImageStyle(img.position || 0)"
-                      class="w-full h-auto min-h-20 rounded-lg object-cover cursor-pointer transition-all duration-150"
-                      :class="{
-                        'shadow-[0_0_0_2px] shadow-surface-900 dark:shadow-surface-0':
-                          selectedImage === `/storage/${img.content}`,
-                      }" @click="selectImage(img)" alt="Miniatura" />
+                      <!-- Botón borrar por miniatura -->
+                      <button type="button"
+                        v-if="userRole === 'admin' || (userPermissions.includes('delete_photographic_evidence'))"
+                        class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white rounded-md px-2 py-1 text-xs shadow"
+                        @click.stop="openConfirmDeleteByThumb(img)" title="Eliminar imagen">
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
 
-                  <Button label="Descargar" class="w-full !py-2 !px-3 !text-base !font-medium !rounded-md" rounded
-                    outlined @click="downloadSelectedImage" />
+                  <Button label="Descargar" class="w-full" @click="downloadSelectedImage" />
+                  <Button label="Eliminar" outlined severity="danger" class="w-full" :disabled="!selectedImage"
+                    v-if="userRole === 'admin' || (userPermissions.includes('delete_photographic_evidence'))"
+                    @click="openConfirmDeleteSelected" />
                 </div>
               </div>
             </div>
+
+            <!-- Confirmación de eliminación -->
+            <Dialog v-model:visible="showConfirmDeleteModal" modal header="Eliminar imagen" :style="{ width: '400px' }">
+              <div class="text-center p-4">
+                <p class="mb-4">¿Desea eliminar esta imagen?</p>
+                <div class="flex justify-center gap-3">
+                  <Button label="Cancelar" text @click="showConfirmDeleteModal = false" />
+                  <Button label="Eliminar" severity="danger" @click="deleteImage" autofocus />
+                </div>
+              </div>
+            </Dialog>
+
           </div>
         </div>
 
@@ -1705,6 +1874,17 @@ const finishConsultation = async () => {
                     class="w-full min-w-0" optionLabel="name" optionValue="id" placeholder="Seleccione submétodos"
                     display="chip" />
                 </div>
+
+                <!-- mmHg (solo si requiere por submétodos 1,2,3) -->
+                <div v-if="requiresMMHG">
+                  <label for="mmhg" class="flex items-center gap-1 mb-1 font-medium">
+                    mmHg <span class="text-red-600">*</span>
+                  </label>
+                  <InputText id="mmhg" v-model="formTreat.mmhg" class="w-full min-w-0" placeholder="Ej: 40" />
+                  <small v-if="errors.mmhg" class="text-red-500">{{ errors.mmhg }}</small>
+                </div>
+
+
               </div>
               <!-- Descripción final -->
               <div class="grid grid-cols-3 gap-6 px-4 mt-6">

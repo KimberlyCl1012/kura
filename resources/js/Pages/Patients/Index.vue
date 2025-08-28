@@ -1,20 +1,26 @@
 <script setup>
 import AppLayout from "../../Layouts/sakai/AppLayout.vue";
 import { FilterMatchMode } from "@primevue/core/api";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { useToast } from "primevue/usetoast";
 import {
     InputText, Checkbox, Select,
     Toolbar, DataTable, Column, Dialog, Button, IconField, InputIcon, DatePicker, Tooltip
 } from "primevue";
 import axios from "axios";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
     patients: Array,
     states: Array,
     sites: Array,
 });
+
+const page = usePage();
+const userRole = computed(() => page.props.userRole);
+const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const dt = ref();
 const toast = useToast();
@@ -203,7 +209,7 @@ function healthRecord(data) {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew" />
+                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew" v-if="userRole === 'admin' || (userPermissions.includes('create_patient'))" />
                 </template>
                 <template #end>
                     <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="exportCSV" />
@@ -235,13 +241,21 @@ function healthRecord(data) {
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
-                        <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined
+                        <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined v-if="userRole === 'admin' || (userPermissions.includes('show_medical_record'))" 
                             rounded class="mr-2" @click="healthRecord(data)"
                             :severity="data.health_record_id ? 'info' : 'secondary'"
                             v-tooltip.top="data.health_record_id ? 'Ver expediente' : 'Crear expediente'" />
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)"
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)" v-if="userRole === 'admin' || (userPermissions.includes('edit_patient'))"
                             v-tooltip.top="'Editar'" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+                        <Button v-if="
+                            (
+                                userRole === 'admin' ||
+                                (
+                                    ['admin_kura', 'resp_sitio', 'perfil_operativo'].includes(userRole)
+                                    && userSiteName === data.siteName
+                                )
+                            )
+                        " icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'" 
                             @click="confirmDeleteUser(data)" />
                     </template>
                 </Column>

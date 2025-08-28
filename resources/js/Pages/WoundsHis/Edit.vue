@@ -303,90 +303,6 @@ const saveUser = async () => {
   }
 };
 
-// Carga inicial forzada de datos
-const woundSubtypes = ref([]);
-const bodySublocations = ref([]);
-const isInitialLoadType = ref(true);
-const isInitialLoadLocation = ref(true);
-
-onMounted(() => {
-  if (props.woundHistory) {
-    formWoundHistory.value.wound_type_id = null;
-    formWoundHistory.value.body_location_id = null;
-
-    Object.assign(formWoundHistory.value, {
-      ...props.woundHistory,
-      woundBeginDate: props.woundHistory.woundBeginDate ? new Date(props.woundHistory.woundBeginDate) : null,
-      woundHealthDate: props.woundHistory.woundHealthDate ? new Date(props.woundHistory.woundHealthDate) : null,
-      measurementDate: props.woundHistory.measurementDate ? new Date(props.woundHistory.measurementDate) : null,
-      grade_foot: props.woundHistory.grade_foot ? parseInt(props.woundHistory.grade_foot) : null,
-    });
-
-    if (props.woundHistory.wound_type_id) {
-      formWoundHistory.value.wound_type_id = parseInt(props.woundHistory.wound_type_id);
-      loadSubtypes(formWoundHistory.value.wound_type_id);
-    }
-
-    if (props.woundHistory.body_location_id) {
-      formWoundHistory.value.body_location_id = parseInt(props.woundHistory.body_location_id);
-      loadSublocations(formWoundHistory.value.body_location_id);
-    }
-  }
-
-  loadExistingImages();
-});
-
-// --- Eliminar imágenes (Historial) ---
-const showConfirmDeleteModal = ref(false);
-const imageToDelete = ref(null);
-
-const openConfirmDeleteSelected = () => {
-  if (!selectedImage.value) return;
-  const img = existingImages.value.find(i => `/storage/${i.content}` === selectedImage.value);
-  if (!img) return;
-  imageToDelete.value = img;
-  showConfirmDeleteModal.value = true;
-};
-
-const openConfirmDeleteByThumb = (img) => {
-  imageToDelete.value = img;
-  showConfirmDeleteModal.value = true;
-};
-
-const deleteImage = async () => {
-  if (!imageToDelete.value?.id) return;
-
-  try {
-    await axios.delete(`/media_history/${imageToDelete.value.id}`);
-
-    // Quitar del arreglo local
-    existingImages.value = existingImages.value.filter(i => i.id !== imageToDelete.value.id);
-
-    // Si la eliminada era la seleccionada, elegir otra o limpiar
-    if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
-      if (existingImages.value.length > 0) {
-        selectImage(existingImages.value[0]);
-      } else {
-        selectedImage.value = '';
-        selectedImageRotation.value = 0;
-      }
-    }
-
-    toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada correctamente.', life: 3000 });
-  } catch (err) {
-    console.error(err);
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 });
-  } finally {
-    showConfirmDeleteModal.value = false;
-    imageToDelete.value = null;
-  }
-};
-
-const clearTemplatedUpload = (clear) => {
-  clear();
-  resetUploads();
-};
-
 
 async function loadSubtypes(typeId) {
   try {
@@ -510,6 +426,91 @@ function percentOffset(...fields) {
   if (total > 100) return ((sum / total) * 100).toFixed(2) + '%';
   return sum + '%';
 }
+
+// Carga inicial forzada de datos
+const woundSubtypes = ref([]);
+const bodySublocations = ref([]);
+const isInitialLoadType = ref(true);
+const isInitialLoadLocation = ref(true);
+
+onMounted(() => {
+  if (props.woundHistory) {
+    formWoundHistory.value.wound_type_id = null;
+    formWoundHistory.value.body_location_id = null;
+
+    Object.assign(formWoundHistory.value, {
+      ...props.woundHistory,
+      woundBeginDate: props.woundHistory.woundBeginDate ? new Date(props.woundHistory.woundBeginDate) : null,
+      woundHealthDate: props.woundHistory.woundHealthDate ? new Date(props.woundHistory.woundHealthDate) : null,
+      measurementDate: props.woundHistory.measurementDate ? new Date(props.woundHistory.measurementDate) : null,
+      grade_foot: props.woundHistory.grade_foot ? parseInt(props.woundHistory.grade_foot) : null,
+    });
+
+    if (props.woundHistory.wound_type_id) {
+      formWoundHistory.value.wound_type_id = parseInt(props.woundHistory.wound_type_id);
+      loadSubtypes(formWoundHistory.value.wound_type_id);
+    }
+
+    if (props.woundHistory.body_location_id) {
+      formWoundHistory.value.body_location_id = parseInt(props.woundHistory.body_location_id);
+      loadSublocations(formWoundHistory.value.body_location_id);
+    }
+  }
+
+  loadExistingImages();
+});
+
+// --- Eliminar imágenes (Historial) ---
+const showConfirmDeleteModal = ref(false);
+const imageToDelete = ref(null);
+
+const openConfirmDeleteSelected = () => {
+  if (!selectedImage.value) return;
+  const img = existingImages.value.find(i => `/storage/${i.content}` === selectedImage.value);
+  if (!img) return;
+  imageToDelete.value = img;
+  showConfirmDeleteModal.value = true;
+};
+
+const openConfirmDeleteByThumb = (img) => {
+  imageToDelete.value = img;
+  showConfirmDeleteModal.value = true;
+};
+
+const deleteImage = async () => {
+  if (!imageToDelete.value?.id) return;
+
+  try {
+    await axios.delete(`/media_history/${imageToDelete.value.id}`);
+
+    // Quitar del arreglo local
+    existingImages.value = existingImages.value.filter(i => i.id !== imageToDelete.value.id);
+
+    // Si la eliminada era la seleccionada, elegir otra o limpiar
+    if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
+      if (existingImages.value.length > 0) {
+        selectImage(existingImages.value[0]);
+      } else {
+        selectedImage.value = '';
+        selectedImageRotation.value = 0;
+      }
+    }
+
+    toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada correctamente.', life: 3000 });
+  } catch (err) {
+    console.error(err);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 });
+  } finally {
+    showConfirmDeleteModal.value = false;
+    imageToDelete.value = null;
+  }
+};
+
+const clearTemplatedUpload = (clear) => {
+  clear();
+  resetUploads();
+};
+
 
 // -------------------------
 // Evidencia fotográfica

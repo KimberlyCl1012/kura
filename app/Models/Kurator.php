@@ -18,6 +18,7 @@ class Kurator extends Model
         'type_identification',
         'identification',
         'state',
+        'created_by',
     ];
 
     public function patient()
