@@ -156,5 +156,29 @@ class PermissionSeeder extends Seeder
             'slug' => 'reassign_patient',
             'description'  => '',
         ]);
+
+        Permission::create([
+            'name' => 'Editar tratamiento',
+            'slug' => 'edit_treatment',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Crear evidencia fotografica (Antecedentes)',
+            'slug' => 'create_photographic_evidence_history',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Eliminar evidencia fotografica (Antecedentes)',
+            'slug' => 'delete_photographic_evidence_history',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Editar notas (Antecedentes)',
+            'slug' => 'edit_wound_history',
+            'description'  => '',
+        ]);
     }
 }

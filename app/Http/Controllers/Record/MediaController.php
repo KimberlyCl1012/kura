@@ -8,6 +8,7 @@ use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class MediaController extends Controller
 {
@@ -144,12 +145,10 @@ class MediaController extends Controller
                 'created_at'     => optional($media->created_at)->toDateTimeString(),
             ];
 
-            // Borrar archivo físico si existe en storage/public
             if (!empty($media->content)) {
                 try {
                     Storage::disk('public')->delete($media->content);
                 } catch (\Throwable $e) {
-                    // No romper si el archivo ya no existe
                     Log::warning('No se pudo eliminar el archivo físico de media', [
                         'media_id' => $media->id,
                         'path'     => $media->content,
@@ -158,10 +157,8 @@ class MediaController extends Controller
                 }
             }
 
-            // Borrar registro
             $media->delete();
 
-            // Log de auditoría
             AccessChangeLog::create([
                 'user_id'      => auth()->id(),
                 'logType'      => 'Media',

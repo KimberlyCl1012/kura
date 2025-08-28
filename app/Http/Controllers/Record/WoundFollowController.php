@@ -12,6 +12,7 @@ use App\Models\Method;
 use App\Models\Submethod;
 use App\Models\Treatment;
 use App\Models\Wound;
+use App\Models\WoundAssessment;
 use App\Models\WoundFollow;
 use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
@@ -120,6 +121,13 @@ class WoundFollowController extends Controller
 
             'treatmentSubmethods' => Submethod::where('state', 1)->get(),
             'treatmentsHistory' => $treatmentsHistory,
+            'assessments' => WoundAssessment::where('state', 1)
+                ->select('type', 'name')
+                ->orderBy('type')->orderBy('name', 'ASC')
+                ->get()
+                ->groupBy('type')
+                ->map(fn($g) => $g->pluck('name'))
+                ->toArray(),
         ]);
     }
 

@@ -1,15 +1,16 @@
 <script setup>
-import AppLayout from "../../Layouts/sakai/AppLayout.vue";
-import { ref, watch, onMounted, computed } from "vue";
-import { useToast } from "primevue/usetoast";
-import axios from "axios";
-import InputText from "primevue/inputtext";
-import Select from "primevue/select";
-import Button from "primevue/button";
-import { Badge, DatePicker, ProgressBar } from "primevue";
-import Editor from "primevue/editor";
-import FileUpload from 'primevue/fileupload';
-import Dialog from 'primevue/dialog';
+import AppLayout from "../../Layouts/sakai/AppLayout.vue"
+import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue"
+import { useToast } from "primevue/usetoast"
+import axios from "axios"
+import InputText from "primevue/inputtext"
+import Select from "primevue/select"
+import Button from "primevue/button"
+import { Badge, DatePicker, ProgressBar } from "primevue"
+import Editor from "primevue/editor"
+import FileUpload from "primevue/fileupload"
+import Dialog from "primevue/dialog"
+import { usePage } from "@inertiajs/vue3"
 
 const props = defineProps({
   woundsType: Array,
@@ -18,49 +19,54 @@ const props = defineProps({
   bodyLocations: Array,
   bodySublocation: Array,
   woundHistory: Object,
-});
+  assessments: Object,
+  permissions: Object, 
+})
 
-const toast = useToast();
-const currentStep = ref(1);
-const isSavingUser = ref(false);
-const submittedUser = ref(false);
-const errors = ref({});
+const page = usePage()
+const userRole = computed(() => page?.props?.userRole)
+const userPermissions = computed(() => page?.props?.userPermissions)
+const userSite = computed(() => page?.props?.userSiteId)
+const userSiteName = computed(() => page?.props?.userSiteName)
 
-const bordes = ref([{ name: "Adherido" }, { name: "No adherido" }, { name: "Enrollado" }, { name: "Epitalizado" }]);
-const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }]);
-const edema = ref([{ name: "+++" }, { name: "++" }, { name: "+" }, { name: "No aplica" }]);
-const dolor = ref([{ name: "En reposo" }, { name: "Con movimiento" }, { name: "Ninguno" }]);
-const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
-const exudado_cantidad = ref([{ name: "Abundante" }, { name: "Moderado" }, { name: "Bajo" }]);
-const exudado_tipo = ref([{ name: "Seroso" }, { name: "Purulento" }, { name: "Hemático" }, { name: "Serohemático" }]);
-const olor = ref([{ name: "Mal olor" }, { name: "No aplica" }]);
-const piel_perilesional = ref([
-  { label: "Eritema", value: "Eritema" },
-  { label: "Escoriación", value: "Escoriación" },
-  { label: "Maceración", value: "Maceración" },
-  { label: "Reseca", value: "Reseca" },
-  { label: "Equimosis", value: "Equimosis" },
-  { label: "Indurada", value: "Indurada" },
-  { label: "Queratosis", value: "Queratosis" },
-  { label: "Integra", value: "Integra" },
-  { label: "Hiperpigmentada", value: "Hiperpigmentada" },
-]);
-const infeccion = ref([
-  { label: "Celulitis", value: "Celulitis" },
-  { label: "Pirexia", value: "Pirexia" },
-  { label: "Aumento del dolor", value: "Aumento del dolor" },
-  { label: "Rapida extensión del area ulcerada", value: "Rapida extensión del area ulcerada" },
-  { label: "Mal olor", value: "Mal olor" },
-  { label: "Incremento del exudado", value: "Incremento del exudado" },
-  { label: "Eritema", value: "Eritema" },
-  { label: "No aplica", value: "No aplica" },
-]);
-const tipo_dolor = ref([{ name: "Nociceptivo" }, { name: "Neuropático" }]);
+const toast = useToast()
+const currentStep = ref(1)
+const isSavingUser = ref(false)
+const submittedUser = ref(false)
+const errors = ref({})
+
+const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }])
+const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }])
+const bordes = ref([])
+const edema = ref([])
+const dolor = ref([])
+const exudado_cantidad = ref([])
+const exudado_tipo = ref([])
+const olor = ref([])
+const tipo_dolor = ref([])
+const piel_perilesional = ref([])
+const infeccion = ref([])
+const duracion_dolor = ref([])
+
+onMounted(() => {
+  const A = props.assessments || {}
+  edema.value = (A["Edema"] || []).map(n => ({ name: n }))
+  dolor.value = (A["Dolor"] || []).map(n => ({ name: n }))
+  tipo_dolor.value = (A["Tipo de dolor"] || []).map(n => ({ name: n }))
+  exudado_cantidad.value = (A["Exudado (Cantidad)"] || []).map(n => ({ name: n }))
+  exudado_tipo.value = (A["Exudado (tipo)"] || []).map(n => ({ name: n }))
+  olor.value = (A["Olor"] || []).map(n => ({ name: n }))
+  bordes.value = (A["Borde de la herida"] || []).map(n => ({ name: n }))
+  duracion_dolor.value = (A["Duración del dolor"] || []).map(n => ({ name: n }))
+  piel_perilesional.value = (A["Piel perilesional"] || []).map(n => ({ label: n, value: n }))
+  infeccion.value = (A["Infeccion"] || []).map(n => ({ label: n, value: n }))
+})
 
 const formWoundHistory = ref({
   id: null,
   wound_type_id: null,
   grade_foot: null,
+  type_bite: null,
   wound_subtype_id: null,
   body_location_id: null,
   body_sublocation_id: null,
@@ -68,11 +74,11 @@ const formWoundHistory = ref({
   woundBeginDate: null,
   woundHealthDate: null,
   measurementDate: null,
-  valoracion: "",
   MESI: "",
   borde: null,
   edema: null,
   dolor: null,
+  duracion_dolor: null,
   exudado_cantidad: null,
   exudado_tipo: null,
   olor: null,
@@ -89,189 +95,260 @@ const formWoundHistory = ref({
   pulse_dorsal_derecho: "",
   pulse_tibial_derecho: "",
   pulse_popliteo_derecho: "",
-  length: '',
-  width: '',
-  depth: '',
-  area: '',
-  volume: '',
-  tunneling: '',
-  undermining: '',
-  granulation_percent: '',
-  slough_percent: '',
-  necrosis_percent: '',
-  epithelialization_percent: '',
-  description: ''
-});
+  length: "",
+  width: "",
+  depth: "",
+  area: "",
+  volume: "",
+  tunneling: "",
+  undermining: "",
+  granulation_percent: "",
+  slough_percent: "",
+  necrosis_percent: "",
+  epithelialization_percent: "",
+  description: "",
+})
 
 const requiresVascular = computed(() =>
   [
     18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33,
   ].includes(formWoundHistory.value.body_location_id)
-);
+)
 
 function goToStep(step) {
-  currentStep.value = step;
+  currentStep.value = step
 }
 
-const addError = (field, msg = 'Este campo es obligatorio.') => {
-  errors.value[field] = msg;
-};
+// ============================
+// Helpers validación
+// ============================
+const addError = (field, msg = "Este campo es obligatorio.") => {
+  errors.value[field] = msg
+}
 
 const isMissing = (v) =>
-  v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+  v === null || v === undefined || (typeof v === "string" && v.trim() === "")
 
 const validateRequired = (fields) => {
-  const missing = [];
+  const missing = []
   fields.forEach((f) => {
     if (isMissing(formWoundHistory.value[f])) {
-      addError(f);
-      missing.push(f);
+      addError(f)
+      missing.push(f)
     }
-  });
-  return missing;
-};
+  })
+  return missing
+}
 
+const canFullEditAntecedent = computed(() => {
+  // Si viene por props.permissions
+  if (props?.permissions) {
+    const p = props.permissions
+    if (typeof p.edit_wound_history === "boolean") return p.edit_wound_history
+    if (typeof p.can_full_edit === "boolean") return p.can_full_edit
+  }
+  // Fallback: Inertia props
+  try {
+    const p = usePage()
+    if (Array.isArray(p?.props?.userPermissions)) {
+      return p.props.userPermissions.includes("edit_wound_history")
+    }
+    const po = p?.props?.permissions
+    if (po && typeof po === "object") {
+      return Boolean(
+        po.edit_wound_history ??
+        po.can_full_edit ??
+        po["record.edit_wound_history"]
+      )
+    }
+  } catch (_) { /* noop */ }
+  return false
+})
+const editorRestrictDeletionAntecedent = computed(() => !canFullEditAntecedent.value)
+
+const normalizeTextWH = (html) => {
+  const txt = String(html || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  return txt.toLocaleLowerCase()
+}
+
+const baselineHtmlWH = ref(props.woundHistory?.description ?? "")
+const baselineNormWH = ref(normalizeTextWH(baselineHtmlWH.value))
+const lastGoodHtmlWH = ref(formWoundHistory.value.description ?? "")
+const skipDescWatchOnceWH = ref(true)
+const deletionWarningShownWH = ref(false)
+
+watch(
+  () => formWoundHistory.value.description,
+  (newHtml) => {
+    if (skipDescWatchOnceWH.value) {
+      lastGoodHtmlWH.value = newHtml ?? ""
+      skipDescWatchOnceWH.value = false
+      return
+    }
+
+    if (!editorRestrictDeletionAntecedent.value) {
+      lastGoodHtmlWH.value = newHtml ?? ""
+      return
+    }
+
+    const newNorm = normalizeTextWH(newHtml)
+    const ok = baselineNormWH.value === "" || newNorm.startsWith(baselineNormWH.value)
+
+    if (!ok) {
+      if (!deletionWarningShownWH.value) {
+        toast.add({
+          severity: "warn",
+          summary: "Edición limitada",
+          detail: "No puedes eliminar ni modificar el texto existente; solo agregar al final.",
+          life: 2000,
+        })
+        deletionWarningShownWH.value = true
+        setTimeout(() => (deletionWarningShownWH.value = false), 1200)
+      }
+      formWoundHistory.value.description = lastGoodHtmlWH.value
+      return
+    }
+
+    lastGoodHtmlWH.value = newHtml ?? ""
+  }
+)
+
+onMounted(() => {
+  baselineHtmlWH.value = props.woundHistory?.description ?? ""
+  baselineNormWH.value = normalizeTextWH(baselineHtmlWH.value)
+  lastGoodHtmlWH.value = formWoundHistory.value.description ?? ""
+})
 
 const saveUser = async () => {
-  submittedUser.value = true;
-  isSavingUser.value = true;
-  errors.value = {};
+  submittedUser.value = true
+  isSavingUser.value = true
+  errors.value = {}
 
-  // ---------- Paso 1: requeridos básicos ----------
   if (currentStep.value === 1) {
     const requiredStep1 = [
-      'wound_type_id',
-      'wound_subtype_id',
-      'body_location_id',
-      'body_sublocation_id',
-      'wound_phase_id',
-      'woundBeginDate',
-    ];
+      "wound_type_id",
+      "wound_subtype_id",
+      "body_location_id",
+      "body_sublocation_id",
+      "wound_phase_id",
+      "woundBeginDate",
+    ]
     if (parseInt(formWoundHistory.value.wound_type_id) === 8) {
-      requiredStep1.push('grade_foot'); // Diabética con grado
+      requiredStep1.push("grade_foot")
+    }
+    if (parseInt(formWoundHistory.value.wound_subtype_id) === 10) {
+      requiredStep1.push("type_bite")
     }
 
-    const miss1 = validateRequired(requiredStep1);
+    const miss1 = validateRequired(requiredStep1)
     if (miss1.length) {
       toast.add({
-        severity: 'error',
-        summary: 'Error de validación',
-        detail: 'Completa los campos requeridos del antecedente.',
+        severity: "error",
+        summary: "Error de validación",
+        detail: "Completa los campos requeridos del antecedente.",
         life: 4000,
-      });
-      isSavingUser.value = false;
-      return;
+      })
+      isSavingUser.value = false
+      return
     }
   }
 
-  // ---------- Paso 2: requeridos de evaluación ----------
   if (currentStep.value === 2) {
-    // Requeridos generales del paso 2
     const requiredStep2 = [
-      'woundHealthDate',
-      'edema',
-      'dolor',
-      'tipo_dolor',
-      'visual_scale',
-      'exudado_tipo',
-      'exudado_cantidad',
-      'infeccion',
-      'olor',
-      'borde',
-      'piel_perilesional',
-      'measurementDate',
-      'length',
-      'width',
-      'depth',
-      'tunneling',
-      'undermining',
-      'granulation_percent',
-      'slough_percent',
-      'necrosis_percent',
-      'epithelialization_percent',
-      'description'
-    ];
-    validateRequired(requiredStep2);
+      "woundHealthDate",
+      "edema",
+      "dolor",
+      "duracion_dolor",
+      "tipo_dolor",
+      "visual_scale",
+      "exudado_tipo",
+      "exudado_cantidad",
+      "infeccion",
+      "olor",
+      "borde",
+      "piel_perilesional",
+      "measurementDate",
+      "length",
+      "width",
+      "undermining",
+      "granulation_percent",
+      "slough_percent",
+      "necrosis_percent",
+      "epithelialization_percent",
+      "description",
+    ]
+    validateRequired(requiredStep2)
 
-    // Requeridos vasculares si la ubicación lo amerita
     if (requiresVascular.value) {
       const vascularFields = [
-        'valoracion',
-        'ITB_izquierdo',
-        'ITB_derecho',
-        'pulse_dorsal_izquierdo',
-        'pulse_dorsal_derecho',
-        'pulse_popliteo_izquierdo',
-        'pulse_popliteo_derecho',
-        'pulse_tibial_izquierdo',
-        'pulse_tibial_derecho',
-        'blood_glucose',
-      ];
-      if (['MESI', 'Manual'].includes(formWoundHistory.value.valoracion)) {
-        vascularFields.push('MESI');
-      }
-      validateRequired(vascularFields);
+        "valoracion",
+        "ITB_izquierdo",
+        "ITB_derecho",
+        "pulse_dorsal_izquierdo",
+        "pulse_dorsal_derecho",
+        "pulse_popliteo_izquierdo",
+        "pulse_popliteo_derecho",
+        "pulse_tibial_izquierdo",
+        "pulse_tibial_derecho",
+        "blood_glucose",
+      ]
+      validateRequired(vascularFields)
     }
 
-    // Validaciones de formato/reglas:
-    // EVA (formato n/10 y rango 1-10)
     if (!errors.value.visual_scale && !/^\d{1,2}\/10$/.test(formWoundHistory.value.visual_scale)) {
-      addError('visual_scale', 'Formato inválido. Usa n/10 (ej. 3/10).');
+      addError("visual_scale", "Formato inválido. Usa n/10 (ej. 3/10).")
     } else if (!errors.value.visual_scale) {
-      const n = parseInt(formWoundHistory.value.visual_scale.split('/')[0], 10);
-      if (isNaN(n) || n < 1 || n > 10) addError('visual_scale', 'Debe estar entre 1/10 y 10/10.');
+      const n = parseInt((formWoundHistory.value.visual_scale || "").split("/")[0], 10)
+      if (isNaN(n) || n < 1 || n > 10) addError("visual_scale", "Debe estar entre 1/10 y 10/10.")
     }
 
-    // Números positivos: length, width, depth
-    ['length', 'width', 'depth'].forEach((k) => {
+    // Números positivos
+    ;["length", "width", "depth"].forEach((k) => {
       if (!errors.value[k]) {
-        const v = parseFloat(formWoundHistory.value[k]);
-        if (isNaN(v) || v <= 0) addError(k, 'Debe ser un número mayor a 0.');
+        const v = parseFloat(formWoundHistory.value[k])
+        if (isNaN(v) || v <= 0) addError(k, "Debe ser un número mayor a 0.")
       }
-    });
+    })
 
-    // Porcentajes 0–100 y suma <= 100
-    const pctKeys = [
-      'granulation_percent',
-      'slough_percent',
-      'necrosis_percent',
-      'epithelialization_percent',
-    ];
-    let pctSum = 0;
+    const pctKeys = ["granulation_percent", "slough_percent", "necrosis_percent", "epithelialization_percent"]
+    let pctSum = 0
     pctKeys.forEach((k) => {
       if (!errors.value[k]) {
-        const v = parseFloat(formWoundHistory.value[k]);
+        const v = parseFloat(formWoundHistory.value[k])
         if (isNaN(v) || v < 0 || v > 100) {
-          addError(k, 'Debe ser un porcentaje entre 0 y 100.');
+          addError(k, "Debe ser un porcentaje entre 0 y 100.")
         } else {
-          pctSum += v;
+          pctSum += v
         }
       }
-    });
-    if (pctKeys.some((k) => errors.value[k])) {
-      // ya hay errores de porcentaje individuales
-    } else if (pctSum > 100) {
-      pctKeys.forEach((k) => addError(k, 'La suma total no debe exceder 100%.'));
+    })
+    if (!pctKeys.some((k) => errors.value[k]) && pctSum > 100) {
+      pctKeys.forEach((k) => addError(k, "La suma total no debe exceder 100%."))
     }
 
-    // Si hay cualquier error, detener
     if (Object.keys(errors.value).length) {
       toast.add({
-        severity: 'error',
-        summary: 'Error de validación',
-        detail: 'Corrige los campos marcados en la evaluación.',
+        severity: "error",
+        summary: "Error de validación",
+        detail: "Completa los campos marcados en la evaluación.",
         life: 4000,
-      });
-      isSavingUser.value = false;
-      return;
+      })
+      isSavingUser.value = false
+      return
     }
   }
 
-  // ---------- Envío ----------
   try {
     const payload = {
       ...formWoundHistory.value,
+      type_bite: parseInt(formWoundHistory.value.wound_subtype_id) === 10
+        ? (formWoundHistory.value.type_bite ?? null)
+        : null,
       woundBeginDate: formWoundHistory.value.woundBeginDate
         ? new Date(formWoundHistory.value.woundBeginDate).toISOString().slice(0, 10)
         : null,
@@ -280,163 +357,174 @@ const saveUser = async () => {
         : null,
       measurementDate: formWoundHistory.value.measurementDate
         ? new Date(formWoundHistory.value.measurementDate).toISOString().slice(0, 10)
-        : null, // 👈 NUEVO
-    };
+        : null,
+    }
 
-    const response = await axios.put(`/wounds_histories/${formWoundHistory.value.id}/edit`, payload);
+    const { data } = await axios.put(`/wounds_histories/${formWoundHistory.value.id}/edit`, payload)
 
-    if (response.data?.message) {
-      toast.add({ severity: 'success', summary: 'Éxito', detail: response.data.message, life: 3000 });
+    if (data?.append_blocked) {
+      toast.add({
+        severity: "warn",
+        summary: "Edición limitada",
+        detail: "No puedes eliminar ni modificar el texto existente; solo agregar al final.",
+        life: 3000,
+      })
+    } else if (data?.message) {
+      toast.add({ severity: "success", summary: "Éxito", detail: data.message, life: 3000 })
     } else {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Ocurrió un error al guardar.', life: 3000 });
+      toast.add({ severity: "error", summary: "Error", detail: "Ocurrió un error al guardar.", life: 3000 })
     }
   } catch (error) {
     if (error.response?.status === 422) {
-      errors.value = error.response.data.errors || {};
-      toast.add({ severity: 'error', summary: 'Error de validación', detail: 'Corrige los errores del formulario.', life: 4000 });
+      errors.value = error.response.data.errors || {}
+      toast.add({
+        severity: "error",
+        summary: "Error de validación",
+        detail: "Corrige los errores del formulario.",
+        life: 4000,
+      })
     } else {
-      console.error(error);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Error inesperado al guardar.', life: 4000 });
+      console.error(error)
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "Error inesperado al guardar.",
+        life: 4000,
+      })
     }
   } finally {
-    isSavingUser.value = false;
+    isSavingUser.value = false
   }
-};
+}
 
+watch(() => formWoundHistory.value.wound_subtype_id, (val) => {
+  if (parseInt(val) !== 10) formWoundHistory.value.type_bite = null
+})
+
+const woundSubtypes = ref([])
+const bodySublocations = ref([])
+const isInitialLoadType = ref(true)
+const isInitialLoadLocation = ref(true)
 
 async function loadSubtypes(typeId) {
   try {
-    const { data } = await axios.get(`/wound_types/${typeId}/subtypes`);
-    woundSubtypes.value = data;
+    const { data } = await axios.get(`/wound_types/${typeId}/subtypes`)
+    woundSubtypes.value = data
   } catch (error) {
-    console.error('Error al cargar subtipos:', error);
+    console.error("Error al cargar subtipos:", error)
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'No se pudieron cargar los subtipos.',
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudieron cargar los subtipos.",
       life: 5000,
-    });
+    })
   }
 }
 
 async function loadSublocations(locationId) {
   try {
-    const { data } = await axios.get(`/body_locations/${locationId}/sublocations`);
-    bodySublocations.value = data;
+    const { data } = await axios.get(`/body_locations/${locationId}/sublocations`)
+    bodySublocations.value = data
   } catch (error) {
-    console.error('Error al cargar sublocalizaciones:', error);
+    console.error("Error al cargar sublocalizaciones:", error)
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'No se pudieron cargar las sublocalizaciones.',
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudieron cargar las sublocalizaciones.",
       life: 5000,
-    });
+    })
   }
 }
 
 watch(() => formWoundHistory.value.wound_type_id, (newVal) => {
   if (isInitialLoadType.value) {
-    isInitialLoadType.value = false;
-    return;
+    isInitialLoadType.value = false
+    return
   }
-
-  const typeId = parseInt(newVal);
-  formWoundHistory.value.wound_subtype_id = null;
-  woundSubtypes.value = [];
-
-  if (typeId) {
-    loadSubtypes(typeId);
-  }
-});
+  const typeId = parseInt(newVal)
+  formWoundHistory.value.wound_subtype_id = null
+  woundSubtypes.value = []
+  if (typeId) loadSubtypes(typeId)
+})
 
 watch(() => formWoundHistory.value.body_location_id, (newVal) => {
   if (isInitialLoadLocation.value) {
-    isInitialLoadLocation.value = false;
-    return;
+    isInitialLoadLocation.value = false
+    return
   }
-
-  const locationId = parseInt(newVal);
-  formWoundHistory.value.body_sublocation_id = null;
-  bodySublocations.value = [];
-
-  if (locationId) {
-    loadSublocations(locationId);
-  }
-});
+  const locationId = parseInt(newVal)
+  formWoundHistory.value.body_sublocation_id = null
+  bodySublocations.value = []
+  if (locationId) loadSublocations(locationId)
+})
 
 watch(() => [formWoundHistory.value.length, formWoundHistory.value.width], ([length, width]) => {
-  const l = parseFloat(length);
-  const w = parseFloat(width);
+  const l = parseFloat(length)
+  const w = parseFloat(width)
   if (!isNaN(l) && !isNaN(w)) {
-    formWoundHistory.value.area = (l * w).toFixed(2);
+    formWoundHistory.value.area = (l * w).toFixed(2)
   } else {
-    formWoundHistory.value.area = '';
+    formWoundHistory.value.area = ""
   }
   if (formWoundHistory.value.depth) {
-    const d = parseFloat(formWoundHistory.value.depth);
+    const d = parseFloat(formWoundHistory.value.depth)
     if (!isNaN(d)) {
-      formWoundHistory.value.volume = (l * w * d).toFixed(2);
+      formWoundHistory.value.volume = (l * w * d).toFixed(2)
     }
   }
-});
+})
 
 watch(() => formWoundHistory.value.depth, (depth) => {
-  const d = parseFloat(depth);
-  const a = parseFloat(formWoundHistory.value.area);
-  formWoundHistory.value.volume = (!isNaN(d) && !isNaN(a)) ? (a * d).toFixed(2) : '';
-});
+  const d = parseFloat(depth)
+  const a = parseFloat(formWoundHistory.value.area)
+  formWoundHistory.value.volume = (!isNaN(d) && !isNaN(a)) ? (a * d).toFixed(2) : ""
+})
 
 function onVisualScaleInput(event) {
-  const input = event.target.value.replace("/10", "");
-  let number = parseInt(input);
+  const input = event.target.value.replace("/10", "")
+  let number = parseInt(input)
   if (!isNaN(number)) {
-    if (number < 1) number = 1;
-    if (number > 10) number = 10;
-    formWoundHistory.value.visual_scale = `${number}/10`;
+    if (number < 1) number = 1
+    if (number > 10) number = 10
+    formWoundHistory.value.visual_scale = `${number}/10`
   } else {
-    formWoundHistory.value.visual_scale = "";
+    formWoundHistory.value.visual_scale = ""
   }
 }
 
-function adjustProgress() { }
+function adjustProgress() { /* opcional UI */ }
 
 const totalPercentage = computed(() => {
-  const g = parseFloat(formWoundHistory.value.granulation_percent) || 0;
-  const s = parseFloat(formWoundHistory.value.slough_percent) || 0;
-  const n = parseFloat(formWoundHistory.value.necrosis_percent) || 0;
-  const e = parseFloat(formWoundHistory.value.epithelialization_percent) || 0;
-  return g + s + n + e;
-});
+  const g = parseFloat(formWoundHistory.value.granulation_percent) || 0
+  const s = parseFloat(formWoundHistory.value.slough_percent) || 0
+  const n = parseFloat(formWoundHistory.value.necrosis_percent) || 0
+  const e = parseFloat(formWoundHistory.value.epithelialization_percent) || 0
+  return g + s + n + e
+})
 
 function percentWidth(field) {
-  const value = parseFloat(formWoundHistory.value[field]) || 0;
-  const total = totalPercentage.value;
-  if (total === 0) return 0;
-  if (total > 100) return ((value / total) * 100).toFixed(2);
-  return value.toFixed(2);
+  const value = parseFloat(formWoundHistory.value[field]) || 0
+  const total = totalPercentage.value
+  if (total === 0) return 0
+  if (total > 100) return ((value / total) * 100).toFixed(2)
+  return value.toFixed(2)
 }
 
 function percentOffset(...fields) {
-  const total = totalPercentage.value;
-  let sum = 0;
+  const total = totalPercentage.value
+  let sum = 0
   for (const field of fields) {
-    const val = parseFloat(formWoundHistory.value[field]) || 0;
-    sum += val;
+    const val = parseFloat(formWoundHistory.value[field]) || 0
+    sum += val
   }
-  if (total > 100) return ((sum / total) * 100).toFixed(2) + '%';
-  return sum + '%';
+  if (total > 100) return ((sum / total) * 100).toFixed(2) + "%"
+  return sum + "%"
 }
-
-// Carga inicial forzada de datos
-const woundSubtypes = ref([]);
-const bodySublocations = ref([]);
-const isInitialLoadType = ref(true);
-const isInitialLoadLocation = ref(true);
 
 onMounted(() => {
   if (props.woundHistory) {
-    formWoundHistory.value.wound_type_id = null;
-    formWoundHistory.value.body_location_id = null;
+    formWoundHistory.value.wound_type_id = null
+    formWoundHistory.value.body_location_id = null
 
     Object.assign(formWoundHistory.value, {
       ...props.woundHistory,
@@ -444,125 +532,93 @@ onMounted(() => {
       woundHealthDate: props.woundHistory.woundHealthDate ? new Date(props.woundHistory.woundHealthDate) : null,
       measurementDate: props.woundHistory.measurementDate ? new Date(props.woundHistory.measurementDate) : null,
       grade_foot: props.woundHistory.grade_foot ? parseInt(props.woundHistory.grade_foot) : null,
-    });
+    })
 
     if (props.woundHistory.wound_type_id) {
-      formWoundHistory.value.wound_type_id = parseInt(props.woundHistory.wound_type_id);
-      loadSubtypes(formWoundHistory.value.wound_type_id);
+      formWoundHistory.value.wound_type_id = parseInt(props.woundHistory.wound_type_id)
+      loadSubtypes(formWoundHistory.value.wound_type_id)
     }
 
     if (props.woundHistory.body_location_id) {
-      formWoundHistory.value.body_location_id = parseInt(props.woundHistory.body_location_id);
-      loadSublocations(formWoundHistory.value.body_location_id);
+      formWoundHistory.value.body_location_id = parseInt(props.woundHistory.body_location_id)
+      loadSublocations(formWoundHistory.value.body_location_id)
     }
   }
 
-  loadExistingImages();
-});
+  loadExistingImages()
+})
 
-// --- Eliminar imágenes (Historial) ---
-const showConfirmDeleteModal = ref(false);
-const imageToDelete = ref(null);
+const MAX_FILES = 4
+const MAX_FILE_SIZE = 9 * 1024 * 1024 // 9 MB
 
-const openConfirmDeleteSelected = () => {
-  if (!selectedImage.value) return;
-  const img = existingImages.value.find(i => `/storage/${i.content}` === selectedImage.value);
-  if (!img) return;
-  imageToDelete.value = img;
-  showConfirmDeleteModal.value = true;
-};
+const fileUploadRef = ref(null)
 
-const openConfirmDeleteByThumb = (img) => {
-  imageToDelete.value = img;
-  showConfirmDeleteModal.value = true;
-};
+const showLimitModal = ref(false)
+const showConfirmUploadModal = ref(false)
+const showConfirmDeleteModal = ref(false)
+const showZoomModal = ref(false)
 
-const deleteImage = async () => {
-  if (!imageToDelete.value?.id) return;
+const uploadFiles = ref([])         
+const existingImages = ref([])       
+const selectedImage = ref("")
+const selectedImageRotation = ref(0)
 
-  try {
-    await axios.delete(`/media_history/${imageToDelete.value.id}`);
+const zoomImageUrl = ref("")
+const zoomRotation = ref(0)
 
-    // Quitar del arreglo local
-    existingImages.value = existingImages.value.filter(i => i.id !== imageToDelete.value.id);
+const totalSize = ref(0)
+const totalSizePercent = ref(0)
 
-    // Si la eliminada era la seleccionada, elegir otra o limpiar
-    if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
-      if (existingImages.value.length > 0) {
-        selectImage(existingImages.value[0]);
-      } else {
-        selectedImage.value = '';
-        selectedImageRotation.value = 0;
-      }
-    }
+const imageToDelete = ref(null)
 
-    toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada correctamente.', life: 3000 });
-  } catch (err) {
-    console.error(err);
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 });
-  } finally {
-    showConfirmDeleteModal.value = false;
-    imageToDelete.value = null;
-  }
-};
-
-const clearTemplatedUpload = (clear) => {
-  clear();
-  resetUploads();
-};
-
-
-// -------------------------
-// Evidencia fotográfica
-// -------------------------
-const MAX_FILES = 4;
-const zoomImageUrl = ref('');
-const zoomRotation = ref(0);
-const showZoomModal = ref(false);
-const showLimitModal = ref(false);
-const uploadFiles = ref([]);
-const totalSize = ref(0);
-const totalSizePercent = ref(0);
-const existingImages = ref([]);
-const selectedImage = ref('');
-const selectedImageRotation = ref(0);
-const fileUploadRef = ref(null);
-const showConfirmUploadModal = ref(false);
-
-const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` });
+const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` })
 
 const updateTotalSize = () => {
-  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0);
-  totalSizePercent.value = totalSize.value / 10;
-};
+  totalSize.value = uploadFiles.value.reduce((acc, f) => acc + f.size, 0)
+  totalSizePercent.value = Math.min(100, Math.round((totalSize.value / MAX_FILE_SIZE) * 100))
+}
+
+const revokeAllObjectURLs = () => {
+  uploadFiles.value.forEach((f) => f?.objectURL && URL.revokeObjectURL(f.objectURL))
+}
 
 const resetUploads = () => {
-  uploadFiles.value = [];
-  totalSize.value = 0;
-  totalSizePercent.value = 0;
-};
+  revokeAllObjectURLs()
+  uploadFiles.value = []
+  totalSize.value = 0
+  totalSizePercent.value = 0
+}
 
 const isLimitReached = (incomingCount) =>
-  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES;
+  existingImages.value.length + uploadFiles.value.length + incomingCount > MAX_FILES
 
 const openZoomModal = (src, rotation) => {
-  zoomImageUrl.value = src;
-  zoomRotation.value = rotation;
-  showZoomModal.value = true;
-};
+  zoomImageUrl.value = src
+  zoomRotation.value = rotation || 0
+  showZoomModal.value = true
+}
 
-const closeLimitModal = () => {
-  showLimitModal.value = false;
-};
+const closeLimitModal = () => (showLimitModal.value = false)
 
 const onSelectedFiles = (event) => {
-  const incoming = event.files;
+  const incoming = event.files || []
+  if (!incoming.length) return
+
   if (isLimitReached(incoming.length)) {
-    showLimitModal.value = true;
-    return;
+    showLimitModal.value = true
+    return
   }
 
-  incoming.forEach(file => {
+  for (const file of incoming) {
+    if (!file.type?.startsWith("image/")) {
+      toast.add({ severity: "warn", summary: "Archivo omitido", detail: `${file.name} no es una imagen.`, life: 3000 })
+      continue
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.add({ severity: "warn", summary: "Muy grande", detail: `${file.name} excede 9MB.`, life: 3000 })
+      continue
+    }
+
     uploadFiles.value.push({
       raw: file,
       name: file.name,
@@ -570,97 +626,162 @@ const onSelectedFiles = (event) => {
       type: file.type,
       objectURL: URL.createObjectURL(file),
       rotation: 0,
-    });
-  });
+    })
+  }
 
-  updateTotalSize();
-};
+  updateTotalSize()
+}
 
 const rotateImage = (index, direction) => {
-  const file = uploadFiles.value[index];
-  file.rotation = direction === 'left'
+  const file = uploadFiles.value[index]
+  if (!file) return
+  file.rotation = direction === "left"
     ? (file.rotation - 5 + 360) % 360
-    : (file.rotation + 5) % 360;
-};
+    : (file.rotation + 5) % 360
+}
 
 const removeFile = (index) => {
-  uploadFiles.value.splice(index, 1);
-  updateTotalSize();
-};
+  const f = uploadFiles.value[index]
+  if (f?.objectURL) URL.revokeObjectURL(f.objectURL)
+  uploadFiles.value.splice(index, 1)
+  updateTotalSize()
+}
+
+const clearTemplatedUpload = (clear) => {
+  clear()
+  resetUploads()
+}
 
 const selectImage = (img) => {
-  selectedImage.value = `/storage/${img.content}`;
-  selectedImageRotation.value = img.position || 0;
-};
+  selectedImage.value = `/storage/${img.content}`
+  selectedImageRotation.value = img.position || 0
+}
 
 const downloadSelectedImage = () => {
-  const link = document.createElement('a');
-  link.href = selectedImage.value;
-  link.download = selectedImage.value.split('/').pop();
-  link.click();
-};
+  if (!selectedImage.value) return
+  const link = document.createElement("a")
+  link.href = selectedImage.value
+  link.download = selectedImage.value.split("/").pop()
+  link.click()
+}
 
 const loadExistingImages = async () => {
-  const woundHistoryId = props.woundHistory?.id;
-  if (!woundHistoryId) return;
+  const woundHistoryId = props.woundHistory?.id
+  if (!woundHistoryId) return
 
   try {
-    const { data } = await axios.get('/media_history', {
-      params: { wound_history_id: woundHistoryId }
-    });
-    existingImages.value = data;
+    const { data } = await axios.get("/media_history", {
+      params: { wound_history_id: woundHistoryId },
+    })
+    existingImages.value = data || []
   } catch (error) {
     if (error.response?.status !== 404) {
-      console.error('Error al cargar imágenes:', error);
+      console.error("Error al cargar imágenes:", error)
     }
   }
-};
-
-const uploadEvent = async () => {
-  if (!props.woundHistory.id) {
-    toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 });
-    return;
-  }
-
-  if (!uploadFiles.value.length) {
-    toast.add({ severity: 'warn', summary: 'Sin archivos', detail: 'Debes seleccionar imágenes para subir.', life: 3000 });
-    return;
-  }
-
-  const formData = new FormData();
-  uploadFiles.value.forEach((file, index) => {
-    formData.append('images[]', file.raw, file.name);
-    formData.append(`rotations[${index}]`, file.rotation || 0);
-  });
-  formData.append('wound_history_id', props.woundHistory.id);
-
-  try {
-    await axios.post('/media_history/upload', formData);
-    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 });
-    resetUploads();
-    await loadExistingImages();
-  } catch (err) {
-    console.error(err);
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 });
-  }
-};
-
-const confirmUpload = async () => {
-  showConfirmUploadModal.value = false;
-  await uploadEvent();
-
-  resetUploads();
-  if (fileUploadRef.value) {
-    fileUploadRef.value.clear();
-  }
-};
+}
 
 watch(existingImages, (imgs) => {
   if (imgs.length > 0 && !selectedImage.value) {
-    selectImage(imgs[0]);
+    selectImage(imgs[0])
   }
-});
+  if (imgs.length === 0) {
+    selectedImage.value = ""
+    selectedImageRotation.value = 0
+  }
+})
+
+const uploadEvent = async () => {
+  if (!props.woundHistory?.id) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "Debe guardar el antecedente antes de subir imágenes.",
+      life: 4000,
+    })
+    return
+  }
+
+  if (!uploadFiles.value.length) {
+    toast.add({ severity: "warn", summary: "Sin archivos", detail: "Debes seleccionar imágenes para subir.", life: 3000 })
+    return
+  }
+
+  const formData = new FormData()
+  uploadFiles.value.forEach((file, index) => {
+    formData.append("images[]", file.raw, file.name)
+    formData.append(`rotations[${index}]`, file.rotation || 0)
+  })
+  formData.append("wound_history_id", props.woundHistory.id)
+
+  try {
+    await axios.post("/media_history/upload", formData)
+    toast.add({ severity: "success", summary: "Éxito", detail: "Imágenes subidas.", life: 3000 })
+    resetUploads()
+    await loadExistingImages()
+  } catch (err) {
+    console.error(err)
+    toast.add({ severity: "error", summary: "Error", detail: "Fallo al subir.", life: 4000 })
+  }
+}
+
+const confirmUpload = async () => {
+  showConfirmUploadModal.value = false
+  await uploadEvent()
+  if (fileUploadRef.value) fileUploadRef.value.clear()
+}
+
+const openConfirmDeleteSelected = () => {
+  if (!selectedImage.value) return
+  const img = existingImages.value.find((i) => `/storage/${i.content}` === selectedImage.value)
+  if (!img) return
+  imageToDelete.value = img
+  showConfirmDeleteModal.value = true
+}
+
+const openConfirmDeleteByThumb = (img) => {
+  imageToDelete.value = img
+  showConfirmDeleteModal.value = true
+}
+
+const deleteImage = async () => {
+  if (!imageToDelete.value?.id) return;
+  try {
+    await axios.delete(`/media_history/${imageToDelete.value.id}`);
+
+    existingImages.value = existingImages.value.filter((i) => i.id !== imageToDelete.value.id)
+
+    if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
+      if (existingImages.value.length) {
+        selectImage(existingImages.value[0])
+      } else {
+        selectedImage.value = ""
+        selectedImageRotation.value = 0
+      }
+    }
+
+    toast.add({ severity: "success", summary: "Eliminada", detail: "Imagen eliminada correctamente.", life: 3000 })
+  } catch (err) {
+    console.error('DELETE /media_history/{id} fallo', {
+      status: err?.response?.status,
+      data: err?.response?.data,
+      headers: err?.response?.headers,
+      url: err?.config?.url,
+      method: err?.config?.method,
+    });
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 });
+  } finally {
+    showConfirmDeleteModal.value = false;
+    imageToDelete.value = null;
+  }
+};
+
+
+onBeforeUnmount(() => {
+  revokeAllObjectURLs()
+})
 </script>
+
 <template>
   <AppLayout title="Antecedente de la herida">
     <div class="card max-w-6xl mx-auto min-h-screen flex flex-col">
@@ -731,6 +852,16 @@ watch(existingImages, (imgs) => {
                   </small>
                 </div>
 
+                <!-- Picadura -->
+                <div v-if="parseInt(formWoundHistory.wound_subtype_id) === 10">
+                  <label class="block font-bold mb-1">
+                    Tipo de picadura/mordedura <span class="text-red-600">*</span>
+                  </label>
+                  <InputText v-model="formWoundHistory.type_bite" class="w-full min-w-0" />
+                  <small v-if="submittedUser && !formWoundHistory.type_bite" class="text-red-500">
+                    Debe escribir el tipo de picadura/mordedura.
+                  </small>
+                </div>
                 <!-- Ubicación corporal -->
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
@@ -820,16 +951,6 @@ watch(existingImages, (imgs) => {
                       optionLabel="name" optionValue="name" class="w-full" placeholder="Seleccione una opción" />
                     <small v-if="errors.valoracion" class="text-red-500">{{
                       errors.valoracion
-                    }}</small>
-                  </div>
-
-                  <div v-if="['MESI', 'Manual'].includes(formWoundHistory.valoracion)">
-                    <label class="flex items-center gap-1 mb-1 font-medium">
-                      {{ formWoundHistory.valoracion }} <span class="text-red-600">*</span>
-                    </label>
-                    <InputText id="MESI" v-model="formWoundHistory.MESI" class="w-full" />
-                    <small v-if="errors.MESI" class="text-red-500">{{
-                      errors.MESI
                     }}</small>
                   </div>
 
@@ -961,10 +1082,12 @@ watch(existingImages, (imgs) => {
                   <label class="flex items-center gap-1 mb-1 font-medium">
                     Edema <span class="text-red-600">*</span>
                   </label>
-                  <Select id="edema" v-model="formWoundHistory.edema" :options="edema" optionLabel="name"
-                    optionValue="name" class="w-full" placeholder="Seleccione una opción"
-                    :class="{ 'p-invalid': !!errors.edema }" />
-                  <small v-if="errors.edema" class="text-red-500">{{ errors.edema }}</small>
+                  <Select id="edema" v-model="formWoundHistory.edema" :options="edema" filter optionLabel="name"
+                    optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
+                  </Select>
+                  <small v-if="errors.edema" class="text-red-500">{{
+                    errors.edema
+                  }}</small>
                 </div>
 
                 <div>
@@ -972,7 +1095,7 @@ watch(existingImages, (imgs) => {
                     Dolor <span class="text-red-600">*</span>
                   </label>
                   <Select id="dolor" v-model="formWoundHistory.dolor" :options="dolor" filter optionLabel="name"
-                    optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.dolor" class="text-red-500">{{
                     errors.dolor
@@ -984,7 +1107,7 @@ watch(existingImages, (imgs) => {
                     Tipo de dolor <span class="text-red-600">*</span>
                   </label>
                   <Select id="tipo_dolor" v-model="formWoundHistory.tipo_dolor" :options="tipo_dolor" filter
-                    optionLabel="name" optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    optionLabel="name" optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.tipo_dolor" class="text-red-500">{{
                     errors.tipo_dolor
@@ -992,10 +1115,21 @@ watch(existingImages, (imgs) => {
                 </div>
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
+                    Duración del dolor <span class="text-red-600">*</span>
+                  </label>
+                  <Select id="duracion_dolor" v-model="formWoundHistory.duracion_dolor" :options="duracion_dolor" filter
+                    optionLabel="name" optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
+                  </Select>
+                  <small v-if="errors.duracion_dolor" class="text-red-500">{{
+                    errors.duracion_dolor
+                  }}</small>
+                </div>
+                <div>
+                  <label class="flex items-center gap-1 mb-1 font-medium">
                     Escala Visual Analógica (EVA)
                     <span class="text-red-600">*</span>
                   </label>
-                  <InputText id="visual_scale" v-model="formWoundHistory.visual_scale" class="w-full" :class="{
+                  <InputText id="visual_scale" v-model="formWoundHistory.visual_scale" class="w-full min-w-0" :class="{
                     'p-invalid': submittedUser && !formWoundHistory.visual_scale,
                   }" placeholder="Ej: 3/10" @input="onVisualScaleInput" />
                   <small v-if="errors.visual_scale" class="text-red-500">{{
@@ -1008,7 +1142,7 @@ watch(existingImages, (imgs) => {
                     Exudado (Tipo) <span class="text-red-600">*</span>
                   </label>
                   <Select id="exudado_tipo" v-model="formWoundHistory.exudado_tipo" :options="exudado_tipo" filter
-                    optionLabel="name" optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    optionLabel="name" optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.exudado_tipo" class="text-red-500">{{
                     errors.exudado_tipo
@@ -1020,7 +1154,8 @@ watch(existingImages, (imgs) => {
                     Exudado (Cantidad) <span class="text-red-600">*</span>
                   </label>
                   <Select id="exudado_cantidad" v-model="formWoundHistory.exudado_cantidad" :options="exudado_cantidad"
-                    filter optionLabel="name" optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    filter optionLabel="name" optionValue="name" class="w-full min-w-0"
+                    placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.exudado_cantidad" class="text-red-500">{{
                     errors.exudado_cantidad
@@ -1032,7 +1167,7 @@ watch(existingImages, (imgs) => {
                     Infección <span class="text-red-600">*</span>
                   </label>
                   <MultiSelect id="infeccion" v-model="formWoundHistory.infeccion" :options="infeccion"
-                    optionLabel="label" optionValue="value" class="w-full" filter
+                    optionLabel="label" optionValue="value" class="w-full min-w-0" filter
                     placeholder="Selecciona una o más opciones" />
                   <small v-if="errors.infeccion" class="text-red-500">{{
                     errors.infeccion
@@ -1044,7 +1179,7 @@ watch(existingImages, (imgs) => {
                     Olor <span class="text-red-600">*</span>
                   </label>
                   <Select id="olor" v-model="formWoundHistory.olor" :options="olor" filter optionLabel="name"
-                    optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.olor" class="text-red-500">{{ errors.olor }}</small>
                 </div>
@@ -1054,18 +1189,19 @@ watch(existingImages, (imgs) => {
                     Borde de la herida <span class="text-red-600">*</span>
                   </label>
                   <Select id="borde" v-model="formWoundHistory.borde" :options="bordes" filter optionLabel="name"
-                    optionValue="name" class="w-full" placeholder="Seleccione una opción">
+                    optionValue="name" class="w-full min-w-0" placeholder="Seleccione una opción">
                   </Select>
                   <small v-if="errors.borde" class="text-red-500">{{
                     errors.borde
                   }}</small>
                 </div>
+
                 <div>
                   <label class="flex items-center gap-1 mb-1 font-medium">
                     Piel perilesional <span class="text-red-600">*</span>
                   </label>
                   <MultiSelect id="piel_perilesional" v-model="formWoundHistory.piel_perilesional"
-                    :options="piel_perilesional" filter optionLabel="label" optionValue="value" class="w-full"
+                    :options="piel_perilesional" filter optionLabel="label" optionValue="value" class="w-full min-w-0"
                     placeholder="Selecciona una o más opciones" />
                   <small v-if="errors.piel_perilesional" class="text-red-500">{{
                     errors.piel_perilesional
@@ -1115,8 +1251,7 @@ watch(existingImages, (imgs) => {
                   <InputText v-model="formWoundHistory.area" class="w-full" disabled />
                 </div>
                 <div>
-                  <label class="flex items-center gap-1 mb-1 font-medium">Profundidad (cm)<span
-                      class="text-red-600">*</span></label>
+                  <label class="flex items-center gap-1 mb-1 font-medium">Profundidad (cm)</label>
                   <InputText v-model="formWoundHistory.depth" class="w-full" />
                   <small v-if="errors.depth" class="text-red-500">{{
                     errors.depth
@@ -1129,8 +1264,7 @@ watch(existingImages, (imgs) => {
                 </div>
 
                 <div>
-                  <label class="flex items-center gap-1 mb-1 font-medium">Tunelización<span
-                      class="text-red-600">*</span></label>
+                  <label class="flex items-center gap-1 mb-1 font-medium">Tunelización</label>
                   <InputText v-model="formWoundHistory.tunneling" class="w-full" />
                   <small v-if="errors.tunneling" class="text-red-500">{{
                     errors.tunneling
@@ -1247,7 +1381,8 @@ watch(existingImages, (imgs) => {
                   <template #header="{ chooseCallback, clearCallback }">
                     <div class="flex flex-wrap justify-between items-center flex-1 gap-4">
                       <div class="flex gap-2">
-                        <Button @click="chooseCallback()" icon="pi pi-images" rounded outlined severity="secondary" />
+                        <Button @click="chooseCallback()" icon="pi pi-images" rounded outlined severity="secondary"
+                          v-if="userRole === 'admin' || (userPermissions.includes('create_photographic_evidence_history'))" />
                         <Button @click="showConfirmUploadModal = true" icon="pi pi-cloud-upload" rounded outlined
                           severity="success" :disabled="!uploadFiles.length" />
                         <Button @click="() => clearTemplatedUpload(clearCallback)" icon="pi pi-times" rounded outlined
@@ -1343,7 +1478,9 @@ watch(existingImages, (imgs) => {
                           }" @click="selectImage(img)" alt="Miniatura" />
 
                         <!-- Botón borrar por miniatura -->
-                        <button type="button"
+                        <button
+                          v-if="userRole === 'admin' || (userPermissions.includes('delete_photographic_evidence_history'))"
+                          type="button"
                           class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white rounded-md px-2 py-1 text-xs shadow"
                           @click.stop="openConfirmDeleteByThumb(img)">
                           Eliminar
@@ -1351,15 +1488,28 @@ watch(existingImages, (imgs) => {
                       </div>
                     </div>
 
-                    <Button label="Descargar" class="w-full !py-2 !px-3 !text-base !font-medium !rounded-md" rounded
-                      outlined @click="downloadSelectedImage" />
-                    <Button label="Eliminar" severity="danger"
-                      class="w-full !py-2 !px-3 !text-base !font-medium !rounded-md mt-3" :disabled="!selectedImage"
+                    <Button label="Descargar" class="w-full" @click="downloadSelectedImage" />
+                    <Button
+                      v-if="userRole === 'admin' || (userPermissions.includes('delete_photographic_evidence_history'))"
+                      label="Eliminar" severity="danger" outlined class="w-full" :disabled="!selectedImage"
                       @click="openConfirmDeleteSelected" />
 
                   </div>
                 </div>
               </div>
+
+              <!-- Confirmación de eliminación -->
+              <Dialog v-model:visible="showConfirmDeleteModal" modal header="Eliminar imagen"
+                :style="{ width: '400px' }">
+                <div class="text-center p-4">
+                  <p class="mb-4">¿Desea eliminar esta imagen?</p>
+                  <div class="flex justify-center gap-3">
+                    <Button label="Cancelar" text @click="showConfirmDeleteModal = false" />
+                    <Button label="Eliminar" severity="danger" @click="deleteImage" autofocus />
+                  </div>
+                </div>
+              </Dialog>
+
             </div>
           </div>
         </div>

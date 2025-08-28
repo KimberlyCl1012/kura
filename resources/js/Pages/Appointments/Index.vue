@@ -49,7 +49,6 @@ const appointment = ref({
 
 const typeOptions = [
   { name: "Valoración" },
-  { name: "Urgencia" },
   { name: "Seguimiento" },
 ];
 
@@ -241,7 +240,8 @@ async function submitReassign() {
     <div class="card">
       <Toolbar class="mb-6">
         <template #start>
-          <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNew" v-if="userRole === 'admin' || (userPermissions.includes('create_appointment'))" />
+          <Button label="Nueva" icon="pi pi-plus" severity="secondary" @click="openNew"
+            v-if="userRole === 'admin' || (userPermissions.includes('create_appointment'))" />
         </template>
         <template #end>
           <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="dt.exportCSV()" />
@@ -272,10 +272,12 @@ async function submitReassign() {
         <Column field="appointment_status" header="Estatus" />
         <Column :exportable="false" header="Acciones" style="min-width: 8rem">
           <template #body="{ data }">
-            <Button class="mr-2" icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'" v-if="userRole === 'admin' || (userPermissions.includes('delete_appointment'))"
+            <Button class="mr-2" icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
+              v-if="data.state === 1 && userRole === 'admin' || (userPermissions.includes('delete_appointment'))"
               @click="confirmDelete(data)" />
-            <Button  v-if="data.state === 1 && (userRole === 'admin' || userPermissions.includes('reassign_patient'))" icon="pi pi-users" outlined rounded severity="info"
-              v-tooltip.top="'Reasignar paciente'" @click="openReassign(data)" />
+            <Button v-if="data.state === 1 && (userRole === 'admin' || userPermissions.includes('reassign_patient'))"
+              icon="pi pi-users" outlined rounded severity="info" v-tooltip.top="'Reasignar paciente'"
+              @click="openReassign(data)" />
           </template>
         </Column>
       </DataTable>

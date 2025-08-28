@@ -63,8 +63,8 @@ function handleEditorInput(fieldName, newValue) {
                 toast.add({
                     severity: 'warn',
                     summary: 'Edición limitada',
-                    detail: 'No puedes eliminar información existente.',
-                    life: 3000,
+                    detail: 'No puedes eliminar ni modificar el texto existente; solo agregar al final.',
+                    life: 2000,
                 });
                 deletionWarningShown.value = true;
             }

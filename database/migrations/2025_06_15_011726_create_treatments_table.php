@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id(); //'id_treatment'
             $table->foreignId('wound_id')->nullable()->constrained('wounds');
             $table->foreignId('appointment_id')->nullable()->constrained('appointments');
-            $table->string('mmHg')->nullable();
+            $table->string('mmhg')->nullable();
             $table->longText('description',999)->nullable();
             $table->date('beginDate');
             $table->boolean('state')->default(1);

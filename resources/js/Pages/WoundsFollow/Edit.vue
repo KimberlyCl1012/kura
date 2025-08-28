@@ -14,6 +14,7 @@ import FileUpload from 'primevue/fileupload';
 import Badge from "primevue/badge";
 import ProgressBar from "primevue/progressbar";
 import axios from "axios";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
     follow: Object,
@@ -33,40 +34,44 @@ const props = defineProps({
     treatmentSubmethods: Array,
     treatmentsHistory: Array,
     woundsInAppointment: Number,
+    assessments: Object,
 });
+
+const page = usePage();
+const userRole = computed(() => page.props.userRole);
+const userPermissions = computed(() => page.props.userPermissions);
+const userSite = computed(() => page.props.userSiteId);
+const userSiteName = computed(() => page.props.userSiteName);
 
 const toast = useToast();
 
-// Catálogos 
-const bordes = ref([{ name: "Adherido" }, { name: "No adherido" }, { name: "Enrollado" }, { name: "Epitalizado" }]);
-const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }]);
-const edema = ref([{ name: "+++" }, { name: "++" }, { name: "+" }, { name: "No aplica" }]);
-const dolor = ref([{ name: "En reposo" }, { name: "Con movimiento" }, { name: "Ninguno" }]);
-const exudado_cantidad = ref([{ name: "Abundante" }, { name: "Moderado" }, { name: "Bajo" }]);
-const exudado_tipo = ref([{ name: "Seroso" }, { name: "Purulento" }, { name: "Hemático" }, { name: "Serohemático" }]);
-const olor = ref([{ name: "Mal olor" }, { name: "No aplica" }]);
-const piel_perilesional = ref([
-    { label: "Eritema", value: "Eritema" },
-    { label: "Escoriación", value: "Escoriación" },
-    { label: "Maceración", value: "Maceración" },
-    { label: "Reseca", value: "Reseca" },
-    { label: "Equimosis", value: "Equimosis" },
-    { label: "Indurada", value: "Indurada" },
-    { label: "Queratosis", value: "Queratosis" },
-    { label: "Integra", value: "Integra" },
-    { label: "Hiperpigmentada", value: "Hiperpigmentada" },
-]);
-const infeccion = ref([
-    { label: "Celulitis", value: "Celulitis" },
-    { label: "Pirexia", value: "Pirexia" },
-    { label: "Aumento del dolor", value: "Aumento del dolor" },
-    { label: "Rapida extensión del area ulcerada", value: "Rapida extensión del area ulcerada" },
-    { label: "Mal olor", value: "Mal olor" },
-    { label: "Incremento del exudado", value: "Incremento del exudado" },
-    { label: "Eritema", value: "Eritema" },
-    { label: "No aplica", value: "No aplica" },
-]);
-const tipo_dolor = ref([{ name: "Nociceptivo" }, { name: "Neuropático" }]);
+// Catálogos
+const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }]);
+const MESI = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }]);
+const bordes = ref([]);
+const edema = ref([]);
+const dolor = ref([]);
+const exudado_cantidad = ref([]);
+const exudado_tipo = ref([]);
+const olor = ref([]);
+const tipo_dolor = ref([]);
+const piel_perilesional = ref([]);
+const infeccion = ref([]);
+const duracion_dolor = ref([]);
+
+onMounted(() => {
+    const A = props.assessments || {};
+    edema.value = (A["Edema"] || []).map(n => ({ name: n }));
+    dolor.value = (A["Dolor"] || []).map(n => ({ name: n }));
+    tipo_dolor.value = (A["Tipo de dolor"] || []).map(n => ({ name: n }));
+    exudado_cantidad.value = (A["Exudado (Cantidad)"] || []).map(n => ({ name: n }));
+    exudado_tipo.value = (A["Exudado (tipo)"] || []).map(n => ({ name: n }));
+    olor.value = (A["Olor"] || []).map(n => ({ name: n }));
+    bordes.value = (A["Borde de la herida"] || []).map(n => ({ name: n }));
+    duracion_dolor.value = (A["Duración del dolor"] || []).map(n => ({ name: n }));
+    piel_perilesional.value = (A["Piel perilesional"] || []).map(n => ({ label: n, value: n }));
+    infeccion.value = (A["Infeccion"] || []).map(n => ({ label: n, value: n }));
+});
 
 const currentStep = ref(1);
 function goToStep(step) {
@@ -96,6 +101,7 @@ onMounted(() => {
             woundBeginDate: props.wound.woundBeginDate ? new Date(props.wound.woundBeginDate) : null,
             woundHealthDate: props.wound.woundHealthDate ? new Date(props.wound.woundHealthDate) : null,
             grade_foot: props.wound.grade_foot ? parseInt(props.wound.grade_foot) : null,
+            type_bite: props.wound.type_bite ? (props.wound.type_bite) : null,
         });
 
         if (props.wound.wound_type_id) {
@@ -254,6 +260,7 @@ const formFollow = ref({
     edema: props.follow?.edema || '',
     dolor: props.follow?.dolor || '',
     tipo_dolor: props.follow?.tipo_dolor || '',
+    duracion_dolor: props.follow?.duracion_dolor || '',
     visual_scale: props.follow?.visual_scale || '',
     exudado_tipo: props.follow?.exudado_tipo || '',
     exudado_cantidad: props.follow?.exudado_cantidad || '',
@@ -269,7 +276,6 @@ const formFollow = ref({
     slough_percent: props.follow?.slough_percent || 0,
     necrosis_percent: props.follow?.necrosis_percent || 0,
     epithelialization_percent: props.follow?.epithelialization_percent || 0,
-    valoracion: props.follow?.valoracion || '',
     MESI: props.follow?.MESI || '',
     ITB_izquierdo: props.follow?.ITB_izquierdo || '',
     ITB_derecho: props.follow?.ITB_derecho || '',
@@ -296,6 +302,7 @@ const fieldLabels = {
     edema: 'Edema',
     dolor: 'Dolor',
     tipo_dolor: 'Tipo de dolor',
+    duracion_dolor: 'Duracion del dolor',
     visual_scale: 'Escala visual (EVA)',
     exudado_tipo: 'Exudado (tipo)',
     exudado_cantidad: 'Exudado (cantidad)',
@@ -311,8 +318,7 @@ const fieldLabels = {
     slough_percent: 'Esfacelo (%)',
     necrosis_percent: 'Necrosis (%)',
     epithelialization_percent: 'Epitelización (%)',
-    valoracion: 'Índice tobillo brazo',
-    MESI: 'Valor MESI / Manual',
+    MESI: 'Índice tobillo brazo',
     ITB_izquierdo: 'ITB izquierdo',
     ITB_derecho: 'ITB derecho',
     pulse_dorsal_izquierdo: 'Pulso dorsal pedio izquierdo',
@@ -335,6 +341,7 @@ const saveFollow = () => {
         'edema',
         'dolor',
         'tipo_dolor',
+        'duracion_dolor',
         'visual_scale',
         'exudado_tipo',
         'exudado_cantidad',
@@ -358,7 +365,7 @@ const saveFollow = () => {
     ];
 
     const requiredVascularFields = [
-        'valoracion',
+        'MESI',
         'ITB_izquierdo',
         'ITB_derecho',
         'pulse_dorsal_izquierdo',
@@ -370,10 +377,6 @@ const saveFollow = () => {
         'monofilamento',
         'blood_glucose',
     ];
-
-    if (['Manual'].includes(formFollow.value.valoracion)) {
-        requiredVascularFields.push('MESI');
-    }
 
     if (vascularLocationIds.includes(formFollow.value.body_location_id)) {
         requiredFields.push(...requiredVascularFields);
@@ -920,6 +923,7 @@ const requiredFieldsForFollow = computed(() => {
         'edema',
         'dolor',
         'tipo_dolor',
+        'duracion_dolor',
         'visual_scale',
         'exudado_tipo',
         'exudado_cantidad',
@@ -944,7 +948,7 @@ const requiredFieldsForFollow = computed(() => {
 
     if (vascularLocationIds.includes(formFollow.value.body_location_id)) {
         const vascular = [
-            'valoracion',
+            'MESI',
             'ITB_izquierdo',
             'ITB_derecho',
             'pulse_dorsal_izquierdo',
@@ -956,9 +960,7 @@ const requiredFieldsForFollow = computed(() => {
             'monofilamento',
             'blood_glucose',
         ];
-        if (['Manual'].includes(formFollow.value.valoracion)) {
-            vascular.push('MESI');
-        }
+
         base.push(...vascular);
     }
 
@@ -1106,6 +1108,13 @@ const finishConsultation = async () => {
                                 <Select v-model="formWound.wound_subtype_id" :options="woundSubtypes" optionLabel="name"
                                     optionValue="id" disabled class="w-full" />
                             </div>
+
+                            <div v-if="formWound.wound_subtype_id === 10">
+                                <label class="flex items-center gap-1 mb-1 font-medium"> Tipo de
+                                    picadura/mordedura</label>
+                                <InputText v-model="formWound.type_bite" disabled class="w-full" />
+                            </div>
+
                             <div>
                                 <label class="flex items-center gap-1 mb-1 font-medium">Ubicación corporal</label>
                                 <Select v-model="formWound.body_location_id" :options="props.bodyLocations"
@@ -1145,13 +1154,8 @@ const finishConsultation = async () => {
                             <div>
                                 <label class="flex items-center gap-1 mb-1 font-medium">Índice tobillo brazo
                                     Manual</label>
-                                <Select v-model="formWound.valoracion" :options="valoracion" optionLabel="name"
-                                    optionValue="name" class="w-full" disabled />
-                            </div>
-
-                            <div v-if="formWound.valoracion === 'MESI'">
-                                <label class="flex items-center gap-1 mb-1 font-medium">MESI</label>
-                                <InputText v-model="formWound.MESI" class="w-full" disabled />
+                                <Select v-model="formWound.MESI" :options="MESI" optionLabel="name" optionValue="name"
+                                    class="w-full" disabled />
                             </div>
 
                             <div>
@@ -1244,6 +1248,12 @@ const finishConsultation = async () => {
                             <div>
                                 <label class="flex items-center gap-1 mb-1 font-medium">Tipo de dolor</label>
                                 <Select v-model="formWound.tipo_dolor" :options="tipo_dolor" optionLabel="name"
+                                    optionValue="name" class="w-full" disabled />
+                            </div>
+
+                            <div>
+                                <label class="flex items-center gap-1 mb-1 font-medium">Duración del dolor</label>
+                                <Select v-model="formWound.duracion_dolor" :options="duracion_dolor" optionLabel="name"
                                     optionValue="name" class="w-full" disabled />
                             </div>
 
@@ -1572,24 +1582,13 @@ const finishConsultation = async () => {
                                             Índice tobillo brazo
                                             <span class="text-red-600">*</span>
                                         </label>
-                                        <Select id="valoracion" v-model="formFollow.valoracion" :options="valoracion"
-                                            filter optionLabel="name" optionValue="name" class="w-full"
+                                        <Select id="MESI" v-model="formFollow.MESI" :options="MESI" filter
+                                            optionLabel="name" optionValue="name" class="w-full"
                                             placeholder="Seleccione una opción" />
-                                        <small v-if="errors.valoracion" class="text-red-500">{{ errors.valoracion
+                                        <small v-if="errors.MESI" class="text-red-500">{{ errors.MESI
                                             }}</small>
                                         <p class="text-sm text-gray-500 mt-1">Valor seleccionado: {{
-                                            formFollow.valoracion }}</p>
-
-                                    </div>
-
-                                    <div v-if="['Manual'].includes(formFollow.valoracion)">
-                                        <label class="flex items-center gap-1 mb-1 font-medium">
-                                            {{ formFollow.valoracion }} <span class="text-red-600">*</span>
-                                        </label>
-                                        <InputText id="MESI" v-model="formFollow.MESI" class="w-full" />
-                                        <small v-if="errors.MESI" class="text-red-500">{{
-                                            errors.MESI
-                                        }}</small>
+                                            formFollow.MESI }}</p>
                                     </div>
 
                                     <div>
@@ -1752,6 +1751,18 @@ const finishConsultation = async () => {
                                     <small v-if="errors.tipo_dolor" class="text-red-500">{{
                                         errors.tipo_dolor
                                         }}</small>
+                                </div>
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">
+                                        Duración del dolor <span class="text-red-600">*</span>
+                                    </label>
+                                    <Select id="duracion_dolor" v-model="formFollow.duracion_dolor"
+                                        :options="duracion_dolor" filter optionLabel="name" optionValue="name"
+                                        class="w-full min-w-0" placeholder="Seleccione una opción">
+                                    </Select>
+                                    <small v-if="errors.duracion_dolor" class="text-red-500">{{
+                                        errors.duracion_dolor
+                                    }}</small>
                                 </div>
                                 <div>
                                     <label class="flex items-center gap-1 mb-1 font-medium">

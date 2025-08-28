@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('kurator_id')->constrained('kurators');
             $table->date('dateStartVisit')->nullable();
             $table->date('dateEndVisit')->nullable();
-            $table->enum('typeVisit', ['Valoración', 'Urgencia', 'Seguimiento']);
+            $table->enum('typeVisit', ['Valoración', 'Seguimiento']);
             $table->integer('state')->default(1);
             $table->timestamps();
         });

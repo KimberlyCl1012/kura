@@ -578,9 +578,9 @@ const showConfirmUploadModal = ref(false);
 const showConfirmDeleteModal = ref(false);
 const showZoomModal = ref(false);
 
-const uploadFiles = ref([]);      // archivos locales (pendientes)
-const existingImages = ref([]);   // imágenes ya en servidor
-const selectedImage = ref("");    // url seleccionada para galería
+const uploadFiles = ref([]);
+const existingImages = ref([]);
+const selectedImage = ref("");
 const selectedImageRotation = ref(0);
 
 const zoomImageUrl = ref("");
@@ -591,10 +591,6 @@ const totalSizePercent = ref(0);
 
 const imageToDelete = ref(null);
 
-//
-// -------------------------
-// Utils
-// -------------------------
 const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` });
 
 const updateTotalSize = () => {
@@ -624,10 +620,6 @@ const openZoomModal = (src, rotation) => {
 
 const closeLimitModal = () => (showLimitModal.value = false);
 
-//
-// -------------------------
-// Selección/rotación/elim local
-// -------------------------
 const onSelectedFiles = (event) => {
   const incoming = event.files || [];
   if (!incoming.length) return;
@@ -681,10 +673,6 @@ const clearTemplatedUpload = (clear) => {
   resetUploads();
 };
 
-//
-// -------------------------
-// Galería (servidor)
-// -------------------------
 const selectImage = (img) => {
   selectedImage.value = `/storage/${img.content}`;
   selectedImageRotation.value = img.position || 0;
@@ -698,12 +686,10 @@ const downloadSelectedImage = () => {
   link.click();
 };
 
-// Carga: usa woundHistory.id o wound.id según tu flujo
 const loadExistingImages = async () => {
   const woundHistoryId = props.woundHistory?.id;
   const woundId = props.wound?.id;
 
-  // adapta a uno u otro endpoint que uses:
   try {
     if (woundHistoryId) {
       const { data } = await axios.get("/media_history", {
@@ -721,14 +707,12 @@ const loadExistingImages = async () => {
       existingImages.value = data || [];
     }
   } catch (error) {
-    // 404 sin imágenes es válido
     if (error.response?.status !== 404) {
       console.error("Error al cargar imágenes:", error);
     }
   }
 };
 
-// Selección inicial cuando llegan del servidor
 watch(existingImages, (imgs) => {
   if (imgs.length > 0 && !selectedImage.value) {
     selectImage(imgs[0]);
@@ -739,12 +723,7 @@ watch(existingImages, (imgs) => {
   }
 });
 
-//
-// -------------------------
-// Subir a servidor
-// -------------------------
 const uploadEvent = async () => {
-  // Asegúrate de que exista el id correspondiente
   const hasContext = !!(props.woundHistory?.id || props.wound?.id);
   if (!hasContext) {
     toast.add({
@@ -790,14 +769,10 @@ const uploadEvent = async () => {
 const confirmUpload = async () => {
   showConfirmUploadModal.value = false;
   await uploadEvent();
-  // limpiar input de FileUpload
   if (fileUploadRef.value) fileUploadRef.value.clear();
 };
 
-//
-// -------------------------
-// Eliminar en servidor
-// -------------------------
+
 const openConfirmDeleteSelected = () => {
   if (!selectedImage.value) return;
   const img = existingImages.value.find((i) => `/storage/${i.content}` === selectedImage.value);
@@ -815,11 +790,9 @@ const deleteImage = async () => {
   if (!imageToDelete.value?.id) return;
 
   try {
-    // Si usas historial:
     if (props.woundHistory?.id) {
       await axios.delete(`/media_history/${imageToDelete.value.id}`);
     } else {
-      // Si usas herida "normal" (Laravel puede requerir _method)
       await axios.post(`/media/${imageToDelete.value.id}`, {
         _method: "DELETE",
         wound_id: props.wound?.id,
@@ -828,10 +801,8 @@ const deleteImage = async () => {
       });
     }
 
-    // Actualiza estado local
     existingImages.value = existingImages.value.filter((i) => i.id !== imageToDelete.value.id);
 
-    // Si eliminaste la seleccionada, elige otra o limpia
     if (selectedImage.value === `/storage/${imageToDelete.value.content}`) {
       if (existingImages.value.length) {
         selectImage(existingImages.value[0]);
@@ -851,105 +822,181 @@ const deleteImage = async () => {
   }
 };
 
-// Carga inicial
 loadExistingImages();
 
-// // Tratamiento
-const treatmentId = ref(props.treatment?.id || null);
-const hasTreatment = ref(!!props.treatment);
+// Tratamiento
+const treatmentId = ref(props.treatment?.id ?? null)
+const hasTreatment = ref(!!props.treatment)
+const isSavingTreatment = ref(false)
+const submittedTreatment = ref(false)
 
 const formTreat = ref({
-  methods: props.treatment?.methods.map(m => m.treatment_method_id) || [],
+  methods: props.treatment?.methods?.map(m => m.treatment_method_id) ?? [],
   submethodsByMethod: props.treatment
     ? (() => {
-      const map = {};
+      const map = {}
       props.treatment.submethods.forEach(sub => {
-        const methodId = sub.treatment_method_id;
-        map[methodId] = map[methodId] || [];
-        map[methodId].push(sub.treatment_submethod_id);
-      });
-      return map;
+        const methodId = sub.treatment_method_id
+        map[methodId] = map[methodId] || []
+        map[methodId].push(sub.treatment_submethod_id)
+      })
+      return map
     })()
     : {},
-  description: props.treatment?.description || "",
-  mmhg: props.treatment?.mmhg || ""
-});
+  description: props.treatment?.description ?? '',
+  mmhg: props.treatment?.mmhg != null ? String(props.treatment.mmhg) : '',
+})
+
+const canFullEdit = computed(() => {
+  if (typeof props.permissions?.can_full_edit === 'boolean') {
+    return props.permissions.can_full_edit
+  }
+
+  if (typeof usePage === 'function') {
+    try {
+      const p = usePage()
+      if (Array.isArray(p?.props?.userPermissions)) {
+        return p.props.userPermissions.includes('edit_treatment')
+      }
+      const po = p?.props?.permissions
+      if (po && typeof po === 'object') {
+        return Boolean(
+          po.edit_treatment ??
+          po.can_full_edit ??
+          po['record.edit_treatment']
+        )
+      }
+    } catch (_) { /* noop */ }
+  }
+
+  return false
+})
+
+const editorRestrictDeletion = computed(() => !canFullEdit.value)
+
+const TRIGGER_IDS = [54, 55, 56]
+const TRIGGERIDS_SET = new Set(TRIGGER_IDS)
+const hydrated = ref(false)
 
 const requiresMMHG = computed(() => {
-  const TRIGGER_IDS = [1, 2, 3];
-  const allSelectedSubs = Object.values(formTreat.value.submethodsByMethod || {}).flat();
-  return allSelectedSubs.some(id => TRIGGER_IDS.includes(Number(id)));
-});
+  const allSelectedSubs = Object.values(formTreat.value.submethodsByMethod || {}).flat()
+  return allSelectedSubs.some(id => TRIGGERIDS_SET.has(Number(id)))
+})
 
-watch(requiresMMHG, (req) => {
-  if (!req) {
-    formTreat.value.mmhg = "";
+watch(requiresMMHG, (req, prev) => {
+  if (!req && prev && hydrated.value) {
+    formTreat.value.mmhg = ''
   }
-});
+})
 
-const isSavingTreatment = ref(false);
-const submittedTreatment = ref(false);
-
-// Computed: filtrar métodos seleccionados
 const selectedMethodsWithSubmethods = computed(() => {
-  return props.treatmentMethods.filter(method =>
-    formTreat.value.methods.includes(method.id)
-  );
-});
+  const ids = new Set(formTreat.value.methods)
+  return props.treatmentMethods.filter(method => ids.has(method.id))
+})
 
 watch(
   () => formTreat.value.methods,
   (newMethods) => {
-    const validMap = {};
+    const validMap = {}
     newMethods.forEach(methodId => {
       if (Array.isArray(formTreat.value.submethodsByMethod[methodId])) {
-        validMap[methodId] = formTreat.value.submethodsByMethod[methodId];
+        validMap[methodId] = formTreat.value.submethodsByMethod[methodId]
       } else {
-        validMap[methodId] = [];
+        validMap[methodId] = []
       }
-    });
-    formTreat.value.submethodsByMethod = validMap;
+    })
+    formTreat.value.submethodsByMethod = validMap
   },
   { deep: true }
-);
+)
+
+const baselineHtml = ref(props.treatment?.description ?? '')
+const normalizeText = (html) => {
+  const txt = String(html || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return txt.toLocaleLowerCase()
+}
+const baselineNorm = ref(normalizeText(baselineHtml.value))
+const lastGoodHtml = ref(formTreat.value.description ?? '')
+const skipDescWatchOnce = ref(true)
+const deletionWarningShown = ref(false)
+
+watch(
+  () => formTreat.value.description,
+  (newHtml) => {
+    if (skipDescWatchOnce.value) {
+      lastGoodHtml.value = newHtml ?? ''
+      skipDescWatchOnce.value = false
+      return
+    }
+
+    if (!editorRestrictDeletion.value) {
+      lastGoodHtml.value = newHtml ?? ''
+      return
+    }
+
+    const newNorm = normalizeText(newHtml)
+    const ok = baselineNorm.value === '' || newNorm.startsWith(baselineNorm.value)
+
+    if (!ok) {
+      if (!deletionWarningShown.value) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Edición limitada',
+          detail: 'No puedes eliminar ni modificar el texto existente; solo agregar al final.',
+          life: 2000,
+        })
+        deletionWarningShown.value = true
+        setTimeout(() => (deletionWarningShown.value = false), 1200)
+      }
+      formTreat.value.description = lastGoodHtml.value
+      return
+    }
+
+    lastGoodHtml.value = newHtml ?? ''
+  }
+)
 
 const storeTreatment = async () => {
-  submittedTreatment.value = true;
-  errors.value = {};
+  submittedTreatment.value = true
+  errors.value = {}
 
   const missingSubmethods = formTreat.value.methods.filter(
     (methodId) =>
       !formTreat.value.submethodsByMethod[methodId] ||
       formTreat.value.submethodsByMethod[methodId].length === 0
-  );
+  )
   if (missingSubmethods.length > 0) {
     toast.add({
-      severity: "error",
-      summary: "Validación",
-      detail: "Cada método debe tener al menos un submétodo seleccionado.",
+      severity: 'error',
+      summary: 'Validación',
+      detail: 'Cada método debe tener al menos un submétodo seleccionado.',
       life: 4000,
-    });
-    return;
+    })
+    return
   }
 
-  // Requerir mmHg si aplica (submétodos 1,2,3)
+  let mmhgToSend = null
   if (requiresMMHG.value) {
-    const val = String(formTreat.value.mmhg || "").trim();
-    const isNumber = /^(\d+(\.\d+)?)$/.test(val);
-    if (!val || !isNumber) {
-      errors.value = { ...(errors.value || {}), mmhg: "Campo requerido. Ingresa un valor numérico válido." };
+    const raw = String(formTreat.value.mmhg ?? '').trim()
+    const isNumber = /^(\d+(\.\d+)?)$/.test(raw)
+    if (!raw || !isNumber) {
+      errors.value = { ...(errors.value || {}), mmhg: 'Campo mmHg requerido.' }
       toast.add({
-        severity: "error",
-        summary: "Validación",
-        detail: "El campo mmHg es obligatorio y debe ser numérico.",
+        severity: 'error',
+        summary: 'Validación',
+        detail: 'El campo mmHg es obligatorio y debe ser numérico.',
         life: 4000,
-      });
-      return;
+      })
+      return
     }
+    mmhgToSend = Number(raw)
   }
 
-
-  isSavingTreatment.value = true;
+  isSavingTreatment.value = true
 
   const payload = {
     treatment_id: treatmentId.value,
@@ -958,88 +1005,81 @@ const storeTreatment = async () => {
     description: formTreat.value.description || null,
     method_ids: formTreat.value.methods,
     submethodsByMethod: formTreat.value.submethodsByMethod,
-    mmhg: requiresMMHG.value ? formTreat.value.mmhg : null,
-  };
+    mmhg: mmhgToSend,
+  }
 
   try {
-    const { data } = await axios.post("/treatments", payload);
+    const { data } = await axios.post('/treatments', payload)
 
     if (data?.treatment_id) {
-      treatmentId.value = data.treatment_id;
+      treatmentId.value = data.treatment_id
     }
 
-    toast.add({
-      severity: "success",
-      summary: "Éxito",
-      detail:
-        data?.message ||
-        (hasTreatment.value ? "Tratamiento actualizado." : "Tratamiento guardado."),
-      life: 3000,
-    });
+    if (data?.append_blocked) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Edición limitada',
+        detail: 'No puedes eliminar ni modificar el texto existente; solo agregar al final.',
+        life: 3000,
+      })
+    } else {
+      toast.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: data?.message || (hasTreatment.value ? 'Tratamiento actualizado.' : 'Tratamiento guardado.'),
+        life: 3000,
+      })
+    }
 
-    hasTreatment.value = true;
+    hasTreatment.value = true
   } catch (error) {
     if (error.response?.status === 422) {
-      // Mostrar TODOS los mensajes de validación
-      errors.value = error.response.data.errors || {};
-
-      const allMessages = Object.values(errors.value)
-        .flat()
-        .filter(Boolean)
-        .join("\n");
-
+      errors.value = error.response.data.errors || {}
+      const allMessages = Object.values(errors.value).flat().filter(Boolean).join('\n')
       toast.add({
-        severity: "error",
-        summary: "Errores de validación",
-        detail: allMessages || "Revisa los campos.",
+        severity: 'error',
+        summary: 'Errores de validación',
+        detail: allMessages || 'Revisa los campos.',
         life: 6000,
-      });
-
-      // --- Alternativa: un toast por cada error ---
-      // Object.values(errors.value).flat().forEach(msg => {
-      //   toast.add({
-      //     severity: "error",
-      //     summary: "Error de validación",
-      //     detail: msg,
-      //     life: 4000,
-      //   });
-      // });
+      })
     } else {
       const detail =
         error.response?.data?.message ||
         error.message ||
-        "No se pudo guardar el tratamiento.";
-
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail,
-        life: 4000,
-      });
+        'No se pudo guardar el tratamiento.'
+      toast.add({ severity: 'error', summary: 'Error', detail, life: 4000 })
     }
   } finally {
-    isSavingTreatment.value = false;
+    isSavingTreatment.value = false
   }
-};
+}
 
-onMounted(() => {
+onMounted(async () => {
   if (props.treatment) {
-    formTreat.value.description = props.treatment.description;
-    formTreat.value.methods = props.treatment.methods.map(m => m.treatment_method_id);
+    formTreat.value.methods = props.treatment.methods?.map(m => m.treatment_method_id) ?? []
 
-    const map = {};
-    props.treatment.submethods.forEach(sub => {
-      const methodId = sub.treatment_method_id;
-      if (methodId) {
-        map[methodId] = map[methodId] || [];
-        map[methodId].push(sub.treatment_submethod_id);
-      }
-    });
-    formTreat.value.submethodsByMethod = map;
+    const map = {}
+      ; (props.treatment.submethods ?? []).forEach(sub => {
+        const methodId = sub.treatment_method_id
+        if (methodId) {
+          map[methodId] = map[methodId] || []
+          map[methodId].push(sub.treatment_submethod_id)
+        }
+      })
+    formTreat.value.submethodsByMethod = map
+
+    formTreat.value.description = props.treatment.description ?? ''
+    formTreat.value.mmhg = props.treatment.mmhg != null ? String(props.treatment.mmhg) : ''
   }
-});
-// // Fin Tratamiento
 
+  baselineHtml.value = props.treatment?.description ?? ''
+  baselineNorm.value = normalizeText(baselineHtml.value)
+  lastGoodHtml.value = formTreat.value.description ?? ''
+
+  skipDescWatchOnce.value = false
+  hydrated.value = true
+})
+// // Fin Tratamiento
 
 //Terminar consulta
 const showConfirmFinishDialog = ref(false);
@@ -1728,7 +1768,7 @@ const finishConsultation = async () => {
                 <template #header="{ chooseCallback, clearCallback }">
                   <div class="flex flex-wrap justify-between items-center flex-1 gap-4">
                     <div class="flex gap-2">
-                      <Button @click="chooseCallback()" icon="pi pi-images" rounded outlined severity="secondary" />
+                      <Button @click="chooseCallback()" icon="pi pi-images" rounded outlined severity="secondary"  v-if="userRole === 'admin' || (userPermissions.includes('create_photographic_evidence'))" />
                       <Button @click="showConfirmUploadModal = true" icon="pi pi-cloud-upload" rounded outlined
                         severity="success" :disabled="!uploadFiles.length" />
                       <Button @click="() => clearTemplatedUpload(clearCallback)" icon="pi pi-times" rounded outlined
@@ -1875,12 +1915,12 @@ const finishConsultation = async () => {
                     display="chip" />
                 </div>
 
-                <!-- mmHg (solo si requiere por submétodos 1,2,3) -->
+                <!-- mmHg -->
                 <div v-if="requiresMMHG">
                   <label for="mmhg" class="flex items-center gap-1 mb-1 font-medium">
                     mmHg <span class="text-red-600">*</span>
                   </label>
-                  <InputText id="mmhg" v-model="formTreat.mmhg" class="w-full min-w-0" placeholder="Ej: 40" />
+                  <InputText id="mmhg" v-model="formTreat.mmhg" class="w-full min-w-0" />
                   <small v-if="errors.mmhg" class="text-red-500">{{ errors.mmhg }}</small>
                 </div>
 
@@ -1903,7 +1943,7 @@ const finishConsultation = async () => {
                 <Button label="Actualizar" icon="pi pi-check" type="submit" :loading="isSavingTreatment"
                   :disabled="isSavingTreatment" />
 
-                <Button v-if="hasTreatment" label="Terminar consulta" icon="pi pi-sign-out" severity="danger"
+                <Button v-if="hasTreatment" label="Terminar consulta" icon="pi pi-sign-out" severity="danger" text
                   :loading="isSavingTreatment" :disabled="isSavingTreatment" @click="confirmFinishConsultation" />
 
               </div>
@@ -2001,14 +2041,11 @@ const finishConsultation = async () => {
 
 .zoom-img {
   margin-top: 0;
-  /* Por defecto (móviles y tablets) */
 }
 
-/* Solo en pantallas grandes (≥ 1024px) */
 @media (min-width: 1024px) {
   .zoom-img {
     margin-top: 5rem;
-    /* o 6rem, 100px según necesites */
   }
 }
 </style>

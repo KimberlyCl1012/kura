@@ -48,10 +48,6 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // Team
-    Route::post('/team-members', [TeamMemberController::class, 'store'])
-        ->name('team-members.store');
-
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::get('/teams/{team}/permissions', [PermissionController::class, 'show'])
@@ -115,6 +111,7 @@ Route::middleware([
     //Media History
     Route::get('/media_history', [MediaHistoryController::class, 'index'])->name('media_history.index');
     Route::post('/media_history/upload', [MediaHistoryController::class, 'upload'])->name('media_history.upload');
+    Route::delete('/media_history/{mediaHistory}', [MediaHistoryController::class, 'destroy'])->name('media_history.destroy');
 
     //Treatment
     Route::post('/treatments/edit', [TreatmentController::class, 'update'])->name('treatment.update');

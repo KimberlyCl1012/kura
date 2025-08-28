@@ -239,7 +239,7 @@ class HealthRecordController extends Controller
 
             unset($data['medical_info']);
 
-            // Permiso inverso
+            // Permiso 
             $canFullEdit = $this->userCan('edit_medical_record');
 
             Log::debug('edit_medical_record', [

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('secondaryKey')->nullable();
             $table->string('changeType');
             $table->string('fieldName')->nullable();
-            $table->text('oldValue')->nullable();
+            $table->longText('oldValue')->nullable();
             $table->longText('newValue')->nullable();
             $table->timestamps();
         });

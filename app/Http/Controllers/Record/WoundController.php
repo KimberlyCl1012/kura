@@ -185,7 +185,7 @@ class WoundController extends Controller
             });
 
             $validator->sometimes('type_bite', 'required', function ($input) {
-                return $input->wound_subtype_id == 11;
+                return $input->wound_subtype_id == 10;
             });
 
             if ($validator->fails()) {
