@@ -209,7 +209,8 @@ function healthRecord(data) {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew" v-if="userRole === 'admin' || (userPermissions.includes('create_patient'))" />
+                    <Button label="Nuevo" icon="pi pi-plus" severity="secondary" @click="openNew"
+                        v-if="userRole === 'admin' || (userPermissions.includes('create_patient'))" />
                 </template>
                 <template #end>
                     <Button label="Exportar" icon="pi pi-upload" severity="secondary" @click="exportCSV" />
@@ -241,11 +242,13 @@ function healthRecord(data) {
                 <Column field="siteName" header="Sitio" />
                 <Column :exportable="false" header="Acciones" style="min-width: 8rem">
                     <template #body="{ data }">
-                        <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined v-if="userRole === 'admin' || (userPermissions.includes('show_medical_record'))" 
-                            rounded class="mr-2" @click="healthRecord(data)"
+                        <Button :icon="data.health_record_id ? 'pi pi-folder-open' : 'pi pi-folder-plus'" outlined
+                            v-if="userRole === 'admin' || (userPermissions.includes('show_medical_record'))" rounded
+                            class="mr-2" @click="healthRecord(data)"
                             :severity="data.health_record_id ? 'info' : 'secondary'"
-                            v-tooltip.top="data.health_record_id ? 'Ver expediente' : 'Crear expediente'" />
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)" v-if="userRole === 'admin' || (userPermissions.includes('edit_patient'))"
+                            v-tooltip.top="data.health_record_id ? 'Ver historia clínica' : 'Crear historia clínica'" />
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(data)"
+                            v-if="userRole === 'admin' || (userPermissions.includes('edit_patient'))"
                             v-tooltip.top="'Editar'" />
                         <Button v-if="
                             (
@@ -255,7 +258,7 @@ function healthRecord(data) {
                                     && userSiteName === data.siteName
                                 )
                             )
-                        " icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'" 
+                        " icon="pi pi-trash" outlined rounded severity="danger" v-tooltip.top="'Eliminar'"
                             @click="confirmDeleteUser(data)" />
                     </template>
                 </Column>

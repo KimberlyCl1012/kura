@@ -13,7 +13,6 @@ use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Permission\PermissionController;
-use App\Http\Controllers\Permission\TeamController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
@@ -135,7 +134,6 @@ Route::middleware([
     Route::get('/wound_types/{woundtypeId}/subtypes', [WoundTypeController::class, 'subtypes'])->name('wound_types.subtypes');
     Route::get('/body_locations/{id}/sublocations', [BodyLocationController::class, 'sublocations'])->name('body_locations.subtypes');
     Route::get('/methods/{id}/submethods', [MethodController::class, 'submethods'])->name('methods.submethods');
-
 
     //Catalogues
     //Address

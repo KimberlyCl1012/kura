@@ -170,7 +170,7 @@ function goToRecords(healthRecordId) {
 
                         <div v-if="props.healthRecord" class="col-span-6 flex items-center justify-end">
                             <Button icon="pi pi-folder-open" outlined severity="danger" class="ml-2"
-                                label="Ver registros" v-tooltip.top="'Registro de heridas y antecedentes'"
+                                label="Ver historia clínica" v-tooltip.top="'Registro de heridas y antecedentes'"
                                 @click.stop="goToRecords(props.healthRecord.cryptHealthRecordId)" />
                         </div>
                     </div>
