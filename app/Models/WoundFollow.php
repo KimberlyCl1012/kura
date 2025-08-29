@@ -30,6 +30,7 @@ class WoundFollow extends Model
         'piel_perilesional',
         'infeccion',
         'tipo_dolor',
+        'duracion_dolor',
         'visual_scale',
         'ITB_izquierdo',
         'pulse_dorsal_izquierdo',

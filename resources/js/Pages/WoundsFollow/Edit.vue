@@ -89,7 +89,6 @@ const bodySublocations = ref([]);
 const isInitialLoadType = ref(true);
 const isInitialLoadLocation = ref(true);
 
-
 onMounted(() => {
     if (props.wound) {
         formWound.value.wound_type_id = null;
@@ -116,7 +115,6 @@ onMounted(() => {
     }
 });
 
-// Función para cargar subtipos desde el backend
 async function loadSubtypes(typeId) {
     try {
         const { data } = await axios.get(`/wound_types/${typeId}/subtypes`);
@@ -132,7 +130,6 @@ async function loadSubtypes(typeId) {
     }
 }
 
-// Función para cargar sublocalizaciones desde el backend
 async function loadSublocations(locationId) {
     try {
         const { data } = await axios.get(`/body_locations/${locationId}/sublocations`);
@@ -148,7 +145,6 @@ async function loadSublocations(locationId) {
     }
 }
 
-// Watcher para cambios en tipo de herida
 watch(() => formWound.value.wound_type_id, (newVal) => {
     if (isInitialLoadType.value) {
         isInitialLoadType.value = false;
@@ -164,7 +160,6 @@ watch(() => formWound.value.wound_type_id, (newVal) => {
     }
 });
 
-// Watcher para cambios en ubicación corporal
 watch(() => formWound.value.body_location_id, (newVal) => {
     if (isInitialLoadLocation.value) {
         isInitialLoadLocation.value = false;
@@ -180,8 +175,6 @@ watch(() => formWound.value.body_location_id, (newVal) => {
     }
 });
 
-
-// Actualiza la barra de colores
 const totalPercentage = computed(() => {
     const g = parseFloat(formMeasurement.value.granulation_percent) || 0;
     const s = parseFloat(formMeasurement.value.slough_percent) || 0;
@@ -215,8 +208,6 @@ function percentOffset(...fields) {
     return sum + '%';
 }
 
-
-//Evidencia de la herida
 const loadExistingImages = async () => {
     const woundId = props.wound?.id
     const appointmentId = props.appointmentId
@@ -237,7 +228,6 @@ const loadExistingImages = async () => {
     }
 }
 
-// carga inicial de imágenes
 watch(
     () => props.appointmentId,
     (newVal) => {
@@ -248,7 +238,51 @@ watch(
     { immediate: true }
 )
 
-//Seguimiento de la herida
+function initSelectedFromHistory() {
+    const list = props.existingImagesHistory || [];
+    if (list.length > 0) {
+        selectedImage.value = `/storage/${list[0].content}`;
+        selectedImageRotation.value = list[0].position || 0;
+    }
+}
+
+onMounted(() => {
+    initSelectedFromHistory();
+});
+
+watch(
+    () => props.existingImagesHistory,
+    (arr) => {
+        if (Array.isArray(arr) && arr.length > 0 && !selectedImage.value) {
+            initSelectedFromHistory();
+        }
+    },
+    { immediate: false }
+);
+
+function onMainImgError(e) {
+    e.target.src = '/images/placeholder.png';
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const formFollow = ref({
     wound_id: props.wound?.id || null,
     appointment_id: props.appointmentId || null,
@@ -382,11 +416,9 @@ const saveFollow = () => {
         requiredFields.push(...requiredVascularFields);
     }
 
-    // Detectar campos vacíos
     const missingFields = requiredFields.filter(
         (field) => !isNonEmpty(formFollow.value[field])
     );
-
 
     if (missingFields.length > 0) {
         const firstField = missingFields[0];
@@ -405,7 +437,6 @@ const saveFollow = () => {
         return;
     }
 
-    // Payload y envío
     const payload = {
         ...formFollow.value,
         measurementDate: formFollow.value.measurementDate
@@ -468,11 +499,8 @@ const saveFollow = () => {
             }
         },
     });
-
 };
 
-
-// Área y volumen automáticos
 watch(() => [formFollow.value.length, formFollow.value.width], ([length, width]) => {
     const l = parseFloat(length);
     const w = parseFloat(width);
@@ -495,7 +523,6 @@ watch(() => formFollow.value.depth, (depth) => {
     formFollow.value.volume = (!isNaN(d) && !isNaN(a)) ? (a * d).toFixed(2) : '';
 });
 
-// Validación de escala visual
 function onVisualScaleInputFollow(event) {
     const input = event.target.value.replace("/10", "");
     let number = parseInt(input);
@@ -508,7 +535,6 @@ function onVisualScaleInputFollow(event) {
     }
 }
 
-// Actualiza la barra de colores
 function adjustProgressFollow() { }
 
 const totalPercentageFollow = computed(() => {
@@ -544,70 +570,75 @@ function percentOffsetFollow(...fields) {
     return sum + '%';
 }
 
+// Evidencia de la herida
+const MAX_FILES = 4;
+const MAX_FILE_SIZE = 9 * 1024 * 1024;
 
-//Evidencia de la herida
-const MAX_FILES = 4
-
-const showLimitModalFollow = ref(false)
+const fileUploadRefFollow = ref(null);
+const showLimitModalFollow = ref(false);
+const showConfirmUploadModalFollow = ref(false);
+const showConfirmDeleteModalFollow = ref(false);
 const existingImagesFollow = ref([])
-const uploadFilesFollow = ref([])
-const totalSizeFollow = ref(0)
-const totalSizePercentFollow = ref(0)
-
 const zoomImageUrl = ref('')
 const zoomRotation = ref(0)
 const showZoomModal = ref(false)
 const selectedImage = ref('')
 const selectedImageRotation = ref(0)
-// funciones auxiliares
-const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` })
+const uploadFilesFollow = ref([]);
 
+const totalSizeFollow = ref(0);
+const totalSizePercentFollow = ref(0);
 
-const openZoomModal = (src, rotation) => {
-    zoomImageUrl.value = src
-    zoomRotation.value = rotation
-    showZoomModal.value = true
-}
+const imageToDeleteFollow = ref(null);
 
-const selectImage = (img) => {
-    selectedImage.value = `/storage/${img.content}`
-    selectedImageRotation.value = img.position || 0
-}
-
-const downloadSelectedImage = () => {
-    const link = document.createElement('a')
-    link.href = selectedImage.value
-    link.download = selectedImage.value.split('/').pop()
-    link.click()
-}
+const getImageStyle = (rotation) => ({ transform: `rotate(${rotation}deg)` });
 
 const updateTotalSizeFollow = () => {
-    totalSizeFollow.value = uploadFilesFollow.value.reduce((acc, f) => acc + f.size, 0)
-    totalSizePercentFollow.value = totalSizeFollow.value / 10
-}
+    totalSizeFollow.value = uploadFilesFollow.value.reduce((acc, f) => acc + f.size, 0);
+    totalSizePercentFollow.value = Math.min(100, Math.round((totalSizeFollow.value / MAX_FILE_SIZE) * 100));
+};
+
+const revokeAllObjectURLsFollow = () => {
+    uploadFilesFollow.value.forEach((f) => f?.objectURL && URL.revokeObjectURL(f.objectURL));
+};
 
 const resetUploadsFollow = () => {
-    uploadFilesFollow.value = []
-    totalSizeFollow.value = 0
-    totalSizePercentFollow.value = 0
-}
+    revokeAllObjectURLsFollow();
+    uploadFilesFollow.value = [];
+    totalSizeFollow.value = 0;
+    totalSizePercentFollow.value = 0;
+};
 
 const isLimitReachedFollow = (incomingCount) =>
-    existingImagesFollow.value.length + uploadFilesFollow.value.length + incomingCount > MAX_FILES
+    (existingImagesFollow.value.length + uploadFilesFollow.value.length + incomingCount) > MAX_FILES;
 
+const openZoomModal = (src, rotation) => {
+    zoomImageUrl.value = src;
+    zoomRotation.value = rotation || 0;
+    showZoomModal.value = true;
+};
 
-const closeLimitModal = () => {
-    showLimitModalFollow.value = false
-}
+const closeLimitModalFollow = () => (showLimitModalFollow.value = false);
 
 const onSelectedFilesFollow = (event) => {
-    const incoming = event.files
+    const incoming = event.files || [];
+    if (!incoming.length) return;
+
     if (isLimitReachedFollow(incoming.length)) {
-        showLimitModalFollow.value = true
-        return
+        showLimitModalFollow.value = true;
+        return;
     }
 
-    incoming.forEach(file => {
+    for (const file of incoming) {
+        if (!file.type?.startsWith("image/")) {
+            toast.add({ severity: "warn", summary: "Archivo omitido", detail: `${file.name} no es una imagen.`, life: 3000 });
+            continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            toast.add({ severity: "warn", summary: "Muy grande", detail: `${file.name} excede 9MB.`, life: 3000 });
+            continue;
+        }
+
         uploadFilesFollow.value.push({
             raw: file,
             name: file.name,
@@ -615,179 +646,178 @@ const onSelectedFilesFollow = (event) => {
             type: file.type,
             objectURL: URL.createObjectURL(file),
             rotation: 0,
-        })
-    })
+        });
+    }
 
-    updateTotalSizeFollow()
-}
+    updateTotalSizeFollow();
+};
 
 const rotateImageFollow = (index, direction) => {
-    const file = uploadFilesFollow.value[index]
-    file.rotation = direction === 'left'
+    const file = uploadFilesFollow.value[index];
+    if (!file) return;
+    file.rotation = direction === "left"
         ? (file.rotation - 5 + 360) % 360
-        : (file.rotation + 5) % 360
-}
+        : (file.rotation + 5) % 360;
+};
 
 const removeFileFollow = (index) => {
-    uploadFilesFollow.value.splice(index, 1)
-    updateTotalSizeFollow()
-}
+    const f = uploadFilesFollow.value[index];
+    if (f?.objectURL) URL.revokeObjectURL(f.objectURL);
+    uploadFilesFollow.value.splice(index, 1);
+    updateTotalSizeFollow();
+};
 
 const clearTemplatedUploadFollow = (clear) => {
-    clear()
-    resetUploadsFollow()
-}
+    clear();
+    resetUploadsFollow();
+};
 
-const uploadEventFollow = async () => {
-    if (!props.wound.id) {
-        toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Debe guardar la herida antes de subir imágenes.', life: 4000 })
-        return
-    }
+const selectImage = (img) => {
+    selectedImage.value = `/storage/${img.content}`;
+    selectedImageRotation.value = img.position || 0;
+};
 
-    if (!uploadFilesFollow.value.length) {
-        toast.add({ severity: 'warn', summary: 'Sin archivos', detail: 'Debes seleccionar imágenes para subir.', life: 3000 })
-        return
-    }
-
-    const formData = new FormData()
-    uploadFilesFollow.value.forEach((file, index) => {
-        formData.append('images[]', file.raw, file.name)
-        formData.append(`rotations[${index}]`, file.rotation || 0)
-    })
-
-    formData.append('type', 'Seg')
-    formData.append('wound_id', props.wound.id)
-    formData.append('appointment_id', props.appointmentId)
-
-    try {
-        await axios.post('/media/upload', formData)
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Imágenes subidas.', life: 3000 })
-        resetUploadsFollow()
-        await loadExistingImagesFollow()
-    } catch (err) {
-        console.error(err)
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Fallo al subir.', life: 4000 })
-    }
-}
-
-watch(existingImagesFollow, (imgs) => {
-    if (imgs.length > 0 && !selectedImage.value) {
-        selectImage(imgs[0])
-    }
-})
+const downloadSelectedImage = () => {
+    if (!selectedImage.value) return;
+    const link = document.createElement("a");
+    link.href = selectedImage.value;
+    link.download = selectedImage.value.split("/").pop();
+    link.click();
+};
 
 const loadExistingImagesFollow = async () => {
-    const woundId = props.wound?.id
-    const appointmentId = props.appointmentId
+    const woundId = props.wound?.id;
+    const appointmentId = props.appointmentId;
 
-    if (!woundId || !appointmentId) return
+    if (!woundId || !appointmentId) return;
 
     try {
-        const { data } = await axios.get('/media', {
+        const { data } = await axios.get("/media", {
             params: {
                 wound_id: woundId,
                 appointment_id: appointmentId,
-                type: 'Seg',
-            }
-        })
-        existingImagesFollow.value = data
+                type: "Seg",
+            },
+        });
+        existingImagesFollow.value = data || [];
     } catch (error) {
-        console.error('Error al cargar imágenes:', error)
-    }
-}
-
-// carga inicial de imágenes
-watch(
-    () => props.appointmentId,
-    (newVal) => {
-        if (newVal && props.wound?.id) {
-            loadExistingImagesFollow()
+        if (error.response?.status !== 404) {
+            console.error("Error al cargar imágenes (Seg):", error);
         }
-    },
-    { immediate: true }
-)
-
-
-const fileUploadClearCallback = ref(null)
-
-const fileUploadRefFollow = ref(null)
-
-//Confirmación de carga de imagenes
-const showConfirmUploadModalFollow = ref(false)
-
-const confirmUploadFollow = async () => {
-    showConfirmUploadModalFollow.value = false
-    await uploadEventFollow()
-
-    // Limpiar componente y estado después de subida exitosa
-    resetUploadsFollow()
-    if (fileUploadRefFollow.value) {
-        fileUploadRefFollow.value.clear()
     }
-}
+};
 
+watch(existingImagesFollow, (imgs) => {
+    if (imgs.length > 0 && !selectedImage.value) {
+        selectImage(imgs[0]);
+    }
+    if (imgs.length === 0) {
+        selectedImage.value = "";
+        selectedImageRotation.value = 0;
+    }
+});
 
-//Eliminar imagenes
-// Confirmación para eliminar
-const showConfirmDeleteModalFollow = ref(false)
-const imageToDeleteFollow = ref(null)
+const uploadEventFollow = async () => {
+    const hasContext = !!(props.wound?.id && props.appointmentId);
+    if (!hasContext) {
+        toast.add({
+            severity: "warn",
+            summary: "Advertencia",
+            detail: "Debe guardar la herida/consulta antes de subir imágenes.",
+            life: 4000,
+        });
+        return;
+    }
 
-const openConfirmDeleteSelectedFollow = () => {
-    if (!selectedImage.value) return
-    // busca el objeto en existingImagesFollow que coincide con selectedImage
-    const img = existingImagesFollow.value.find(
-        i => `/storage/${i.content}` === selectedImage.value
-    )
-    if (!img) return
-    imageToDeleteFollow.value = img
-    showConfirmDeleteModalFollow.value = true
-}
+    if (!uploadFilesFollow.value.length) {
+        toast.add({ severity: "warn", summary: "Sin archivos", detail: "Debes seleccionar imágenes para subir.", life: 3000 });
+        return;
+    }
 
-const openConfirmDeleteByThumbFollow = (img) => {
-    imageToDeleteFollow.value = img
-    showConfirmDeleteModalFollow.value = true
-}
+    const formData = new FormData();
+    uploadFilesFollow.value.forEach((file, index) => {
+        formData.append("images[]", file.raw, file.name);
+        formData.append(`rotations[${index}]`, file.rotation || 0);
+    });
 
-const deleteImageFollow = async () => {
-    if (!imageToDeleteFollow.value?.id) return
+    formData.append("type", "Seg");
+    formData.append("wound_id", props.wound.id);
+    formData.append("appointment_id", props.appointmentId);
 
     try {
-        await axios.delete(`/media/${imageToDeleteFollow.value.id}`)
+        await axios.post("/media/upload", formData);
+        toast.add({ severity: "success", summary: "Éxito", detail: "Imágenes subidas.", life: 3000 });
+        resetUploadsFollow();
+        await loadExistingImagesFollow();
+    } catch (err) {
+        console.error(err);
+        toast.add({ severity: "error", summary: "Error", detail: "Fallo al subir.", life: 4000 });
+    }
+};
 
-        // Quitarla del arreglo local sin recargar todo
+const confirmUploadFollow = async () => {
+    showConfirmUploadModalFollow.value = false;
+    await uploadEventFollow();
+    if (fileUploadRefFollow.value) fileUploadRefFollow.value.clear();
+};
+
+const openConfirmDeleteSelectedFollow = () => {
+    if (!selectedImage.value) return;
+    const img = existingImagesFollow.value.find((i) => `/storage/${i.content}` === selectedImage.value);
+    if (!img) return;
+    imageToDeleteFollow.value = img;
+    showConfirmDeleteModalFollow.value = true;
+};
+
+const openConfirmDeleteByThumbFollow = (img) => {
+    imageToDeleteFollow.value = img;
+    showConfirmDeleteModalFollow.value = true;
+};
+
+const deleteImageFollow = async () => {
+    if (!imageToDeleteFollow.value?.id) return;
+
+    try {
+        await axios.delete(`/media/${imageToDeleteFollow.value.id}`);
+
         existingImagesFollow.value = existingImagesFollow.value.filter(
-            i => i.id !== imageToDeleteFollow.value.id
-        )
+            (i) => i.id !== imageToDeleteFollow.value.id
+        );
 
-        // Si la imagen borrada era la seleccionada, seleccionar otra
         if (selectedImage.value === `/storage/${imageToDeleteFollow.value.content}`) {
-            if (existingImagesFollow.value.length > 0) {
-                selectImage(existingImagesFollow.value[0])
+            if (existingImagesFollow.value.length) {
+                selectImage(existingImagesFollow.value[0]);
             } else {
-                selectedImage.value = ''
-                selectedImageRotation.value = 0
+                selectedImage.value = "";
+                selectedImageRotation.value = 0;
             }
         }
 
-        toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Imagen eliminada correctamente.', life: 3000 })
+        toast.add({ severity: "success", summary: "Eliminada", detail: "Imagen eliminada correctamente.", life: 3000 });
     } catch (err) {
-        console.error(err)
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar la imagen.', life: 4000 })
+        console.error(err);
+        toast.add({ severity: "error", summary: "Error", detail: "No se pudo eliminar la imagen.", life: 4000 });
     } finally {
-        showConfirmDeleteModalFollow.value = false
-        imageToDeleteFollow.value = null
+        showConfirmDeleteModalFollow.value = false;
+        imageToDeleteFollow.value = null;
     }
-}
+};
 
-//Tratamiento 
+
+loadExistingImagesFollow();
+
+//tratamiento
+const treatmentId = ref(props.treatmentFollow?.id ?? null);
 const hasTreatment = ref(!!props.treatmentFollow);
+const isSavingTreatment = ref(false);
+const submittedTreatment = ref(false);
 
 const formTreat = ref({
-    methods: props.treatmentFollow?.methods.map(m => m.treatment_method_id) || [],
+    methods: props.treatmentFollow?.methods?.map(m => m.treatment_method_id) ?? [],
     submethodsByMethod: props.treatmentFollow
         ? (() => {
             const map = {};
-            props.treatmentFollow.submethods.forEach(sub => {
+            (props.treatmentFollow.submethods ?? []).forEach(sub => {
                 const methodId = sub.treatment_method_id;
                 map[methodId] = map[methodId] || [];
                 map[methodId].push(sub.treatment_submethod_id);
@@ -795,18 +825,47 @@ const formTreat = ref({
             return map;
         })()
         : {},
-    description: props.treatmentFollow?.description || "",
+    description: props.treatmentFollow?.description ?? '',
+    mmhg: props.treatmentFollow?.mmhg != null ? String(props.treatmentFollow.mmhg) : '',
 });
 
+const canFullEdit = computed(() => {
+    if (typeof props.permissions?.can_full_edit === 'boolean') {
+        return props.permissions.can_full_edit;
+    }
+    try {
+        const p = usePage?.();
+        if (Array.isArray(p?.props?.userPermissions)) {
+            return p.props.userPermissions.includes('edit_treatment');
+        }
+        const po = p?.props?.permissions;
+        if (po && typeof po === 'object') {
+            return Boolean(po.edit_treatment ?? po.can_full_edit ?? po['record.edit_treatment']);
+        }
+    } catch (_) { /* noop */ }
+    return false;
+});
 
-const isSavingTreatment = ref(false);
-const submittedTreatment = ref(false);
+const editorRestrictDeletion = computed(() => !canFullEdit.value);
 
-// Computed: filtrar métodos seleccionados
+const TRIGGER_IDS = [54, 55, 56];
+const TRIGGERIDS_SET = new Set(TRIGGER_IDS);
+const hydrated = ref(false);
+
+const requiresMMHG = computed(() => {
+    const allSelectedSubs = Object.values(formTreat.value.submethodsByMethod || {}).flat();
+    return allSelectedSubs.some(id => TRIGGERIDS_SET.has(Number(id)));
+});
+
+watch(requiresMMHG, (req, prev) => {
+    if (!req && prev && hydrated.value) {
+        formTreat.value.mmhg = '';
+    }
+});
+
 const selectedMethodsWithSubmethods = computed(() => {
-    return props.treatmentMethods.filter(method =>
-        formTreat.value.methods.includes(method.id)
-    );
+    const ids = new Set(formTreat.value.methods);
+    return props.treatmentMethods.filter(method => ids.has(method.id));
 });
 
 watch(
@@ -825,80 +884,149 @@ watch(
     { deep: true }
 );
 
+const baselineHtml = ref(props.treatmentFollow?.description ?? '');
+const normalizeText = (html) => {
+    const txt = String(html || '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return txt.toLocaleLowerCase();
+};
+const baselineNorm = ref(normalizeText(baselineHtml.value));
+const lastGoodHtml = ref(formTreat.value.description ?? '');
+const skipDescWatchOnce = ref(true);
+const deletionWarningShown = ref(false);
+
+watch(
+    () => formTreat.value.description,
+    (newHtml) => {
+        if (skipDescWatchOnce.value) {
+            lastGoodHtml.value = newHtml ?? '';
+            skipDescWatchOnce.value = false;
+            return;
+        }
+        if (!editorRestrictDeletion.value) {
+            lastGoodHtml.value = newHtml ?? '';
+            return;
+        }
+        const newNorm = normalizeText(newHtml);
+        const ok = baselineNorm.value === '' || newNorm.startsWith(baselineNorm.value);
+        if (!ok) {
+            if (!deletionWarningShown.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Edición limitada',
+                    detail: 'No puedes eliminar ni modificar el texto existente; solo agregar al final.',
+                    life: 2000,
+                });
+                deletionWarningShown.value = true;
+                setTimeout(() => (deletionWarningShown.value = false), 1200);
+            }
+            formTreat.value.description = lastGoodHtml.value;
+            return;
+        }
+        lastGoodHtml.value = newHtml ?? '';
+    }
+);
+
 const storeTreatment = async () => {
     submittedTreatment.value = true;
     errors.value = {};
 
     const missingSubmethods = formTreat.value.methods.filter(
-        methodId =>
+        (methodId) =>
             !formTreat.value.submethodsByMethod[methodId] ||
             formTreat.value.submethodsByMethod[methodId].length === 0
     );
-
     if (missingSubmethods.length > 0) {
         toast.add({
-            severity: "error",
-            summary: "Validación",
-            detail: "Cada método debe tener al menos un submétodo seleccionado.",
+            severity: 'error',
+            summary: 'Validación',
+            detail: 'Cada método debe tener al menos un submétodo seleccionado.',
             life: 4000,
         });
         return;
     }
 
+    let mmhgToSend = null;
+    if (requiresMMHG.value) {
+        const raw = String(formTreat.value.mmhg ?? '').trim();
+        const isNumber = /^(\d+(\.\d+)?)$/.test(raw);
+        if (!raw || !isNumber) {
+            errors.value = { ...(errors.value || {}), mmhg: 'Campo mmHg requerido.' };
+            toast.add({
+                severity: 'error',
+                summary: 'Validación',
+                detail: 'El campo mmHg es obligatorio y debe ser numérico.',
+                life: 4000,
+            });
+            return;
+        }
+        mmhgToSend = Number(raw);
+    }
+
     isSavingTreatment.value = true;
 
     const payload = {
-        treatment_id: props.treatmentFollow?.id,
+        treatment_id: treatmentId.value,
         appointment_id: props.appointmentId,
         wound_id: formWound.value.id,
-        description: formTreat.value.description,
+        description: formTreat.value.description || null,
         method_ids: formTreat.value.methods,
         submethodsByMethod: formTreat.value.submethodsByMethod,
+        mmhg: mmhgToSend,
     };
 
     try {
-        await axios.post("/treatments", payload);
-        toast.add({
-            severity: "success",
-            summary: "Éxito",
-            detail: hasTreatment.value ? "Tratamiento actualizado." : "Tratamiento guardado.",
-            life: 3000,
-        });
+        const { data } = await axios.post('/treatments', payload);
+
+        if (data?.treatment_id) {
+            treatmentId.value = data.treatment_id;
+        }
+
+        if (data?.append_blocked) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Edición limitada',
+                detail: 'No puedes eliminar ni modificar el texto existente; solo agregar al final.',
+                life: 3000,
+            });
+        } else {
+            toast.add({
+                severity: 'success',
+                summary: 'Éxito',
+                detail: data?.message || (hasTreatment.value ? 'Tratamiento actualizado.' : 'Tratamiento guardado.'),
+                life: 3000,
+            });
+        }
 
         hasTreatment.value = true;
     } catch (error) {
         if (error.response?.status === 422) {
             errors.value = error.response.data.errors || {};
-
-            const firstErrorKey = Object.keys(errors.value)[0];
-            const firstMessage = errors.value[firstErrorKey][0];
-
+            const allMessages = Object.values(errors.value).flat().filter(Boolean).join('\n');
             toast.add({
-                severity: "error",
-                summary: "Error de validación",
-                detail: firstMessage,
-                life: 4000,
+                severity: 'error',
+                summary: 'Errores de validación',
+                detail: allMessages || 'Revisa los campos.',
+                life: 6000,
             });
         } else {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "No se pudo guardar el tratamiento.",
-                life: 4000,
-            });
+            const detail = error.response?.data?.message || error.message || 'No se pudo guardar el tratamiento.';
+            toast.add({ severity: 'error', summary: 'Error', detail, life: 4000 });
         }
     } finally {
         isSavingTreatment.value = false;
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     if (props.treatmentFollow) {
-        formTreat.value.description = props.treatmentFollow.description;
-        formTreat.value.methods = props.treatmentFollow.methods.map(m => m.treatment_method_id);
+        formTreat.value.methods = props.treatmentFollow.methods?.map(m => m.treatment_method_id) ?? [];
 
         const map = {};
-        props.treatmentFollow.submethods.forEach(sub => {
+        (props.treatmentFollow.submethods ?? []).forEach(sub => {
             const methodId = sub.treatment_method_id;
             if (methodId) {
                 map[methodId] = map[methodId] || [];
@@ -906,167 +1034,161 @@ onMounted(() => {
             }
         });
         formTreat.value.submethodsByMethod = map;
+
+        formTreat.value.description = props.treatmentFollow.description ?? '';
+        formTreat.value.mmhg = props.treatmentFollow.mmhg != null ? String(props.treatmentFollow.mmhg) : '';
     }
+
+    baselineHtml.value = props.treatmentFollow?.description ?? '';
+    baselineNorm.value = normalizeText(baselineHtml.value);
+    lastGoodHtml.value = formTreat.value.description ?? '';
+
+    skipDescWatchOnce.value = false;
+    hydrated.value = true;
 });
 
-//Terminal consulta 
+
+//Finalizar consulta
+const canFinishConsultation = computed(() => missingFinishBlocks.value.length === 0)
+
 const isNonEmpty = (v) => {
-    if (v === null || v === undefined) return false;
-    if (typeof v === 'string') return v.trim() !== '';
-    if (Array.isArray(v)) return v.length > 0;
-    return true;
-};
+    if (v === null || v === undefined) return false
+    if (typeof v === 'string') return v.trim() !== ''
+    if (Array.isArray(v)) return v.length > 0
+    return true
+}
 
 const requiredFieldsForFollow = computed(() => {
     const base = [
-        'wound_phase_id',
-        'edema',
-        'dolor',
-        'tipo_dolor',
-        'duracion_dolor',
-        'visual_scale',
-        'exudado_tipo',
-        'exudado_cantidad',
-        'infeccion',
-        'olor',
-        'borde',
-        'piel_perilesional',
-        'measurementDate',
-        'length',
-        'width',
-        'undermining',
-        'granulation_percent',
-        'slough_percent',
-        'necrosis_percent',
+        'wound_phase_id', 'edema', 'dolor', 'tipo_dolor', 'duracion_dolor',
+        'visual_scale', 'exudado_tipo', 'exudado_cantidad', 'infeccion', 'olor',
+        'borde', 'piel_perilesional', 'measurementDate', 'length', 'width',
+        'undermining', 'granulation_percent', 'slough_percent', 'necrosis_percent',
         'epithelialization_percent',
-    ];
+    ]
 
-    const vascularLocationIds = [
-        18, 19, 20, 21, 22, 23, 24, 25,
-        26, 27, 28, 29, 30, 31, 32, 33
-    ];
+    const vascularLocationIds = [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
 
     if (vascularLocationIds.includes(formFollow.value.body_location_id)) {
-        const vascular = [
-            'MESI',
-            'ITB_izquierdo',
-            'ITB_derecho',
-            'pulse_dorsal_izquierdo',
-            'pulse_dorsal_derecho',
-            'pulse_popliteo_izquierdo',
-            'pulse_popliteo_derecho',
-            'pulse_tibial_izquierdo',
-            'pulse_tibial_derecho',
-            'monofilamento',
-            'blood_glucose',
-        ];
-
-        base.push(...vascular);
+        base.push(
+            'MESI', 'ITB_izquierdo', 'ITB_derecho', 'pulse_dorsal_izquierdo', 'pulse_dorsal_derecho',
+            'pulse_popliteo_izquierdo', 'pulse_popliteo_derecho',
+            'pulse_tibial_izquierdo', 'pulse_tibial_derecho', 'monofilamento', 'blood_glucose'
+        )
     }
-
-    return base;
-});
+    return base
+})
 
 const areFollowFieldsComplete = computed(() => {
-    const fields = requiredFieldsForFollow.value;
-    const allFilled = fields.every((f) => isNonEmpty(formFollow.value[f]));
-    const percentagesOk = totalPercentageFollow.value <= 100;
-    return allFilled && percentagesOk;
-});
+    const fields = requiredFieldsForFollow.value
+    const allFilled = fields.every((f) => isNonEmpty(formFollow.value[f]))
+    const percentagesOk = totalPercentageFollow.value <= 100
+    return allFilled && percentagesOk
+})
 
-const canFinishConsultation = computed(() => {
-    return hasTreatment.value && hasFollow.value && areFollowFieldsComplete.value;
-});
+const hasEvidenceFollow = computed(() => existingImagesFollow.value.length > 0)
 
-const woundsInAppointment = ref(0);
-const showConfirmFinishDialog = ref(false);
+const missingFinishBlocks = computed(() => {
+    const missing = []
+    if (!hasFollow.value) missing.push('Seguimiento guardado')
+    if (!areFollowFieldsComplete.value) {
+        if (totalPercentageFollow.value > 100) {
+            missing.push('Evaluación: la suma de porcentajes excede 100%')
+        } else {
+            missing.push('Evaluación completa')
+        }
+    }
+    if (!hasEvidenceFollow.value) missing.push('Evidencia (al menos 1 imagen)')
+    if (!hasTreatment.value) missing.push('Tratamiento guardado')
+    return missing
+})
+
+const showConfirmFinishDialog = ref(false)
+const woundsInAppointment = ref(0)
 
 const confirmFinishConsultation = async () => {
-    if (!canFinishConsultation.value) {
+    const blockers = missingFinishBlocks.value
+    if (blockers.length) {
         toast.add({
-            severity: "warn",
-            summary: "Campos incompletos",
-            detail: "Aún faltan datos requeridos del seguimiento o no hay tratamiento guardado.",
-            life: 4000,
-        });
-        return;
+            severity: 'warn',
+            summary: 'No puedes finalizar',
+            detail: 'Falta: ' + blockers.join(' · '),
+            life: 6000,
+        })
+        return
     }
 
-    const appointmentId = props.wound.appointment_id;
+    const appointmentId = props.wound?.appointment_id
     if (!appointmentId) {
         toast.add({
-            severity: "warn",
-            summary: "Advertencia",
-            detail: "No se pudo obtener el ID de la consulta.",
+            severity: 'warn',
+            summary: 'Advertencia',
+            detail: 'No se pudo obtener el ID de la consulta.',
             life: 4000,
-        });
-        return;
+        })
+        return
     }
 
     try {
-        const { data } = await axios.get(`/appointments/${appointmentId}/wounds/count`);
-        woundsInAppointment.value = data.count;
+        const { data } = await axios.get(`/appointments/${appointmentId}/wounds/count`)
+        woundsInAppointment.value = data.count
 
         if (data.count === 0) {
             toast.add({
-                severity: "warn",
-                summary: "Sin heridas",
-                detail: "Esta consulta no tiene heridas asociadas.",
+                severity: 'warn',
+                summary: 'Sin heridas',
+                detail: 'Esta consulta no tiene heridas asociadas.',
                 life: 4000,
-            });
-            return;
+            })
+            return
         }
 
-        showConfirmFinishDialog.value = true;
+        showConfirmFinishDialog.value = true
     } catch (error) {
         toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: "No se pudo verificar el número de heridas.",
+            severity: 'error',
+            summary: 'Error',
+            detail: 'No se pudo verificar el número de heridas.',
             life: 5000,
-        });
+        })
     }
-};
-
+}
 
 const onConfirmFinishConsultation = () => {
-    showConfirmFinishDialog.value = false;
-    finishConsultation();
-};
+    showConfirmFinishDialog.value = false
+    finishConsultation()
+}
 
 const finishConsultation = async () => {
-    isSavingTreatment.value = true;
-
+    isSavingTreatment.value = true
     try {
         const response = await axios.put('/appointments/finish', {
             appointment_id: props.wound.appointment_id,
-        });
+        })
 
         toast.add({
-            severity: "success",
-            summary: "Consulta finalizada",
-            detail: response.data.message || "El estado fue actualizado.",
+            severity: 'success',
+            summary: 'Consulta finalizada',
+            detail: response.data.message || 'El estado fue actualizado.',
             life: 3000,
-        });
+        })
 
         if (response.data.redirect_to) {
             setTimeout(() => {
-                window.location.href = response.data.redirect_to;
-            }, 1500);
+                window.location.href = response.data.redirect_to
+            }, 1500)
         }
-
     } catch (error) {
         toast.add({
-            severity: "error",
-            summary: "Error al finalizar",
-            detail: error.response?.data?.message || error.message || "Ocurrió un error inesperado.",
+            severity: 'error',
+            summary: 'Error al finalizar',
+            detail: error.response?.data?.message || error.message || 'Ocurrió un error inesperado.',
             life: 6000,
-        });
+        })
     } finally {
-        isSavingTreatment.value = false;
+        isSavingTreatment.value = false
     }
-};
-
+}
 
 </script>
 <template>
@@ -1143,79 +1265,83 @@ const finishConsultation = async () => {
                             </h3>
                         </div>
 
+                        <!-- Valoración vascular -->
                         <div
-                            class="flex flex-col flex-grow pt-5 border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
-                            <h3 class="text-xl font-semibold px-4">
-                                Valoración vascular
-                            </h3>
+                            v-if="[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33].includes(formWound.body_location_id)">
+                            <div
+                                class="flex flex-col flex-grow pt-5 border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
+                                <h3 class="text-xl font-semibold px-4">
+                                    Valoración vascular
+                                </h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4 mb-5">
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Índice tobillo brazo
+                                        Manual</label>
+                                    <Select v-model="formWound.MESI" :options="MESI" optionLabel="name"
+                                        optionValue="name" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">ITB izquierdo</label>
+                                    <InputText v-model="formWound.ITB_izquierdo" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">ITB derecho</label>
+                                    <InputText v-model="formWound.ITB_derecho" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso dorsal pedio
+                                        izquierdo</label>
+                                    <InputText v-model="formWound.pulse_dorsal_izquierdo" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso poplíteo
+                                        izquierdo</label>
+                                    <InputText v-model="formWound.pulse_popliteo_izquierdo" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso tibial posterior
+                                        izquierdo</label>
+                                    <InputText v-model="formWound.pulse_tibial_izquierdo" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso dorsal pedio
+                                        derecho</label>
+                                    <InputText v-model="formWound.pulse_dorsal_derecho" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso poplíteo
+                                        derecho</label>
+                                    <InputText v-model="formWound.pulse_popliteo_derecho" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Pulso tibial posterior
+                                        derecho</label>
+                                    <InputText v-model="formWound.pulse_tibial_derecho" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Monofilamento</label>
+                                    <InputText v-model="formWound.monofilamento" class="w-full" disabled />
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-1 mb-1 font-medium">Nivel de glucosa en
+                                        sangre</label>
+                                    <InputText v-model="formWound.blood_glucose" class="w-full" disabled />
+                                </div>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4 mb-5">
 
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Índice tobillo brazo
-                                    Manual</label>
-                                <Select v-model="formWound.MESI" :options="MESI" optionLabel="name" optionValue="name"
-                                    class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">ITB izquierdo</label>
-                                <InputText v-model="formWound.ITB_izquierdo" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">ITB derecho</label>
-                                <InputText v-model="formWound.ITB_derecho" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso dorsal pedio
-                                    izquierdo</label>
-                                <InputText v-model="formWound.pulse_dorsal_izquierdo" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso poplíteo
-                                    izquierdo</label>
-                                <InputText v-model="formWound.pulse_popliteo_izquierdo" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso tibial posterior
-                                    izquierdo</label>
-                                <InputText v-model="formWound.pulse_tibial_izquierdo" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso dorsal pedio
-                                    derecho</label>
-                                <InputText v-model="formWound.pulse_dorsal_derecho" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso poplíteo
-                                    derecho</label>
-                                <InputText v-model="formWound.pulse_popliteo_derecho" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Pulso tibial posterior
-                                    derecho</label>
-                                <InputText v-model="formWound.pulse_tibial_derecho" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Monofilamento</label>
-                                <InputText v-model="formWound.monofilamento" class="w-full" disabled />
-                            </div>
-
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Nivel de glucosa en
-                                    sangre</label>
-                                <InputText v-model="formWound.blood_glucose" class="w-full" disabled />
-                            </div>
-
-                        </div>
 
                         <div
                             class="flex flex-col flex-grow pt-5 border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
@@ -1453,7 +1579,15 @@ const finishConsultation = async () => {
                                         </li>
                                     </ul>
                                 </div>
+
+                                <div v-if="treatment.submethods.some(sub => [54, 55, 56].includes(sub.treatment_submethod_id))"
+                                    class="mt-3">
+                                    <p class="font-semibold">mmHg:</p>
+
+                                    <span>{{ treatment.mmhg || 'No especificado' }}</span>
+                                </div>
                             </div>
+
                         </div>
 
                         <div
@@ -1490,14 +1624,20 @@ const finishConsultation = async () => {
                             <div class="flex-1 flex flex-col lg:flex-row gap-8">
                                 <div
                                     class="flex-1 p-2 px-5 bg-surface-0 dark:bg-surface-900 shadow-sm overflow-hidden rounded-xl flex flex-col gap-10">
-                                    <img :src="selectedImage"
+
+                                    <img v-if="!!selectedImage" :src="selectedImage"
+                                        :style="getImageStyle(selectedImageRotation)"
                                         class="w-full flex-1 max-h-[40rem] rounded-lg object-cover cursor-zoom-in"
                                         alt="Imagen principal"
-                                        @click="openZoomModal(selectedImage, selectedImageRotation)" />
+                                        @click="openZoomModal(selectedImage, selectedImageRotation)"
+                                        @error="onMainImgError" />
 
+                                    <div v-else
+                                        class="w-full flex-1 max-h-[40rem] rounded-lg grid place-items-center border border-dashed">
+                                        <span class="text-sm text-gray-500">Cargando imagen…</span>
+                                    </div>
                                     <div
                                         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-10 gap-y-6 pl-6 pr-15">
-
                                         <img v-for="img in existingImagesHistory" :key="img.id"
                                             :src="`/storage/${img.content}`" :style="getImageStyle(img.position || 0)"
                                             class="w-full h-auto min-h-20 rounded-lg object-cover cursor-pointer transition-all duration-150"
@@ -1514,9 +1654,19 @@ const finishConsultation = async () => {
                             </div>
                         </div>
 
+                        <!-- Confirmación de eliminación -->
+                        <Dialog v-model:visible="showConfirmDeleteModalFollow" modal header="Eliminar imagen"
+                            :style="{ width: '400px' }">
+                            <div class="text-center p-4">
+                                <p class="mb-4">¿Desea eliminar esta imagen?</p>
+                                <div class="flex justify-center gap-3">
+                                    <Button label="Cancelar" text @click="showConfirmDeleteModalFollow = false" />
+                                    <Button label="Eliminar" severity="danger" @click="deleteImageFollow" autofocus />
+                                </div>
+                            </div>
+                        </Dialog>
                     </div>
                 </div>
-
                 <div v-show="currentStep === 2">
                     <div
                         class="flex flex-col flex-grow p-4 border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
@@ -2130,8 +2280,8 @@ const finishConsultation = async () => {
                                                 }" @click="selectImage(img)" alt="Miniatura" />
 
                                             <!-- Botón borrar por miniatura -->
-                                            <button type="button" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
-               bg-red-600 text-white rounded-md px-2 py-1 text-xs shadow"
+                                            <button type="button"
+                                                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity  bg-red-600 text-white rounded-md px-2 py-1 text-xs shadow"
                                                 @click.stop="openConfirmDeleteByThumbFollow(img)">
                                                 Eliminar
                                             </button>
@@ -2192,6 +2342,15 @@ const finishConsultation = async () => {
                                             :options="method.submethods" class="w-full min-w-0" optionLabel="name"
                                             optionValue="id" placeholder="Seleccione submétodos" display="chip" />
                                     </div>
+
+                                    <!-- mmHg -->
+                                    <div v-if="requiresMMHG">
+                                        <label for="mmhg" class="flex items-center gap-1 mb-1 font-medium">
+                                            mmHg <span class="text-red-600">*</span>
+                                        </label>
+                                        <InputText id="mmhg" v-model="formTreat.mmhg" class="w-full min-w-0" />
+                                        <small v-if="errors.mmhg" class="text-red-500">{{ errors.mmhg }}</small>
+                                    </div>
                                 </div>
 
                                 <!-- Descripción final -->
@@ -2211,13 +2370,12 @@ const finishConsultation = async () => {
 
                                 <!-- Botones -->
                                 <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2 px-4 py-6">
-                                    <Button :label="hasTreatment ? 'Actualizar' : 'Guardar'" icon="pi pi-check" text
+                                    <Button :label="hasTreatment ? 'Actualizar' : 'Guardar'" icon="pi pi-check"
                                         type="submit" :loading="isSavingTreatment" :disabled="isSavingTreatment" />
-                                    <Button v-if="canFinishConsultation" label="Terminar consulta" icon="pi pi-sign-out"
-                                        severity="danger" @click="confirmFinishConsultation"
+                                    <Button v-if="canFinishConsultation" type="button" label="Terminar consulta"
+                                        icon="pi pi-sign-out" severity="danger" text @click="confirmFinishConsultation"
                                         :loading="isSavingTreatment" />
                                 </div>
-
                             </div>
                         </form>
 
@@ -2237,16 +2395,13 @@ const finishConsultation = async () => {
                                 <div class="flex justify-center gap-3">
                                     <Button label="Cancelar" icon="pi pi-times" text
                                         @click="showConfirmFinishDialog = false" />
-                                    <Button label="Finalizar" icon="pi pi-check" severity="danger"
+                                    <Button label="Sí, finalizar" icon="pi pi-check" severity="danger"
                                         @click="onConfirmFinishConsultation" autofocus />
                                 </div>
                             </div>
                         </Dialog>
-
-
                     </div>
                 </div>
-
             </section>
         </div>
     </AppLayout>

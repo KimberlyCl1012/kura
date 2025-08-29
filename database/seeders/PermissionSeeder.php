@@ -180,5 +180,17 @@ class PermissionSeeder extends Seeder
             'slug' => 'edit_wound_history',
             'description'  => '',
         ]);
+
+         Permission::create([
+            'name' => 'Crear evidencia fotografica (Seguimiento)',
+            'slug' => 'create_photographic_evidence_follow',
+            'description'  => '',
+        ]);
+
+        Permission::create([
+            'name' => 'Eliminar evidencia fotografica (Seguimiento)',
+            'slug' => 'delete_photographic_evidence_follow',
+            'description'  => '',
+        ]);
     }
 }
