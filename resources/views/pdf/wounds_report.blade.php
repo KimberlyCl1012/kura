@@ -376,7 +376,6 @@
                     </tr>
                     <tr>
                         <th>Fase</th>
-                        <td>{{ $w->woundPhase->name }}</td>
                         <th>Fecha creación</th>
                         <td>{{ $w->woundCreationDate ?? $w->created_at->format('Y-m-d') }}</td>
                     </tr>

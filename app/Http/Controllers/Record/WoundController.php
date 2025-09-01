@@ -17,7 +17,6 @@ use App\Models\Submethod;
 use App\Models\Treatment;
 use App\Models\Wound;
 use App\Models\WoundAssessment;
-use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
 use App\Models\WoundType;
 use Carbon\Carbon;
@@ -64,14 +63,11 @@ class WoundController extends Controller
             'list_body_locations.id as body_location_id',
             'list_body_sublocations.name as body_sublocation',
             'list_body_sublocations.id as body_sublocation_id',
-            'list_wound_phases.name as wound_phase',
-            'list_wound_phases.id as wound_phase_id',
         ])
             ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
             ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
             ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
             ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
-            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
             ->where('wounds.appointment_id', $decryptAppointmentId)
             ->where('wounds.health_record_id', $decryptHealthRecordId)
             ->where('wounds.state', 1)
@@ -88,13 +84,11 @@ class WoundController extends Controller
                     'list_wound_subtypes.name as wound_subtype_history',
                     'list_body_locations.name as body_location_history',
                     'list_body_sublocations.name as body_sublocation_history',
-                    'list_wound_phases.name as wound_phase_history',
                 ])
                 ->join('list_wound_types', 'list_wound_types.id', '=', 'wound_histories.wound_type_id')
                 ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wound_histories.wound_subtype_id')
                 ->join('list_body_locations', 'list_body_locations.id', '=', 'wound_histories.body_location_id')
                 ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wound_histories.body_sublocation_id')
-                ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wound_histories.wound_phase_id')
                 ->where('wound_histories.wound_id', $wound->id)
                 ->where('wound_histories.state', 1)
                 ->get()
@@ -116,14 +110,11 @@ class WoundController extends Controller
             'list_body_locations.id as body_location_id',
             'list_body_sublocations.name as body_sublocation',
             'list_body_sublocations.id as body_sublocation_id',
-            'list_wound_phases.name as wound_phase',
-            'list_wound_phases.id as wound_phase_id',
         ])
             ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
             ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
             ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
             ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
-            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
             ->where('wounds.health_record_id', $decryptHealthRecordId)
             ->where('wounds.state', 2) // Seguimientos
             ->get();
@@ -144,7 +135,6 @@ class WoundController extends Controller
             'wounds' => $wounds,
             'woundsType' => WoundType::where('state', 1)->get(),
             'woundsSubtype' => WoundSubtype::where('state', 1)->get(),
-            'woundsPhase' => WoundPhase::where('state', 1)->get(),
             'bodyLocations' => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
             'appointmentId' => $decryptAppointmentId,
@@ -174,7 +164,6 @@ class WoundController extends Controller
                 'wound_subtype_id'    => 'required|exists:list_wound_subtypes,id',
                 'body_location_id'    => 'required|exists:list_body_locations,id',
                 'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
-                'wound_phase_id'      => 'required|exists:list_wound_phases,id',
                 'woundBeginDate'      => 'required|date',
             ];
 
@@ -203,7 +192,6 @@ class WoundController extends Controller
                 'wound_subtype_id'    => $request->wound_subtype_id,
                 'body_location_id'    => $request->body_location_id,
                 'body_sublocation_id' => $request->body_sublocation_id,
-                'wound_phase_id'      => $request->wound_phase_id,
                 'woundBeginDate'      => Carbon::parse($request->woundBeginDate)->format('Y-m-d'),
             ]);
 
@@ -223,7 +211,6 @@ class WoundController extends Controller
                     'wound_subtype_id',
                     'body_location_id',
                     'body_sublocation_id',
-                    'wound_phase_id',
                     'woundBeginDate',
                     'state',
                 ])),
@@ -264,14 +251,11 @@ class WoundController extends Controller
             'list_body_locations.id as body_location_id',
             'list_body_sublocations.name as body_sublocation_name',
             'list_body_sublocations.id as body_sublocation_id',
-            'list_wound_phases.name as wound_phase_name',
-            'list_wound_phases.id as wound_phase_id',
         ])
             ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
             ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
             ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
             ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
-            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
             ->where('wounds.id', $decryptWoundId)
             ->where('wounds.state', 1)
             ->firstOrFail();
@@ -290,7 +274,6 @@ class WoundController extends Controller
             'measurement' => $measurement,
             'woundsType' => WoundType::where('state', 1)->get(),
             'woundsSubtype' => WoundSubtype::where('state', 1)->get(),
-            'woundsPhase' => WoundPhase::where('state', 1)->get(),
             'bodyLocations' => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
             'treatmentMethods' => Method::where('state', 1)
@@ -321,7 +304,6 @@ class WoundController extends Controller
                 'wound_subtype_id' => 'required|exists:list_wound_subtypes,id',
                 'body_location_id' => 'required|exists:list_body_locations,id',
                 'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
-                'wound_phase_id' => 'required|exists:list_wound_phases,id',
                 'woundBeginDate' => 'nullable|date',
                 'woundHealthDate' => 'nullable|date',
                 'grade_foot' => 'nullable',
@@ -386,7 +368,6 @@ class WoundController extends Controller
                 'wound_subtype_id',
                 'body_location_id',
                 'body_sublocation_id',
-                'wound_phase_id',
                 'woundBeginDate',
                 'woundHealthDate',
                 'grade_foot',

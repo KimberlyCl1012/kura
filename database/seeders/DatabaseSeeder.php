@@ -24,7 +24,6 @@ class DatabaseSeeder extends Seeder
         $this->call(HealthInstitutionSeeder::class);
         $this->call(TreatmentMethodSeeder::class);
         $this->call(TreatmentSubmethodSeeder::class);
-        $this->call(WoundPhaseSeeder::class);
         $this->call(WoundTypeSeeder::class);
         $this->call(WoundSubtypeSeeder::class);
         $this->call(WoundAssessmentSeeder::class);

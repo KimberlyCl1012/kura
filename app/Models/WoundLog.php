@@ -26,13 +26,4 @@ class WoundLog extends Model
         return $this->belongsTo(Measurement::class);  //, 'ID_Medicion'
     }
 
-    public function currentWoundLog()
-    {
-        return $this->belongsTo(WoundLog::class, 'woundPhaseNew_id');  //, 'id_woundPhaseNew'
-    }
-
-    public function oldWoundLog()
-    {
-        return $this->belongsTo(WoundLog::class, 'woundPhaseOld_id');  //, 'id_woundPhaseOld'
-    }
 }

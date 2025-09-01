@@ -83,17 +83,17 @@ const generatePdf = async () => {
 
         const blob = new Blob([response.data], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-
-        window.open(url, '_blank');
-
-        setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
-        // const link = document.createElement('a');
-        // link.href = url;
-        // link.setAttribute('download', 'reporte_heridas.pdf');
-        // document.body.appendChild(link);
-        // link.click();
-        // URL.revokeObjectURL(url);
-        // document.body.removeChild(link);
+        //Vista previa
+        // window.open(url, '_blank');
+        // setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+        //Descargar
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'reporte_heridas.pdf');
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
     } catch (error) {
         console.error("Error al generar PDF:", error);
     }
@@ -110,7 +110,9 @@ const generatePdf = async () => {
                 <Button icon="pi pi-file-pdf" label="Generar reporte" severity="danger" @click="generatePdf"
                     :disabled="!canGenerate" />
             </div>
-
+            <div class="p-6 text-center text-gray-500 border rounded-md">
+                Selecciona al menos un filtro <strong>para generar el reporte.</strong>
+            </div>
             <!-- Filtros -->
             <div class="grid md:grid-cols-3 gap-4">
                 <!-- Checkboxes de secciones -->
@@ -162,7 +164,7 @@ const generatePdf = async () => {
             </div>
 
             <!-- Tabla -->
-            <DataTable v-if="showTable" v-model:selection="selectedWounds" :value="wounds" dataKey="id"
+            <!-- <DataTable v-if="showTable" v-model:selection="selectedWounds" :value="wounds" dataKey="id"
                 tableStyle="min-width: 70rem" selectionMode="multiple" :paginator="true" :rows="10">
                 <Column selectionMode="multiple" headerStyle="width: 3rem" />
                 <Column header="Paciente">
@@ -171,32 +173,30 @@ const generatePdf = async () => {
                         {{ data.health_record?.patient?.user_detail?.name || 'N/A' }}
                         {{ data.health_record?.patient?.user_detail?.fatherLastName || '' }}
                     </template>
-                </Column>
-                <Column header="Tipo">
-                    <template #body="{ data }">
+</Column>
+<Column header="Tipo">
+    <template #body="{ data }">
                         {{ data.wound_type?.name || 'N/A' }}
                     </template>
-                </Column>
-                <Column header="Subtipo">
-                    <template #body="{ data }">
+</Column>
+<Column header="Subtipo">
+    <template #body="{ data }">
                         {{ data.wound_subtype?.name || 'N/A' }}
                     </template>
-                </Column>
-                <Column header="Ubicación">
-                    <template #body="{ data }">
+</Column>
+<Column header="Ubicación">
+    <template #body="{ data }">
                         {{ data.body_location?.name || 'N/A' }}
                     </template>
-                </Column>
-                <Column header="Fecha creación">
-                    <template #body="{ data }">
+</Column>
+<Column header="Fecha creación">
+    <template #body="{ data }">
                         {{ data.created_at?.substring(0, 10) }}
                     </template>
-                </Column>
-            </DataTable>
+</Column>
+</DataTable> -->
 
-            <div v-else class="p-6 text-center text-gray-500 border rounded-md">
-                Selecciona al menos una opción en <strong>Historia clínica</strong> para mostrar la información.
-            </div>
+
         </div>
     </AppLayout>
 </template>

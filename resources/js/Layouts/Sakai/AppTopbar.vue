@@ -90,9 +90,6 @@ const logout = () => {
                 <DropdownLink :href="route('wound_assessment.index')">
                   • Evaluaciones de la herida
                 </DropdownLink>
-                <DropdownLink :href="route('wound_phases.index')">
-                  • Fases de la herida
-                </DropdownLink>
               </div>
             </template>
           </Dropdown>

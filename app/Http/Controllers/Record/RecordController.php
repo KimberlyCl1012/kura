@@ -104,7 +104,6 @@ class RecordController extends Controller
             ->select([
                 'id',
                 'health_record_id',
-                'wound_phase_id',
                 'wound_type_id',
                 'wound_subtype_id',
                 'body_location_id',
@@ -138,7 +137,6 @@ class RecordController extends Controller
                 'created_at'
             ])
             ->with([
-                'woundPhase:id,name',
                 'woundType:id,name',
                 'woundSubtype:id,name,wound_type_id',
                 'bodyLocation:id,name',

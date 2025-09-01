@@ -13,7 +13,6 @@ class WoundFollow extends Model
     protected $fillable = [
         'wound_id',
         'appointment_id',
-        'wound_phase_id',
         'wound_type_id',
         'wound_subtype_id',
         'body_location_id',

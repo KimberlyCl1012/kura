@@ -16,8 +16,6 @@ return new class extends Migration
             $table->foreignId('wound_id')->constrained('wounds');
             $table->foreignId('treatment_id')->constrained('treatments');
             $table->foreignId('measurement_id')->constrained('measurements');
-            $table->foreignId('woundPhaseOld_id')->constrained('list_wound_phases');
-            $table->foreignId('woundPhaseNew_id')->constrained('list_wound_phases');
             $table->timestamps();
         });
     }

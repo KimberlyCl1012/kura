@@ -16,11 +16,6 @@ class WoundHistory extends Model
         return $this->belongsTo(HealthRecord::class);  // , 'id_healthRecord'
     }
 
-    public function woundPhase()
-    {
-        return $this->belongsTo(WoundPhase::class);  // , 'id_woundPhase'
-    }
-
     public function woundType()
     {
         return $this->belongsTo(WoundType::class);  // , 'id_woundType'

@@ -8,7 +8,6 @@ use App\Models\BodyLocation;
 use App\Models\BodySublocation;
 use App\Models\WoundAssessment;
 use App\Models\WoundHistory;
-use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
 use App\Models\WoundType;
 use Carbon\Carbon;
@@ -88,7 +87,6 @@ class WoundHistoryController extends Controller
                 'wound_subtype_id'    => 'required|exists:list_wound_subtypes,id',
                 'body_location_id'    => 'required|exists:list_body_locations,id',
                 'body_sublocation_id' => 'required|exists:list_body_sublocations,id',
-                'wound_phase_id'      => 'required|exists:list_wound_phases,id',
                 'woundBeginDate'      => 'required|date',
             ];
 
@@ -119,7 +117,6 @@ class WoundHistoryController extends Controller
                 'wound_subtype_id'    => $request->wound_subtype_id,
                 'body_location_id'    => $request->body_location_id,
                 'body_sublocation_id' => $request->body_sublocation_id,
-                'wound_phase_id'      => $request->wound_phase_id,
                 'woundBeginDate'      => $this->parseDate($request->woundBeginDate),
                 'woundBackground'     => 1,
             ]);
@@ -140,7 +137,6 @@ class WoundHistoryController extends Controller
                     'wound_subtype_id'    => $history->wound_subtype_id,
                     'body_location_id'    => $history->body_location_id,
                     'body_sublocation_id' => $history->body_sublocation_id,
-                    'wound_phase_id'      => $history->wound_phase_id,
                     'woundBeginDate'      => $history->woundBeginDate,
                     'woundBackground'     => $history->woundBackground,
                     'created_at'          => optional($history->created_at)->toDateTimeString(),
@@ -179,7 +175,6 @@ class WoundHistoryController extends Controller
             'woundHistory'    => $history,
             'woundsType'      => WoundType::where('state', 1)->get(),
             'woundsSubtype'   => WoundSubtype::where('state', 1)->get(),
-            'woundsPhase'     => WoundPhase::where('state', 1)->get(),
             'bodyLocations'   => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
             'assessments' => WoundAssessment::where('state', 1)
@@ -205,7 +200,6 @@ class WoundHistoryController extends Controller
                 'wound_subtype_id'         => 'required|exists:list_wound_subtypes,id',
                 'body_location_id'         => 'required|exists:list_body_locations,id',
                 'body_sublocation_id'      => 'required|exists:list_body_sublocations,id',
-                'wound_phase_id'           => 'required|exists:list_wound_phases,id',
                 'woundBeginDate'           => 'required|date',
                 'woundHealthDate'          => 'nullable|date',
                 'measurementDate'          => 'nullable|date',
@@ -308,7 +302,6 @@ class WoundHistoryController extends Controller
                 'wound_subtype_id',
                 'body_location_id',
                 'body_sublocation_id',
-                'wound_phase_id',
                 'woundBeginDate',
                 'woundHealthDate',
                 'measurementDate',
@@ -356,7 +349,6 @@ class WoundHistoryController extends Controller
                 'wound_subtype_id'          => $request->wound_subtype_id,
                 'body_location_id'          => $request->body_location_id,
                 'body_sublocation_id'       => $request->body_sublocation_id,
-                'wound_phase_id'            => $request->wound_phase_id,
                 'woundBeginDate'            => $this->parseDate($request->woundBeginDate),
                 'woundHealthDate'           => $this->parseDate($request->woundHealthDate),
                 'measurementDate'           => $this->parseDate($request->measurementDate),

@@ -14,7 +14,6 @@ use App\Models\Treatment;
 use App\Models\Wound;
 use App\Models\WoundAssessment;
 use App\Models\WoundFollow;
-use App\Models\WoundPhase;
 use App\Models\WoundSubtype;
 use App\Models\WoundType;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -60,14 +59,11 @@ class WoundFollowController extends Controller
             'list_body_locations.id as body_location_id',
             'list_body_sublocations.name as body_sublocation_name',
             'list_body_sublocations.id as body_sublocation_id',
-            'list_wound_phases.name as wound_phase_name',
-            'list_wound_phases.id as wound_phase_id',
         ])
             ->join('list_wound_types', 'list_wound_types.id', '=', 'wounds.wound_type_id')
             ->join('list_wound_subtypes', 'list_wound_subtypes.id', '=', 'wounds.wound_subtype_id')
             ->join('list_body_locations', 'list_body_locations.id', '=', 'wounds.body_location_id')
             ->join('list_body_sublocations', 'list_body_sublocations.id', '=', 'wounds.body_sublocation_id')
-            ->join('list_wound_phases', 'list_wound_phases.id', '=', 'wounds.wound_phase_id')
             ->where('wounds.id', $decryptWoundId)
             ->firstOrFail();
 
@@ -106,7 +102,6 @@ class WoundFollowController extends Controller
             'follow' => $follow,
             'woundsType' => WoundType::where('state', 1)->get(),
             'woundsSubtype' => WoundSubtype::where('state', 1)->get(),
-            'woundsPhase' =>    WoundPhase::where('state', 1)->get(),
             'bodyLocations' => BodyLocation::where('state', 1)->get(),
             'bodySublocation' => BodySublocation::where('state', 1)->get(),
             'treatmentFollow' => $treatmentFollow,
@@ -140,7 +135,6 @@ class WoundFollowController extends Controller
             $validated = $request->validate([
                 'wound_id' => 'required|exists:wounds,id',
                 'appointment_id' => 'required|exists:appointments,id',
-                'wound_phase_id' => 'required|exists:list_wound_phases,id',
                 'wound_type_id' => 'required|exists:list_wound_types,id',
                 'wound_subtype_id' => 'required|exists:list_wound_subtypes,id',
                 'body_location_id' => 'required|exists:list_body_locations,id',
@@ -212,7 +206,6 @@ class WoundFollowController extends Controller
                         'id',
                         'wound_id',
                         'appointment_id',
-                        'wound_phase_id',
                         'wound_type_id',
                         'wound_subtype_id',
                         'body_location_id',
@@ -259,7 +252,6 @@ class WoundFollowController extends Controller
             } else {
                 // Log campo por campo (incluye arrays como JSON string)
                 $fields = [
-                    'wound_phase_id',
                     'wound_type_id',
                     'wound_subtype_id',
                     'body_location_id',

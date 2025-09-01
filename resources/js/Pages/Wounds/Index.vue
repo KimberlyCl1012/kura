@@ -57,7 +57,6 @@ const formWound = ref({
     wound_subtype_id: null,
     body_location_id: null,
     body_sublocation_id: null,
-    wound_phase_id: null,
     woundBeginDate: null,
     wound_id: null,
 });
@@ -117,7 +116,6 @@ function openNewAntecedent(data) {
     formWound.value.wound_subtype_id = null;
     formWound.value.body_location_id = null;
     formWound.value.body_sublocation_id = null;
-    formWound.value.wound_phase_id = null;
     formWound.value.wound_id = data.id;
 
     woundDialog.value = true;
@@ -135,7 +133,6 @@ function resetForm() {
         wound_subtype_id: null,
         body_location_id: null,
         body_sublocation_id: null,
-        wound_phase_id: null,
         woundBeginDate: null,
         wound_id: null,
     };
@@ -160,7 +157,6 @@ async function saveUser() {
         { key: "wound_subtype_id", label: "Tipo de herida (Localización secundaria)" },
         { key: "body_location_id", label: "Ubicación corporal" },
         { key: "body_sublocation_id", label: "Ubicación corporal (Localización secundaria)" },
-        { key: "wound_phase_id", label: "Fase de la herida" },
         { key: "woundBeginDate", label: "Fecha que inició la herida" },
     ];
 
@@ -415,19 +411,6 @@ function goToFollow(wound) {
                             :class="{ 'p-invalid': submitted && !formWound.body_sublocation_id }" />
                         <small v-if="submitted && !formWound.body_sublocation_id" class="text-red-500">
                             Debe seleccionar la sublocalización.
-                        </small>
-                    </div>
-
-                    <!-- Fase -->
-                    <div>
-                        <label class="block font-bold mb-1">
-                            Fase de la herida <span class="text-red-600">*</span>
-                        </label>
-                        <Select v-model="formWound.wound_phase_id" :options="woundsPhase" optionLabel="name"
-                            placeholder="Seleccione una fase" optionValue="id" filter class="w-full"
-                            :class="{ 'p-invalid': submitted && !formWound.wound_phase_id }" />
-                        <small v-if="submitted && !formWound.wound_phase_id" class="text-red-500">
-                            Debe seleccionar la fase.
                         </small>
                     </div>
 

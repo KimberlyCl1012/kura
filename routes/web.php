@@ -7,7 +7,6 @@ use App\Http\Controllers\Catalogues\MethodController;
 use App\Http\Controllers\Catalogues\SiteController;
 use App\Http\Controllers\Catalogues\SubmethodController;
 use App\Http\Controllers\Catalogues\WoundAssessmentController;
-use App\Http\Controllers\Catalogues\WoundPhaseController;
 use App\Http\Controllers\Catalogues\WoundSubtypeController;
 use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
@@ -166,12 +165,6 @@ Route::middleware([
     Route::post('/sites', [SiteController::class, 'store'])->name('sites.store');
     Route::put('/sites/{id}', [SiteController::class, 'update'])->name('sites.update');
     Route::delete('/sites/{id}', [SiteController::class, 'destroy'])->name('sites.destroy');
-
-    //Wound phases
-    Route::get('/wound_phases', [WoundPhaseController::class, 'index'])->name('wound_phases.index');
-    Route::post('/wound_phases', [WoundPhaseController::class, 'store'])->name('wound_phases.store');
-    Route::put('/wound_phases/{id}', [WoundPhaseController::class, 'update'])->name('wound_phases.update');
-    Route::delete('/wound_phases/{id}', [WoundPhaseController::class, 'destroy'])->name('wound_phases.destroy');
 
     //Wound types
     Route::get('/wound_types', [WoundTypeController::class, 'index'])->name('wound_types.index');

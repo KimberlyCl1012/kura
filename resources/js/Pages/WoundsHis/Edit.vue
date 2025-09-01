@@ -70,7 +70,6 @@ const formWoundHistory = ref({
   wound_subtype_id: null,
   body_location_id: null,
   body_sublocation_id: null,
-  wound_phase_id: null,
   woundBeginDate: null,
   woundHealthDate: null,
   measurementDate: null,
@@ -235,7 +234,6 @@ const saveUser = async () => {
       "wound_subtype_id",
       "body_location_id",
       "body_sublocation_id",
-      "wound_phase_id",
       "woundBeginDate",
     ]
     if (parseInt(formWoundHistory.value.wound_type_id) === 8) {
@@ -887,20 +885,6 @@ onBeforeUnmount(() => {
                     }" />
                   <small v-if="submittedUser && !formWoundHistory.body_sublocation_id" class="text-red-500">
                     Debe seleccionar la sublocalización.
-                  </small>
-                </div>
-
-                <!-- Fase -->
-                <div>
-                  <label class="flex items-center gap-1 mb-1 font-medium">
-                    Fase de la herida <span class="text-red-600">*</span>
-                  </label>
-                  <Select v-model="formWoundHistory.wound_phase_id" :options="props.woundsPhase" optionLabel="name"
-                    placeholder="Seleccione una fase" optionValue="id" filter class="w-full" :class="{
-                      'p-invalid': submittedUser && !formWoundHistory.wound_phase_id,
-                    }" />
-                  <small v-if="submittedUser && !formWoundHistory.wound_phase_id" class="text-red-500">
-                    Debe seleccionar la fase.
                   </small>
                 </div>
 

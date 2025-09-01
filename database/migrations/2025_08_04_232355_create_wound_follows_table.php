@@ -15,12 +15,11 @@ return new class extends Migration
             $table->id(); //'id_wound_follow'
             $table->foreignId('wound_id')->constrained('wounds');
             $table->foreignId('appointment_id')->constrained('appointments');
-            $table->foreignId('wound_phase_id')->constrained('list_wound_phases');
             $table->foreignId('wound_type_id')->constrained('list_wound_types');
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
             $table->foreignId('body_location_id')->constrained('list_body_locations');
             $table->foreignId('body_sublocation_id')->constrained('list_body_sublocations');
-              $table->string('type_bite')->nullable();
+            $table->string('type_bite')->nullable();
             $table->string('other_type')->nullable();
             $table->string('grade_foot')->nullable();
             $table->string('MESI')->nullable();

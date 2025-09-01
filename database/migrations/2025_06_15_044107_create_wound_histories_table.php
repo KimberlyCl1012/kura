@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('wound_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('wound_id')->constrained('wounds');
-            $table->foreignId('wound_phase_id')->constrained('list_wound_phases');
             $table->foreignId('wound_type_id')->constrained('list_wound_types');
             $table->foreignId('wound_subtype_id')->constrained('list_wound_subtypes');
             $table->foreignId('body_location_id')->constrained('list_body_locations');

@@ -21,12 +21,6 @@ class Wound extends Model
         return $this->belongsTo(Appointment::class);
     }
 
-
-    public function woundPhase()
-    {
-        return $this->belongsTo(WoundPhase::class);  // , 'id_woundPhase'
-    }
-
     public function woundType()
     {
         return $this->belongsTo(WoundType::class);  // , 'id_woundType'

@@ -105,6 +105,94 @@ const displayableRole = (role) => {
 
 <template>
   <div>
+
+
+    <div v-if="team.team_invitations.length > 0 && userPermissions.canAddTeamMembers">
+      <SectionBorder />
+
+      <!-- Team Member Invitations -->
+      <ActionSection class="mt-10 sm:mt-0">
+        <template #title> Pending Team Invitations </template>
+
+        <template #description>
+          These people have been invited to your team and have been sent an invitation
+          email. They may join the team by accepting the email invitation.
+        </template>
+
+        <!-- Pending Team Member Invitation List -->
+        <template #content>
+          <div class="space-y-6">
+            <div v-for="invitation in team.team_invitations" :key="invitation.id"
+              class="flex items-center justify-between">
+              <div class="text-gray-600">
+                {{ invitation.email }}
+              </div>
+
+              <div class="flex items-center">
+                <!-- Cancel Team Invitation -->
+                <button v-if="userPermissions.canRemoveTeamMembers"
+                  class="cursor-pointer ms-6 text-sm text-red-500 focus:outline-none"
+                  @click="cancelTeamInvitation(invitation)">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </ActionSection>
+    </div>
+
+    <div v-if="team.users.length > 0">
+      <SectionBorder />
+
+      <!-- Manage Team Members -->
+      <ActionSection class="mt-10 sm:mt-0">
+        <template #title> Miembros del rol </template>
+
+        <template #description>
+          Todas las personas que forman parte de este equipo.
+        </template>
+
+        <!-- Team Member List -->
+        <template #content>
+          <div class="space-y-6">
+            <div v-for="user in team.users" :key="user.id" class="flex items-center justify-between">
+              <div class="flex items-center">
+                <img class="size-8 rounded-full object-cover" :src="user.profile_photo_url" :alt="user.name" />
+                <div class="ms-4" style="color: #000">
+                  {{ user.name }}
+                </div>
+              </div>
+
+              <div class="flex items-center">
+                <!-- Manage Team Member Role -->
+                <button v-if="userPermissions.canUpdateTeamMembers && availableRoles.length"
+                  class="ms-2 text-sm text-gray-400 underline" @click="manageRole(user)">
+                  {{ displayableRole(user.membership.role) }}
+                </button>
+
+                <div v-else-if="availableRoles.length" class="ms-2 text-sm text-gray-400">
+                  {{ displayableRole(user.membership.role) }}
+                </div>
+
+                <!-- Leave Team -->
+                <button v-if="$page.props.auth.user.id === user.id" class="cursor-pointer ms-6 text-sm text-red-500"
+                  @click="confirmLeavingTeam">
+                  Abandonar
+                </button>
+
+                <!-- Remove Team Member -->
+                <button v-else-if="userPermissions.canRemoveTeamMembers"
+                  class="cursor-pointer ms-6 text-sm text-red-500" @click="confirmTeamMemberRemoval(user)">
+                  Remover
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </ActionSection>
+    </div>
+
     <div v-if="userPermissions.canAddTeamMembers">
       <SectionBorder />
 
@@ -191,92 +279,6 @@ const displayableRole = (role) => {
           </PrimaryButton>
         </template>
       </FormSection>
-    </div>
-
-    <div v-if="team.team_invitations.length > 0 && userPermissions.canAddTeamMembers">
-      <SectionBorder />
-
-      <!-- Team Member Invitations -->
-      <ActionSection class="mt-10 sm:mt-0">
-        <template #title> Pending Team Invitations </template>
-
-        <template #description>
-          These people have been invited to your team and have been sent an invitation
-          email. They may join the team by accepting the email invitation.
-        </template>
-
-        <!-- Pending Team Member Invitation List -->
-        <template #content>
-          <div class="space-y-6">
-            <div v-for="invitation in team.team_invitations" :key="invitation.id"
-              class="flex items-center justify-between">
-              <div class="text-gray-600">
-                {{ invitation.email }}
-              </div>
-
-              <div class="flex items-center">
-                <!-- Cancel Team Invitation -->
-                <button v-if="userPermissions.canRemoveTeamMembers"
-                  class="cursor-pointer ms-6 text-sm text-red-500 focus:outline-none"
-                  @click="cancelTeamInvitation(invitation)">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </template>
-      </ActionSection>
-    </div>
-
-    <div v-if="team.users.length > 0">
-      <SectionBorder />
-
-      <!-- Manage Team Members -->
-      <ActionSection class="mt-10 sm:mt-0">
-        <template #title> Miembros del rol </template>
-
-        <template #description>
-          Todas las personas que forman parte de este equipo.
-        </template>
-
-        <!-- Team Member List -->
-        <template #content>
-          <div class="space-y-6">
-            <div v-for="user in team.users" :key="user.id" class="flex items-center justify-between">
-              <div class="flex items-center">
-                <img class="size-8 rounded-full object-cover" :src="user.profile_photo_url" :alt="user.name" />
-                <div class="ms-4" style="color: #000">
-                  {{ user.name }}
-                </div>
-              </div>
-
-              <div class="flex items-center">
-                <!-- Manage Team Member Role -->
-                <button v-if="userPermissions.canUpdateTeamMembers && availableRoles.length"
-                  class="ms-2 text-sm text-gray-400 underline" @click="manageRole(user)">
-                  {{ displayableRole(user.membership.role) }}
-                </button>
-
-                <div v-else-if="availableRoles.length" class="ms-2 text-sm text-gray-400">
-                  {{ displayableRole(user.membership.role) }}
-                </div>
-
-                <!-- Leave Team -->
-                <button v-if="$page.props.auth.user.id === user.id" class="cursor-pointer ms-6 text-sm text-red-500"
-                  @click="confirmLeavingTeam">
-                  Abandonar
-                </button>
-
-                <!-- Remove Team Member -->
-                <button v-else-if="userPermissions.canRemoveTeamMembers"
-                  class="cursor-pointer ms-6 text-sm text-red-500" @click="confirmTeamMemberRemoval(user)">
-                  Remover
-                </button>
-              </div>
-            </div>
-          </div>
-        </template>
-      </ActionSection>
     </div>
 
     <!-- Role Management Modal -->

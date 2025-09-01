@@ -287,7 +287,6 @@ function onMainImgError(e) {
 const formFollow = ref({
     wound_id: props.wound?.id || null,
     appointment_id: props.appointmentId || null,
-    wound_phase_id: props.follow?.wound_phase_id || null,
     wound_type_id: props.wound?.wound_type_id || null,
     wound_subtype_id: props.wound?.wound_subtype_id || null,
     body_location_id: props.wound?.body_location_id || null,
@@ -333,7 +332,6 @@ const submittedFollow = ref(false);
 const isSavingFollow = ref(false);
 
 const fieldLabels = {
-    wound_phase_id: 'Fase de la herida',
     edema: 'Edema',
     dolor: 'Dolor',
     tipo_dolor: 'Tipo de dolor',
@@ -372,7 +370,6 @@ const saveFollow = () => {
     errors.value = {};
 
     const requiredFields = [
-        'wound_phase_id',
         'edema',
         'dolor',
         'tipo_dolor',
@@ -1061,7 +1058,7 @@ const isNonEmpty = (v) => {
 
 const requiredFieldsForFollow = computed(() => {
     const base = [
-        'wound_phase_id', 'edema', 'dolor', 'tipo_dolor', 'duracion_dolor',
+        'edema', 'dolor', 'tipo_dolor', 'duracion_dolor',
         'visual_scale', 'exudado_tipo', 'exudado_cantidad', 'infeccion', 'olor',
         'borde', 'piel_perilesional', 'measurementDate', 'length', 'width',
         'undermining', 'granulation_percent', 'slough_percent', 'necrosis_percent',
@@ -1250,11 +1247,6 @@ const finishConsultation = async () => {
                             <div>
                                 <label class="flex items-center gap-1 mb-1 font-medium">Sublocalización</label>
                                 <Select v-model="formWound.body_sublocation_id" :options="bodySublocations"
-                                    optionLabel="name" optionValue="id" disabled class="w-full" />
-                            </div>
-                            <div>
-                                <label class="flex items-center gap-1 mb-1 font-medium">Fase</label>
-                                <Select v-model="formWound.wound_phase_id" :options="props.woundsPhase"
                                     optionLabel="name" optionValue="id" disabled class="w-full" />
                             </div>
                             <div>
@@ -1678,25 +1670,7 @@ const finishConsultation = async () => {
                         <h2 class="text-xl font-semibold mb-4 px-4 pt-4">Seguimiento de la herida</h2>
 
                         <form @submit.prevent="saveFollow" class="flex flex-col flex-grow overflow-auto">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-6 px-4">
-                                <!-- Fase -->
-                                <div>
-                                    <label class="flex items-center gap-1 mb-1 font-medium">
-                                        Fase de la herida <span class="text-red-600">*</span>
-                                    </label>
-                                    <Select v-model="formFollow.wound_phase_id" :options="props.woundsPhase"
-                                        optionLabel="name" placeholder="Seleccione una fase" optionValue="id" filter
-                                        class="w-full" :class="{
-                                            'p-invalid': submittedFollow && !formFollow.wound_phase_id,
-                                        }" />
-                                    <small v-if="submittedFollow && !formFollow.wound_phase_id" class="text-red-500">
-                                        Debe seleccionar la fase.
-                                    </small>
-                                </div>
-                            </div>
-
-
-                            <div
+                             <div
                                 class="flex flex-col flex-grow pt-5 border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 overflow-auto">
                                 <h3 class="text-xl font-semibold mb-4 px-4 pt-4">
                                     Evaluación de la herida
