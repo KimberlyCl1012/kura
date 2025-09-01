@@ -35,6 +35,7 @@ const props = defineProps({
     treatmentsHistory: Array,
     woundsInAppointment: Number,
     assessments: Object,
+    isFollow: { type: Boolean, default: true }
 });
 
 const page = usePage();
@@ -1118,7 +1119,7 @@ const confirmFinishConsultation = async () => {
         return
     }
 
-    const appointmentId = props.wound?.appointment_id
+    const appointmentId = props.wound.appointment_id
     if (!appointmentId) {
         toast.add({
             severity: 'warn',
@@ -1159,11 +1160,15 @@ const onConfirmFinishConsultation = () => {
     finishConsultation()
 }
 
+const IS_WOUND_FOLLOW = props.isFollow
+
 const finishConsultation = async () => {
     isSavingTreatment.value = true
     try {
         const response = await axios.put('/appointments/finish', {
-            appointment_id: props.wound.appointment_id,
+            appointmentId: props.appointmentId,
+            appointment_wound_id: props.wound.appointment_id,
+            wound_follow: IS_WOUND_FOLLOW,
         })
 
         toast.add({

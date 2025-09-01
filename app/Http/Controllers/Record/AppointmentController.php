@@ -10,6 +10,7 @@ use App\Models\Kurator;
 use App\Models\KuratorPatient;
 use App\Models\Site;
 use App\Models\Wound;
+use App\Models\WoundFollow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -270,47 +271,101 @@ class AppointmentController extends Controller
 
     public function finish(Request $request)
     {
+        $appointmentId = $request->input('appointmentId');
+        $appointment_wound_id = $request->input('appointment_wound_id');
+        $isFollow      = $request->boolean('wound_follow');
+
         try {
-            $appointmentId = $request->input('appointment_id');
-
-            if (!$appointmentId) {
-                return response()->json(['message' => 'ID de consulta requerido'], 422);
-            }
-
-            // Verificar existencia de la cita
             $appointment = Appointment::findOrFail($appointmentId);
 
-            // Verificar si hay heridas
-            $woundCount = Wound::where('appointment_id', $appointmentId)->count();
+            DB::beginTransaction();
+
+            if ($isFollow === true) {
+                $updatedFollows = WoundFollow::where('appointment_id', $appointmentId)
+                    ->update(['state' => 3]);
+
+                $updatedAppointment = Appointment::where('id', $appointmentId)
+                    ->update(['state' => 3]);
+
+                $updatedWounds = Wound::where('appointment_id', $appointment_wound_id)
+                    ->update(['state' => 3]);
+
+                $this->logChange([
+                    'logType'      => 'Cita',
+                    'table'        => 'wound_follows',
+                    'primaryKey'   => null,
+                    'secondaryKey' => $appointmentId,
+                    'changeType'   => 'bulk-update',
+                    'fieldName'    => 'state',
+                    'oldValue'     => 'varios',
+                    'newValue'     => json_encode(['state' => 3, 'updated_rows' => $updatedFollows]),
+                ]);
+
+                $oldState   = (int) $appointment->state;
+                $oldDateEnd = $appointment->dateEndVisit;
+
+                $appointment->state = 3;
+                $appointment->save();
+
+                if ($oldState !== 3) {
+                    $this->logChange([
+                        'logType'    => 'Cita',
+                        'table'      => 'appointments',
+                        'primaryKey' => $appointment->id,
+                        'changeType' => 'update',
+                        'fieldName'  => 'state',
+                        'oldValue'   => $oldState,
+                        'newValue'   => 3,
+                    ]);
+                }
+
+                if ($oldDateEnd !== $appointment->dateEndVisit) {
+                    $this->logChange([
+                        'logType'    => 'Cita',
+                        'table'      => 'appointments',
+                        'primaryKey' => $appointment->id,
+                        'changeType' => 'update',
+                        'fieldName'  => 'dateEndVisit',
+                        'oldValue'   => $oldDateEnd,
+                        'newValue'   => $appointment->dateEndVisit,
+                    ]);
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'message'     => 'Consulta finalizada correctamente (seguimiento).',
+                    'redirect_to' => route('kurators.index'),
+                ]);
+            }
+
+            $woundCount = Wound::where('appointment_id', $appointment_wound_id)->count();
 
             if ($woundCount === 0) {
                 DB::rollBack();
                 return response()->json(['message' => 'No hay heridas asociadas a esta consulta.'], 400);
             }
 
-            // Actualizar todas las heridas de la cita
-            $updated = Wound::where('appointment_id', $appointmentId)->update(['state' => 3]);
+            $updatedWounds = Wound::where('appointment_id', $appointment_wound_id)
+                ->update(['state' => 3]);
 
             $this->logChange([
-                'logType'    => 'Cita',
-                'table'      => 'wounds',
-                'primaryKey' => null,
+                'logType'      => 'Cita',
+                'table'        => 'wounds',
+                'primaryKey'   => null,
                 'secondaryKey' => $appointmentId,
-                'changeType' => 'bulk-update',
-                'fieldName'  => 'state',
-                'oldValue'   => 'varios',
-                'newValue'   => json_encode(['state' => 3, 'updated_rows' => $updated]),
+                'changeType'   => 'bulk-update',
+                'fieldName'    => 'state',
+                'oldValue'     => 'varios',
+                'newValue'     => json_encode(['state' => 3, 'updated_rows' => $updatedWounds]),
             ]);
 
-            // Cambiar estado de la cita y fecha de cierre
-            $oldState = (int) $appointment->state;
+            $oldState   = (int) $appointment->state;
             $oldDateEnd = $appointment->dateEndVisit;
 
-            // Actualizar el estado de la consulta
             $appointment->state = 3;
             $appointment->save();
 
-            // Logs de la cita (state y dateEndVisit)
             if ($oldState !== 3) {
                 $this->logChange([
                     'logType'    => 'Cita',
@@ -338,13 +393,14 @@ class AppointmentController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Consulta finalizada correctamente.',
+                'message'     => 'Consulta finalizada correctamente.',
                 'redirect_to' => route('kurators.index'),
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => 'Error al finalizar la consulta.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

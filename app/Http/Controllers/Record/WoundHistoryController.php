@@ -209,7 +209,6 @@ class WoundHistoryController extends Controller
                 'woundBeginDate'           => 'required|date',
                 'woundHealthDate'          => 'nullable|date',
                 'measurementDate'          => 'nullable|date',
-                'valoracion'               => 'nullable|string|max:255', // si lo usas para lógica
                 'MESI'                     => 'nullable|string|max:255',
                 'borde'                    => 'nullable|string|max:255',
                 'edema'                    => 'nullable|string|max:255',
@@ -313,7 +312,6 @@ class WoundHistoryController extends Controller
                 'woundBeginDate',
                 'woundHealthDate',
                 'measurementDate',
-                'valoracion',
                 'MESI',
                 'borde',
                 'edema',
@@ -362,8 +360,7 @@ class WoundHistoryController extends Controller
                 'woundBeginDate'            => $this->parseDate($request->woundBeginDate),
                 'woundHealthDate'           => $this->parseDate($request->woundHealthDate),
                 'measurementDate'           => $this->parseDate($request->measurementDate),
-                'valoracion'                => $request->valoracion, // solo si existe esa columna
-                'MESI'                      => $request->MESI,       // si así guardas el valor MESI
+                'MESI'                      => $request->MESI,    
                 'borde'                     => $request->borde,
                 'edema'                     => $request->edema,
                 'dolor'                     => $request->dolor,

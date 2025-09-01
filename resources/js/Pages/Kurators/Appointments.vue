@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from "@/Layouts/sakai/AppLayout.vue";
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
 import { router } from "@inertiajs/vue3";
@@ -48,6 +48,16 @@ const expandAll = () => {
 const collapseAll = () => {
     expandedRows.value = {};
 };
+
+onMounted(() => {
+    expandAll();
+});
+
+watch(
+    () => props.appointments,
+    () => expandAll(),
+    { deep: true }
+);
 
 const onRowExpand = (event) => {
     toast.add({ severity: "info", summary: "Paciente expandido", detail: event.data.patient_full_name, life: 2000 });
@@ -291,7 +301,8 @@ function healthRecord(patientId) {
                         <label for="dateOfBirth" class="block font-bold mb-1">
                             Fecha de nacimiento <span class="text-red-500">*</span>
                         </label>
-                        <DatePicker class="w-full" inputId="dateOfBirth" showIcon v-model="patient.dateOfBirth" placeholder="mm/dd/yyyy"
+                        <DatePicker class="w-full" inputId="dateOfBirth" showIcon v-model="patient.dateOfBirth"
+                            placeholder="mm/dd/yyyy"
                             :class="{ 'p-invalid': submittedPatient && !patient.dateOfBirth }" />
                         <small v-if="submittedPatient && !patient.dateOfBirth" class="text-red-500">La fecha es
                             obligatoria.</small>

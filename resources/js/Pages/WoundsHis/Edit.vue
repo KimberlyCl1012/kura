@@ -36,7 +36,7 @@ const submittedUser = ref(false)
 const errors = ref({})
 
 const grades = ref([{ id: 1, name: "1" }, { id: 2, name: "2" }, { id: 3, name: "3" }])
-const valoracion = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }])
+const MESI = ref([{ name: "Manual" }, { name: "MESI" }, { name: "No aplica" }])
 const bordes = ref([])
 const edema = ref([])
 const dolor = ref([])
@@ -286,7 +286,6 @@ const saveUser = async () => {
 
     if (requiresVascular.value) {
       const vascularFields = [
-        "valoracion",
         "ITB_izquierdo",
         "ITB_derecho",
         "pulse_dorsal_izquierdo",
@@ -947,10 +946,10 @@ onBeforeUnmount(() => {
                       Índice tobillo brazo
                       <span class="text-red-600">*</span>
                     </label>
-                    <Select id="valoracion" v-model="formWoundHistory.valoracion" :options="valoracion" filter
+                    <Select id="MESI" v-model="formWoundHistory.MESI" :options="MESI" filter
                       optionLabel="name" optionValue="name" class="w-full" placeholder="Seleccione una opción" />
-                    <small v-if="errors.valoracion" class="text-red-500">{{
-                      errors.valoracion
+                    <small v-if="errors.MESI" class="text-red-500">{{
+                      errors.MESI
                     }}</small>
                   </div>
 

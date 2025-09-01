@@ -1135,7 +1135,7 @@ const finishConsultation = async () => {
 
   try {
     const response = await axios.put('/appointments/finish', {
-      appointment_id: props.wound.appointment_id,
+      appointment_wound_id: props.wound.appointment_id,
     }, {
       headers: {
         'Content-Type': 'application/json',
