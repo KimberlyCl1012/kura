@@ -97,7 +97,7 @@ const logout = () => {
             </template>
           </Dropdown>
         </li>
-        <li class="border-surface lg:border-t-0 list-none" v-if="userRole == 'admin'">
+        <li class="border-surface lg:border-t-0 list-none">
           <Dropdown align="right" width="64">
             <template #trigger>
               <button type="button" class="layout-topbar-action mt-2">
@@ -107,7 +107,7 @@ const logout = () => {
             <template #content>
               <div style="width: 150px">
                 <div class="block px-4 py-2 text-xs text-gray-400">Configuración</div>
-                <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
+                <DropdownLink :href="route('roles.show', $page.props.auth.user.current_team)">
                   • Roles
                 </DropdownLink>
                 <!-- <DropdownLink :href="route('teams.create')"> • Crear Rol </DropdownLink> -->

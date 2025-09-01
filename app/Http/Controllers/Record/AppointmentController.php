@@ -268,8 +268,88 @@ class AppointmentController extends Controller
         }
     }
 
+    public function finishWound(Request $request)
+    {
+        try {
+            $appointmentId = $request->input('appointment_id');
 
-    public function finish(Request $request)
+            if (!$appointmentId) {
+                return response()->json(['message' => 'ID de consulta requerido'], 422);
+            }
+
+            // Verificar existencia de la cita
+            $appointment = Appointment::findOrFail($appointmentId);
+
+            // Verificar si hay heridas
+            $woundCount = Wound::where('appointment_id', $appointmentId)->count();
+
+            if ($woundCount === 0) {
+                DB::rollBack();
+                return response()->json(['message' => 'No hay heridas asociadas a esta consulta.'], 400);
+            }
+
+            // Actualizar todas las heridas de la cita
+            $updated = Wound::where('appointment_id', $appointmentId)->update(['state' => 3]);
+
+            $this->logChange([
+                'logType'    => 'Cita',
+                'table'      => 'wounds',
+                'primaryKey' => null,
+                'secondaryKey' => $appointmentId,
+                'changeType' => 'bulk-update',
+                'fieldName'  => 'state',
+                'oldValue'   => 'varios',
+                'newValue'   => json_encode(['state' => 3, 'updated_rows' => $updated]),
+            ]);
+
+            // Cambiar estado de la cita y fecha de cierre
+            $oldState = (int) $appointment->state;
+            $oldDateEnd = $appointment->dateEndVisit;
+
+            // Actualizar el estado de la consulta
+            $appointment->state = 3;
+            $appointment->save();
+
+            // Logs de la cita (state y dateEndVisit)
+            if ($oldState !== 3) {
+                $this->logChange([
+                    'logType'    => 'Cita',
+                    'table'      => 'appointments',
+                    'primaryKey' => $appointment->id,
+                    'changeType' => 'update',
+                    'fieldName'  => 'state',
+                    'oldValue'   => $oldState,
+                    'newValue'   => 3,
+                ]);
+            }
+
+            if ($oldDateEnd !== $appointment->dateEndVisit) {
+                $this->logChange([
+                    'logType'    => 'Cita',
+                    'table'      => 'appointments',
+                    'primaryKey' => $appointment->id,
+                    'changeType' => 'update',
+                    'fieldName'  => 'dateEndVisit',
+                    'oldValue'   => $oldDateEnd,
+                    'newValue'   => $appointment->dateEndVisit,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Consulta finalizada correctamente.',
+                'redirect_to' => route('kurators.index'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al finalizar la consulta.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function finishFollow(Request $request)
     {
         $appointmentId = $request->input('appointmentId');
         $appointment_wound_id = $request->input('appointment_wound_id');

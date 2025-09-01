@@ -44,7 +44,7 @@ const confirmingLeavingTeam = ref(false);
 const teamMemberBeingRemoved = ref(null);
 
 const addTeamMember = () => {
-  addTeamMemberForm.post(route("team-members.store"), {
+  addTeamMemberForm.post(route("roles.store"), {
     errorBag: "addTeamMember",
     preserveScroll: true,
     onSuccess: () => addTeamMemberForm.reset(),

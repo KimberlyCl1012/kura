@@ -168,11 +168,24 @@ async function deleteKurator() {
     }
 }
 
+const isSpecialtyValid = computed(() => {
+    if (!kurator.value.type_kurator) return true;
+    return specialtyOptions.value.includes((kurator.value.specialty || "").trim());
+});
+
+const specialtyNeedsDetail = computed(() =>
+    ["Especialista", "Especialidad", "Subespecialidad", "Maestría", "Doctorado"]
+        .includes((kurator.value.specialty || "").trim())
+);
+
+
 async function saveKurator() {
     submitted.value = true;
     isSaving.value = true;
 
-    // Validaciones básicas
+    kurator.value.specialty = (kurator.value.specialty || "").trim();
+    kurator.value.detail_specialty = (kurator.value.detail_specialty || "").trim();
+
     const missingRequired =
         !kurator.value.name ||
         !kurator.value.fatherLastName ||
@@ -185,11 +198,21 @@ async function saveKurator() {
         !kurator.value.identification ||
         (!isEditMode.value && !kurator.value.password);
 
-    const missingDetail = needsSpecialtyDetail.value && !kurator.value.detail_specialty;
+    const invalidSpecialty = !isSpecialtyValid.value;
+    const missingDetail = (specialtyNeedsDetail?.value ?? needsSpecialtyDetail.value)
+        && !kurator.value.detail_specialty;
 
-    if (missingRequired || missingDetail) {
+    if (missingRequired || invalidSpecialty || missingDetail) {
         isSaving.value = false;
-        if (missingDetail) {
+
+        if (invalidSpecialty) {
+            toast.add({
+                severity: "warn",
+                summary: "Especialidad inválida",
+                detail: "Complete los campos requeridos.",
+                life: 4000,
+            });
+        } else if (missingDetail) {
             toast.add({
                 severity: "warn",
                 summary: "Falta información",
@@ -205,6 +228,7 @@ async function saveKurator() {
         specialty: kurator.value.specialty,
         detail_specialty: kurator.value.detail_specialty,
     };
+
     try {
         if (isEditMode.value) {
             if (!kurator.value.kurator_id) {
@@ -212,12 +236,10 @@ async function saveKurator() {
                 isSaving.value = false;
                 return;
             }
-
             await axios.post(route("kurators.update", kurator.value.kurator_id), {
                 ...payload,
                 _method: "PUT",
             });
-
             toast.add({ severity: "success", summary: "Actualizado", detail: "Personal sanitario actualizado", life: 3000 });
         } else {
             await axios.post(route("kurators.store"), payload);
@@ -229,12 +251,7 @@ async function saveKurator() {
         if (e.response && e.response.status === 422) {
             const errors = e.response.data.errors;
             for (const field in errors) {
-                toast.add({
-                    severity: "error",
-                    summary: "Error de validación",
-                    detail: errors[field][0],
-                    life: 4000,
-                });
+                toast.add({ severity: "error", summary: "Error de validación", detail: errors[field][0], life: 4000 });
             }
         } else {
             toast.add({ severity: "error", summary: "Error", detail: "Error al guardar", life: 3000 });
@@ -243,7 +260,6 @@ async function saveKurator() {
         isSaving.value = false;
     }
 }
-
 
 watch(() => kurator.value.type_kurator, () => {
     kurator.value.specialty = "";

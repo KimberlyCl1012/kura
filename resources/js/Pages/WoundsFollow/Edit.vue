@@ -1165,7 +1165,7 @@ const IS_WOUND_FOLLOW = props.isFollow
 const finishConsultation = async () => {
     isSavingTreatment.value = true
     try {
-        const response = await axios.put('/appointments/finish', {
+        const response = await axios.put('/appointments/finishFollow', {
             appointmentId: props.appointmentId,
             appointment_wound_id: props.wound.appointment_id,
             wound_follow: IS_WOUND_FOLLOW,

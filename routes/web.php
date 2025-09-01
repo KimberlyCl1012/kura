@@ -13,6 +13,8 @@ use App\Http\Controllers\Catalogues\WoundTypeController;
 use App\Http\Controllers\Kurator\KuratorController;
 use App\Http\Controllers\Patient\PatientController;
 use App\Http\Controllers\Permission\PermissionController;
+use App\Http\Controllers\Permission\RoleController;
+use App\Http\Controllers\Permission\TeamController;
 use App\Http\Controllers\Record\AppointmentController;
 use App\Http\Controllers\Record\HealthRecordController;
 use App\Http\Controllers\Record\MeasurementController;
@@ -46,6 +48,10 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    //Teams
+    Route::get('/roles/{team}', [RoleController::class, 'show'])->name('roles.show');
+    Route::post('/roles/store', [RoleController::class, 'store'])->name('roles.store');
 
     //Permissions
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
@@ -88,7 +94,8 @@ Route::middleware([
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
-    Route::put('/appointments/finish', [AppointmentController::class, 'finish'])->name('appointments.finish');
+    Route::put('/appointments/finishWound', [AppointmentController::class, 'finishWound'])->name('appointments.finishWound');
+    Route::put('/appointments/finishFollow', [AppointmentController::class, 'finishFollow'])->name('appointments.finishFollow');
     Route::get('/appointments/{appointmentId}/wounds/count', [AppointmentController::class, 'countWounds'])->name('appointments.countWounds');
     //Move Patient
     Route::put('/appointments/{appointment}/reassign', [AppointmentController::class, 'reassign'])->name('appointments.reassign');

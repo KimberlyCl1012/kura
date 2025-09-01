@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement(<<<'SQL'
-        CREATE OR REPLACE VIEW vw_report_health_records AS
+        CREATE VIEW vw_record_wounds AS
         SELECT
             hr.id                           AS health_record_id,
             hr.record_uuid,

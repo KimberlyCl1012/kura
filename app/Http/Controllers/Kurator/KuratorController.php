@@ -9,6 +9,7 @@ use App\Models\Kurator;
 use App\Models\Patient;
 use App\Models\Site;
 use App\Models\State;
+use App\Models\Team;
 use App\Models\User;
 use App\Models\UserDetail;
 use Carbon\Carbon;
@@ -153,7 +154,7 @@ class KuratorController extends Controller
             'password' => 'required|string|min:6',
             'specialty' => 'required|string|max:255',
             'detail_specialty' => 'nullable|string|max:255',
-            'type_kurator'        => ['required', 'string', 'max:50', Rule::in(['Enfermería', 'Medicina'])],
+            'type_kurator' => ['required', 'string', 'max:50', Rule::in(['Enfermería', 'Medicina'])],
             'type_identification' => 'required|string|max:50',
             'identification' => 'required|string|max:50',
         ]);
@@ -167,7 +168,6 @@ class KuratorController extends Controller
             if (!in_array($key, $allowed, true)) {
                 $v->errors()->add('specialty', 'La especialidad seleccionada no es válida para el tipo de personal.');
             }
-
             if ($this->requiresDetail($key) && $detail === '') {
                 $v->errors()->add('detail_specialty', 'Debes indicar el nombre de la especialidad/subespecialidad/posgrado.');
             }
@@ -180,10 +180,9 @@ class KuratorController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1. Crear usuario
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name'     => $request->name,
+                'email'    => $request->email,
                 'password' => bcrypt($request->password),
             ]);
 
@@ -193,31 +192,30 @@ class KuratorController extends Controller
                 'primaryKey' => $user->id,
                 'changeType' => 'create',
                 'newValue'   => json_encode([
-                    'name' => $user->name,
+                    'name'  => $user->name,
                     'email' => $user->email,
                 ]),
             ]);
 
-            // 2. Crear detalles
             $userDetail = UserDetail::create([
-                'user_id' => $user->id,
-                'name' => $request->name,
+                'user_id'       => $user->id,
+                'name'          => $request->name,
                 'fatherLastName' => $request->fatherLastName,
                 'motherLastName' => $request->motherLastName,
-                'sex' => $request->sex,
-                'mobile' => $request->mobile,
-                'contactEmail' => $request->email,
-                'site_id' => $request->site_id,
-                'company_id' => 1,
+                'sex'           => $request->sex,
+                'mobile'        => $request->mobile,
+                'contactEmail'  => $request->email,
+                'site_id'       => $request->site_id,
+                'company_id'    => 1,
             ]);
 
             $this->logChange([
-                'logType'    => 'Kurador',
-                'table'      => 'user_details',
-                'primaryKey' => $userDetail->id,
+                'logType'      => 'Kurador',
+                'table'        => 'user_details',
+                'primaryKey'   => $userDetail->id,
                 'secondaryKey' => $user->id,
-                'changeType' => 'create',
-                'newValue'   => json_encode($userDetail->only([
+                'changeType'   => 'create',
+                'newValue'     => json_encode($userDetail->only([
                     'name',
                     'fatherLastName',
                     'motherLastName',
@@ -228,29 +226,50 @@ class KuratorController extends Controller
                 ])),
             ]);
 
-            // 3. Crear kurador
-            $anio = Carbon::now()->format('Y');
-            $site = str_pad($userDetail->site_id, 2, '0', STR_PAD_LEFT);
+            //Asigno el Rol "perfil operativo"
+            $teamOperativo = Team::firstWhere('id', 4);
+
+            if ($teamOperativo) {
+                $teamOperativo->users()->syncWithoutDetaching([
+                    $user->id => ['role' => 'perfil_operativo'],
+                ]);
+
+                $user->forceFill(['current_team_id' => $teamOperativo->id])->save();
+
+                $this->logChange([
+                    'logType'      => 'Kurador',
+                    'table'        => 'team_user',
+                    'primaryKey'   => $teamOperativo->id,
+                    'secondaryKey' => $user->id,
+                    'changeType'   => 'attach',
+                    'newValue'     => json_encode(['role' => 'perfil_operativo']),
+                ]);
+            } else {
+                throw new \RuntimeException('No se encontró el equipo Operativo para asignar rol.');
+            }
+
+            $anio   = Carbon::now()->format('Y');
+            $site   = str_pad($userDetail->site_id, 2, '0', STR_PAD_LEFT);
             $random = strtoupper(Str::random(3));
 
             $kurator = Kurator::create([
-                'user_uuid'          => 'KU' . $anio . '-' . $site . $random,
-                'user_detail_id'     => $userDetail->id,
-                'specialty'        => $request->input('specialty'),
-                'detail_specialty' => $request->input('detail_specialty'),
-                'type_kurator'       => $request->type_kurator,
+                'user_uuid'           => 'KU' . $anio . '-' . $site . $random,
+                'user_detail_id'      => $userDetail->id,
+                'specialty'           => $request->input('specialty'),
+                'detail_specialty'    => $request->input('detail_specialty'),
+                'type_kurator'        => $request->type_kurator,
                 'type_identification' => $request->type_identification,
-                'identification'     => $request->identification,
-                'created_by' => $request->user()->id,
+                'identification'      => $request->identification,
+                'created_by'          => $request->user()->id,
             ]);
 
             $this->logChange([
-                'logType'    => 'Kurador',
-                'table'      => 'kurators',
-                'primaryKey' => $kurator->id,
+                'logType'      => 'Kurador',
+                'table'        => 'kurators',
+                'primaryKey'   => $kurator->id,
                 'secondaryKey' => $userDetail->id,
-                'changeType' => 'create',
-                'newValue'   => json_encode($kurator->only([
+                'changeType'   => 'create',
+                'newValue'     => json_encode($kurator->only([
                     'user_uuid',
                     'specialty',
                     'detail_specialty',
@@ -262,7 +281,9 @@ class KuratorController extends Controller
 
             DB::commit();
 
-            return redirect()->route('kurators.index')->with('success', 'Personal santitario creado correctamente.');
+            return redirect()
+                ->route('kurators.index')
+                ->with('success', 'Personal sanitario creado correctamente.');
         } catch (\Throwable $e) {
             Log::error($e);
             DB::rollBack();
@@ -381,7 +402,7 @@ class KuratorController extends Controller
                 'sex' => $request->sex,
                 'mobile' => $request->mobile,
                 'contactEmail' => $request->email,
-                'site_id' => $request->site_id,
+                'site_id' => 2,
             ]);
 
             $kurator->update([

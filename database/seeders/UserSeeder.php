@@ -218,7 +218,7 @@ class UserSeeder extends Seeder
         $userFour->currentTeam->users()->attach($userFour->id, ['role' => 'resp_sitio']);
     }
 
-    protected function syncTeamPermissions(\App\Models\Team $team, array $permissionIds): void
+    protected function syncTeamPermissions(Team $team, array $permissionIds): void
     {
         if (method_exists($team, 'permissions')) {
             $team->permissions()->sync($permissionIds);
